@@ -1,5 +1,5 @@
 name: ghostkey
-description: Zero-knowledge digital executor
+description: Zero-knowledge digital executor for crypto estate planning
 version: 0.0.1
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -9,13 +9,11 @@ dependencies:
   supabase_flutter: ^2.3.4
   flutter_secure_storage: ^9.0.0
   pointycastle: ^3.9.0
-  shamir_secret_sharing_dart: ^1.0.0
+  crypto: ^3.0.3
   flutter_local_notifications: ^17.0.0
-  firebase_messaging: ^14.7.0
   flutter_stripe: ^10.0.0
   cupertino_icons: ^1.0.6
   local_auth: ^2.1.8
-  mobile_scanner: ^3.5.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
