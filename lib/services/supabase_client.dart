@@ -9,4 +9,13 @@ class SupabaseService {
   }
 
   static SupabaseClient get client => Supabase.instance.client;
+
+  static Future<List<Map<String, dynamic>>> getSecrets() async {
+    final response = await client.from('secrets').select();
+    return response;
+  }
+
+  static Future<void> addSecret(String title, String value) async {
+    await client.from('secrets').insert({'title': title, 'value': value});
+  }
 }
