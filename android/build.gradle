@@ -1,18 +1,2 @@
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-
-rootProject.buildDir = '../build'
-subprojects {
-    project.buildDir = "${rootProject.buildDir}/${project.name}"
-}
-subprojects {
-    project.evaluationDependsOn(':app')
-}
-
-task clean(type: Delete) {
-    delete rootProject.buildDir
-}
+classpath 'com.android.tools.build:gradle:8.6.1'
+classpath 'com.google.gms:google-services:4.4.0'
