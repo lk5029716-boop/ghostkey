@@ -1,0 +1,6 @@
+includeBuild('/opt/data/GhostKey/packages/flutter_tools/gradle') {
+    project(':flutter').projectDir = new File(rootProject.projectDir, '../packages/flutter_tools/gradle')
+}
+
+rootProject.name = 'ghostkey'
+include ':app'
