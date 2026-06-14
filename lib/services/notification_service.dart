@@ -9,13 +9,7 @@ class NotificationService {
     await _plugin.initialize(const InitializationSettings(android: android, iOS: ios));
   }
 
-  static Future<void> scheduleCheckInReminder() async {
-    await _plugin.periodicallyShow(
-      0,
-      'GhostKey Check-in',
-      'Are you okay? Tap to confirm.',
-      RepeatInterval.daily,
-      null,
-    );
+  static Future<void> showTimerNotification(int id, String title, String body) async {
+    await _plugin.show(id, title, body, null);
   }
 }
