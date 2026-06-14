@@ -7,16 +7,8 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.6
-  supabase_flutter: ^2.3.4
-  flutter_secure_storage: ^9.0.0
-  pointycastle: ^3.9.0
-  crypto: ^3.0.3
-  flutter_local_notifications: ^17.0.0
-  firebase_core: ^2.24.0
-  firebase_messaging: ^14.7.0
-  local_auth: ^2.1.8
-  provider: ^6.1.1
   shared_preferences: ^2.2.2
+  provider: ^6.1.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
