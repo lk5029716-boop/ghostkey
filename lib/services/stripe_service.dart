@@ -6,6 +6,11 @@ class StripeService {
     await Stripe.instance.applySettings();
   }
 
-  static Future<void> createSubscription() async {
+  static Future<bool> createCheckoutSession(String priceId) async {
+    try {
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 }
