@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "500893118451",
+    "project_id": "ghostkey-2d586",
+    "storage_bucket": "ghostkey-2d586.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:500893118451:android:82c3b70c7fa6a29784ac86",
+        "android_client_info": {
+          "package_name": "com.ghostkey.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSy...7h4g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
