@@ -6,11 +6,7 @@ class StripeService {
     await Stripe.instance.applySettings();
   }
 
-  static Future<bool> createCheckoutSession(String priceId) async {
-    try {
-      return true;
-    } catch (e) {
-      return false;
-    }
+  static Future<void> createSubscription() async {
+    // TODO: create checkout session via Supabase Edge Function
   }
 }
