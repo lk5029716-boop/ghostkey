@@ -1,5 +1,18 @@
-buildscript {
-    dependencies {
-        classpath 'com.android.tools.build:gradle:8.6.1'
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
     }
+}
+
+rootProject.buildDir = '../build'
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+subprojects {
+    project.evaluationDependsOn(':app')
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
 }
