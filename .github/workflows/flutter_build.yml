@@ -38,8 +38,14 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Debug - check assets
+        run: ls -la assets/ && file assets/logo.png
+
+      - name: Debug - check flutter_launcher_icons
+        run: flutter pub deps | grep launcher
+
       - name: Generate Launcher Icons
-        run: flutter pub run flutter_launcher_icons:main
+        run: flutter pub run flutter_launcher_icons:main -v
 
       - name: Build APK
         run: flutter build apk --debug
