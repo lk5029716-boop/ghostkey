@@ -36,7 +36,6 @@ class GhostKeyApp extends StatelessWidget {
   }
 }
 
-// ─── ONBOARDING ───
 class OnboardingScreen extends StatelessWidget {
   final SharedPreferences prefs;
   const OnboardingScreen({super.key, required this.prefs});
@@ -121,7 +120,6 @@ class OnboardingScreen extends StatelessWidget {
   }
 }
 
-// ─── PIN SETUP ───
 class PinSetupScreen extends StatefulWidget {
   final SharedPreferences prefs;
   const PinSetupScreen({super.key, required this.prefs});
@@ -136,41 +134,21 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
 
   void _onComplete() {
     if (_pin.length < 6) return;
-    if (!_confirming) {
-      setState(() { _firstPin = _pin; _pin = ''; _confirming = true; });
-    } else if (_pin == _firstPin) {
-      widget.prefs.setString('pin', _pin);
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const DashboardScreen()));
-    } else {
-      setState(() { _pin = ''; _confirming = false; });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PINs do not match'), backgroundColor: Color(0xFF1C2040)));
-    }
+    if (!_confirming) { setState(() { _firstPin = _pin; _pin = ''; _confirming = true; }); }
+    else if (_pin == _firstPin) { widget.prefs.setString('pin', _pin); Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => DashboardScreen(prefs: widget.prefs))); }
+    else { setState(() { _pin = ''; _confirming = false; }); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PINs do not match'), backgroundColor: Color(0xFF1C2040))); }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0F1226),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent, elevation: 0,
-        leading: _confirming ? IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => setState(() { _confirming = false; _pin = ''; })) : null,
-        title: Text(_confirming ? 'Confirm PIN' : 'Create PIN', style: const TextStyle(color: Colors.white)),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text(_confirming ? 'Re-enter your 6-digit PIN' : 'Create a 6-digit PIN to secure your vault', style: const TextStyle(fontSize: 14, color: Colors.white54), textAlign: TextAlign.center),
-            const SizedBox(height: 32),
-            PinPad(onChanged: (p) => setState(() => _pin = p), onComplete: _onComplete),
-          ]),
-        ),
-      ),
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0, leading: _confirming ? IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => setState(() { _confirming = false; _pin = ''; })) : null, title: Text(_confirming ? 'Confirm PIN' : 'Create PIN', style: const TextStyle(color: Colors.white))),
+      body: SafeArea(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Text(_confirming ? 'Re-enter your 6-digit PIN' : 'Create a 6-digit PIN', style: const TextStyle(fontSize: 14, color: Colors.white54), textAlign: TextAlign.center), const SizedBox(height: 32), PinPad(onChanged: (p) => setState(() => _pin = p), onComplete: _onComplete)]))),
     );
   }
 }
 
-// ─── PIN PAD ───
 class PinPad extends StatefulWidget {
   final void Function(String) onChanged;
   final VoidCallback onComplete;
@@ -182,10 +160,7 @@ class PinPad extends StatefulWidget {
 class _PinPadState extends State<PinPad> {
   String _pin = '';
   void _onKey(String key) {
-    setState(() {
-      if (key == 'del') { if (_pin.isNotEmpty) _pin = _pin.substring(0, _pin.length - 1); }
-      else if (_pin.length < 6) _pin += key;
-    });
+    setState(() { if (key == 'del') { if (_pin.isNotEmpty) _pin = _pin.substring(0, _pin.length - 1); } else if (_pin.length < 6) _pin += key; });
     widget.onChanged(_pin);
     if (_pin.length == 6) Future.delayed(const Duration(milliseconds: 200), widget.onComplete);
   }
@@ -207,30 +182,54 @@ class _PinPadState extends State<PinPad> {
   }
 
   Widget _kb(String label, VoidCallback onTap, {IconData? icon}) {
-    return TextButton(
-      onPressed: onTap,
-      style: TextButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), backgroundColor: const Color(0xFF1C2040).withOpacity(0.5)),
-      child: icon != null ? Icon(icon, color: Colors.white, size: 22) : Text(label, style: const TextStyle(fontSize: 26, color: Colors.white)),
-    );
+    return TextButton(onPressed: onTap, style: TextButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), backgroundColor: const Color(0xFF1C2040).withOpacity(0.5)), child: icon != null ? Icon(icon, color: Colors.white, size: 22) : Text(label, style: const TextStyle(fontSize: 26, color: Colors.white)));
   }
 }
 
-// ─── DASHBOARD (placeholder) ───
-class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({super.key});
+class DashboardScreen extends StatefulWidget {
+  final SharedPreferences prefs;
+  const DashboardScreen({super.key, required this.prefs});
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  int _daysRemaining = 45;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0F1226),
-      appBar: AppBar(title: const Text('My Vault', style: TextStyle(color: Colors.white)), backgroundColor: Colors.transparent, elevation: 0),
-      body: const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(Icons.check_circle, size: 64, color: Color(0xFF4CAF50)),
-        SizedBox(height: 16),
-        Text('GhostKey v2.0', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white)),
-        SizedBox(height: 8),
-        Text('New design loaded successfully', style: TextStyle(color: Colors.white54)),
-      ])),
+      appBar: AppBar(title: const Text('My Vault', style: TextStyle(color: Colors.white)), backgroundColor: Colors.transparent, elevation: 0, actions: [IconButton(onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => SettingsScreen(prefs: widget.prefs))); }, icon: const Icon(Icons.settings, color: Colors.white))]),
+      body: ListView(padding: const EdgeInsets.all(16), children: [
+        Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: const Color(0xFF1C2040), borderRadius: BorderRadius.circular(16)), child: Row(children: [Container(width: 52, height: 52, decoration: const BoxDecoration(color: Color(0xFFF0D25A), shape: BoxShape.circle), child: const Icon(Icons.timer, color: Color(0xFF0F1226))), const SizedBox(width: 16), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Inactivity Timer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)), const SizedBox(height: 4), Text('$_daysRemaining days remaining', style: const TextStyle(color: Colors.white54))])), TextButton(onPressed: () => setState(() => _daysRemaining = 45), child: const Text('Check-in', style: TextStyle(color: Color(0xFFF0D25A))))])),
+        const SizedBox(height: 24),
+        Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: const Color(0xFF1C2040), borderRadius: BorderRadius.circular(16)), child: Row(children: [Container(width: 52, height: 52, decoration: const BoxDecoration(color: Color(0xFF1C2040), shape: BoxShape.circle), child: const Icon(Icons.people, color: Color(0xFFF0D25A))), const SizedBox(width: 16), const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Heirs', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)), SizedBox(height: 4), Text('No heirs added', style: TextStyle(color: Colors.white54))])), TextButton(onPressed: () {}, child: const Text('Add', style: TextStyle(color: Color(0xFFF0D25A))))])),
+        const SizedBox(height: 32),
+        const Center(child: Column(children: [Icon(Icons.lock_open, size: 56, color: Colors.white24), SizedBox(height: 12), Text('No secrets yet', style: TextStyle(color: Colors.white54, fontSize: 16)), SizedBox(height: 4), Text('Tap + to add your first secret', style: TextStyle(color: Colors.white24, fontSize: 13))])),
+      ]),
+      floatingActionButton: FloatingActionButton(onPressed: () {}, backgroundColor: const Color(0xFFF0D25A), child: const Icon(Icons.add, color: Color(0xFF0F1226))),
+    );
+  }
+}
+
+class SettingsScreen extends StatelessWidget {
+  final SharedPreferences prefs;
+  const SettingsScreen({super.key, required this.prefs});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F1226),
+      appBar: AppBar(title: const Text('Settings', style: TextStyle(color: Colors.white)), backgroundColor: Colors.transparent, elevation: 0),
+      body: ListView(padding: const EdgeInsets.all(16), children: [
+        ListTile(leading: const Icon(Icons.timer, color: Colors.white), title: const Text('Inactivity Timer', style: TextStyle(color: Colors.white)), subtitle: const Text('Configure timer duration', style: TextStyle(color: Colors.white54)), trailing: const Icon(Icons.chevron_right, color: Colors.white54), onTap: () {}),
+        ListTile(leading: const Icon(Icons.people, color: Colors.white), title: const Text('Manage Heirs', style: TextStyle(color: Colors.white)), subtitle: const Text('Add or remove heirs', style: TextStyle(color: Colors.white54)), trailing: const Icon(Icons.chevron_right, color: Colors.white54), onTap: () {}),
+        ListTile(leading: const Icon(Icons.security, color: Colors.white), title: const Text('Change PIN', style: TextStyle(color: Colors.white)), subtitle: const Text('Update your security PIN', style: TextStyle(color: Colors.white54)), trailing: const Icon(Icons.chevron_right, color: Colors.white54), onTap: () {}),
+        ListTile(leading: const Icon(Icons.vpn_key, color: Colors.white), title: const Text('2FA', style: TextStyle(color: Colors.white)), subtitle: const Text('Two-factor authentication', style: TextStyle(color: Colors.white54)), trailing: const Icon(Icons.chevron_right, color: Colors.white54), onTap: () {}),
+        const Divider(color: Colors.white24),
+        ListTile(leading: const Icon(Icons.logout, color: Colors.red), title: const Text('Lock Vault', style: TextStyle(color: Colors.red)), onTap: () {}),
+      ]),
     );
   }
 }
