@@ -1,0 +1,49 @@
+name: Build GhostKey APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.22.0"
+          channel: stable
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Generate Android project with correct package name
+        run: |
+          mkdir -p /tmp/flutter_gen
+          cd /tmp/flutter_gen
+          flutter create --org com.ghostkey --project-name app --platforms android temp_app
+          rm -rf /home/runner/work/ghostkey/ghostkey/android
+          cp -r /tmp/flutter_gen/temp_app/android /home/runner/work/ghostkey/ghostkey/android
+          cd /home/runner/work/ghostkey/ghostkey
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --debug
+
+      - name: Upload to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          file: /home/runner/work/ghostkey/ghostkey/build/app/outputs/flutter-apk/app-debug.apk
