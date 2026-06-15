@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'screens/ledger_seed_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -289,7 +290,9 @@ class VaultDashboard extends StatefulWidget {
 
 class _VaultDashboardState extends State<VaultDashboard> {
   int _daysRemaining = 45;
-  final List<Map<String, String>> _secrets = [];
+  final List<Map<String, String>> _secrets = [
+    {'type': 'ledger', 'title': 'Ledger Seed Phrase', 'description': '2025-06-15'},
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -303,7 +306,7 @@ class _VaultDashboardState extends State<VaultDashboard> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                MaterialPageRoute(builder: (_) => const LedgerSeedPhraseScreen()),
               );
             },
             icon: const Icon(Icons.settings),
