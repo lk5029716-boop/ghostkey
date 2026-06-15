@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'screens/ledger_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -290,9 +289,7 @@ class VaultDashboard extends StatefulWidget {
 
 class _VaultDashboardState extends State<VaultDashboard> {
   int _daysRemaining = 45;
-  final List<Map<String, String>> _secrets = [
-    {'type': 'ledger', 'title': 'Ledger Seed Phrase', 'description': '2025-06-15'},
-  ];
+  final List<Map<String, String>> _secrets = [];
 
   @override
   Widget build(BuildContext context) {
@@ -316,24 +313,14 @@ class _VaultDashboardState extends State<VaultDashboard> {
       body: _secrets.isEmpty ? _buildEmptyState() : _buildSecretList(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const LedgerScreen()),
-        );
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Add secret — coming soon')),
+          );
         },
         backgroundColor: const Color(0xFFF0D25A),
         child: const Icon(Icons.add, color: Color(0xFF0F1226)),
       ),
     );
-  }
-
-  void _openSecret(Map<String, String> secret) {
-    if (secret['type'] == 'ledger') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const LedgerScreen()),
-      );
-    }
   }
 
   Widget _buildEmptyState() {
@@ -428,39 +415,17 @@ class _VaultDashboardState extends State<VaultDashboard> {
             ],
           ),
         ),
-        const SizedBox(height: 24),
-        // Demo Ledger secret (tappable)
-        InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const LedgerScreen()),
-            );
-          },
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF151833),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF1C2040)),
-            ),
-            child: Row(
-              children: const [
-                Icon(Icons.key, color: Color(0xFFF0D25A)),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Ledger Seed Phrase', style: TextStyle(fontWeight: FontWeight.w600)),
-                      SizedBox(height: 2),
-                      Text('2025-06-15', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                    ],
-                  ),
-                ),
-                Icon(Icons.lock, size: 14, color: Colors.white30),
-              ],
-            ),
+        const SizedBox(height: 32),
+        // Empty secrets
+        const Center(
+          child: Column(
+            children: [
+              Icon(Icons.lock_open, size: 56, color: Colors.white24),
+              SizedBox(height: 12),
+              Text('No secrets yet', style: TextStyle(color: Colors.white54, fontSize: 16)),
+              SizedBox(height: 4),
+              Text('Tap + to add your first secret', style: TextStyle(color: Colors.white30, fontSize: 13)),
+            ],
           ),
         ),
       ],
@@ -493,17 +458,14 @@ class _VaultDashboardState extends State<VaultDashboard> {
         const SizedBox(height: 16),
         const Text('Secrets', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
-        ..._secrets.map((s) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFF151833),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF1C2040)),
-            ),
-            child: InkWell(
-              onTap: () => _openSecret(s),
+        ..._secrets.map((s) => Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF151833),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF1C2040)),
+              ),
               child: Row(
                 children: [
                   const Icon(Icons.key, color: Color(0xFFF0D25A)),
@@ -520,9 +482,7 @@ class _VaultDashboardState extends State<VaultDashboard> {
                   const Icon(Icons.lock, size: 14, color: Colors.white30),
                 ],
               ),
-            ),
-          );
-        }),
+            )),
       ],
     );
   }
