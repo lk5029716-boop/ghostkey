@@ -28,14 +28,11 @@ jobs:
 
       - name: Generate Android project
         run: |
-          # Generate a fresh Flutter project in a temp directory
           mkdir -p /tmp/flutter_gen
           cd /tmp/flutter_gen
           flutter create --org com.ghostkey --project-name ghostkey --platforms android temp_app
-          # Copy generated android project back
           rm -rf /home/runner/work/ghostkey/ghostkey/android
           cp -r /tmp/flutter_gen/temp_app/android /home/runner/work/ghostkey/ghostkey/android
-          # Go back to repo
           cd /home/runner/work/ghostkey/ghostkey
 
       - name: Install dependencies
@@ -47,8 +44,19 @@ jobs:
       - name: Build APK
         run: flutter build apk --debug 2>&1 | tail -50
 
-      - name: Verify APK
-        run: ls -la build/app/outputs/flutter-apk/app-debug.apk
+      - name: Find and verify APK
+        run: |
+          find /home/runner/work/ghostkey/ghostkey -name "*.apk" -type f 2>/dev/null
+          APK=$(find /home/runner/work/ghostkey/ghostkey -name "app-debug.apk" -type f | head -1)
+          if [ -z "$APK" ]; then
+            echo "ERROR: APK not found"
+            exit 1
+          fi
+          echo "APK found: $APK"
+          ls -la "$APK"
+          # Copy to expected location for upload
+          mkdir -p /home/runner/work/ghostkey/ghostkey/build/app/outputs/flutter-apk/
+          cp "$APK" /home/runner/work/ghostkey/ghostkey/build/app/outputs/flutter-apk/app-debug.apk
 
       - uses: actions/upload-artifact@v4
         if: always()
