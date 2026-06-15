@@ -306,7 +306,7 @@ class _VaultDashboardState extends State<VaultDashboard> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const LedgerSeedPhraseScreen()),
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
               );
             },
             icon: const Icon(Icons.settings),
@@ -316,14 +316,24 @@ class _VaultDashboardState extends State<VaultDashboard> {
       body: _secrets.isEmpty ? _buildEmptyState() : _buildSecretList(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Add secret — coming soon')),
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const LedgerSeedPhraseScreen()),
           );
         },
         backgroundColor: const Color(0xFFF0D25A),
         child: const Icon(Icons.add, color: Color(0xFF0F1226)),
       ),
     );
+  }
+
+  void _openSecret(Map<String, String> secret) {
+    if (secret['type'] == 'ledger') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const LedgerSeedPhraseScreen()),
+      );
+    }
   }
 
   Widget _buildEmptyState() {
@@ -469,9 +479,11 @@ class _VaultDashboardState extends State<VaultDashboard> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFF1C2040)),
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.key, color: Color(0xFFF0D25A)),
+              child: InkWell(
+                onTap: () => _openSecret(s),
+                child: Row(
+                  children: [
+                    const Icon(Icons.key, color: Color(0xFFF0D25A)),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
