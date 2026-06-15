@@ -39,18 +39,16 @@ jobs:
         run: flutter pub get
 
       - name: Build APK
+        run: flutter build apk --debug
+
+      - name: Prepare APK
         run: |
-          flutter build apk --debug 2>&1 | tee /tmp/build_output.log
-          echo "EXIT_CODE=\${PIPESTATUS[0]}"
-          echo "=== APK Search ==="
-          find /home/runner/work -name "*.apk" 2>/dev/null || echo "NO APK"
-          echo "=== Build Dir ==="
-          ls -R /home/runner/work/ghostkey/ghostkey/build/app/outputs/ 2>/dev/null || echo "NO OUTPUTS DIR"
+          mkdir -p /tmp/apk
+          find /home/runner/work/ghostkey/ghostkey/build -name "*.apk" -exec cp {} /tmp/apk/ \;
+          ls -la /tmp/apk/
 
       - name: Upload APK
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ghostkey-apk
-          path: /home/runner/work/ghostkey/ghostkey/build/app/outputs/flutter-apk/app-debug.apk
-          if-no-files-found: ignore
+          path: /tmp/apk/
