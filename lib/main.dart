@@ -493,19 +493,20 @@ class _VaultDashboardState extends State<VaultDashboard> {
         const SizedBox(height: 16),
         const Text('Secrets', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
-        ..._secrets.map((s) => Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFF151833),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF1C2040)),
-              ),
-              child: InkWell(
-                onTap: () => _openSecret(s),
-                child: Row(
-                  children: [
-                    const Icon(Icons.key, color: Color(0xFFF0D25A)),
+        ..._secrets.map((s) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF151833),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF1C2040)),
+            ),
+            child: InkWell(
+              onTap: () => _openSecret(s),
+              child: Row(
+                children: [
+                  const Icon(Icons.key, color: Color(0xFFF0D25A)),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -519,8 +520,9 @@ class _VaultDashboardState extends State<VaultDashboard> {
                   const Icon(Icons.lock, size: 14, color: Colors.white30),
                 ],
               ),
-            )),
-
+            ),
+          );
+        }),
       ],
     );
   }
