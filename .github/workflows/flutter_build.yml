@@ -39,17 +39,11 @@ jobs:
         run: flutter pub get
 
       - name: Build APK
-        run: flutter build apk --debug 2>&1 | tail -80
-
-      - name: Copy APK to upload dir
-        run: |
-          mkdir -p /tmp/apk_upload
-          cp /home/runner/work/ghostkey/ghostkey/build/app/outputs/flutter-apk/app-debug.apk /tmp/apk_upload/ || \
-          cp /home/runner/work/ghostkey/ghostkey/build/app/outputs/apk/debug/app-debug.apk /tmp/apk_upload/
-          ls -la /tmp/apk_upload/
+        run: flutter build apk --debug > /tmp/build.log 2>&1; echo "EXIT=$?"; cat /tmp/build.log; find /home/runner/work -name "*.apk" -type f 2>/dev/null || echo "NO APK FOUND"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: ghostkey-apk
-          path: /tmp/apk_upload/app-debug.apk
+          path: /home/runner/work/ghostkey/ghostkey/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: ignore
