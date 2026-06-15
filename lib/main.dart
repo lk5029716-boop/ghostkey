@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'screens/ledger_seed_screen.dart';
+import 'screens/ledger_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -428,17 +428,39 @@ class _VaultDashboardState extends State<VaultDashboard> {
             ],
           ),
         ),
-        const SizedBox(height: 32),
-        // Empty secrets
-        const Center(
-          child: Column(
-            children: [
-              Icon(Icons.lock_open, size: 56, color: Colors.white24),
-              SizedBox(height: 12),
-              Text('No secrets yet', style: TextStyle(color: Colors.white54, fontSize: 16)),
-              SizedBox(height: 4),
-              Text('Tap + to add your first secret', style: TextStyle(color: Colors.white30, fontSize: 13)),
-            ],
+        const SizedBox(height: 24),
+        // Demo Ledger secret (tappable)
+        InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const LedgerScreen()),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF151833),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF1C2040)),
+            ),
+            child: Row(
+              children: const [
+                Icon(Icons.key, color: Color(0xFFF0D25A)),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Ledger Seed Phrase', style: TextStyle(fontWeight: FontWeight.w600)),
+                      SizedBox(height: 2),
+                      Text('2025-06-15', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                    ],
+                  ),
+                ),
+                Icon(Icons.lock, size: 14, color: Colors.white30),
+              ],
+            ),
           ),
         ),
       ],
