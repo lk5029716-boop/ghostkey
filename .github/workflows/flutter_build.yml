@@ -38,8 +38,10 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build APK
+      - name: Generate Launcher Icons
         run: flutter pub run flutter_launcher_icons:main
+
+      - name: Build APK
         run: flutter build apk --debug
 
       - name: Upload to Firebase App Distribution
