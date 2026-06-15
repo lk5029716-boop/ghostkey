@@ -316,10 +316,10 @@ class _VaultDashboardState extends State<VaultDashboard> {
       body: _secrets.isEmpty ? _buildEmptyState() : _buildSecretList(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const LedgerSeedPhraseScreen()),
-          );
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const LedgerScreen()),
+        );
         },
         backgroundColor: const Color(0xFFF0D25A),
         child: const Icon(Icons.add, color: Color(0xFF0F1226)),
@@ -331,7 +331,7 @@ class _VaultDashboardState extends State<VaultDashboard> {
     if (secret['type'] == 'ledger') {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const LedgerSeedPhraseScreen()),
+        MaterialPageRoute(builder: (_) => const LedgerScreen()),
       );
     }
   }
