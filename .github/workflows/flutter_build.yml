@@ -41,10 +41,15 @@ jobs:
       - name: Build APK
         run: flutter build apk --debug 2>&1 | tail -80
 
+      - name: Copy APK to upload dir
+        run: |
+          mkdir -p /tmp/apk_upload
+          cp /home/runner/work/ghostkey/ghostkey/build/app/outputs/flutter-apk/app-debug.apk /tmp/apk_upload/ || \
+          cp /home/runner/work/ghostkey/ghostkey/build/app/outputs/apk/debug/app-debug.apk /tmp/apk_upload/
+          ls -la /tmp/apk_upload/
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: debug-apk
-          path: |
-            /home/runner/work/ghostkey/ghostkey/build/app/outputs/flutter-apk/app-debug.apk
-            /home/runner/work/ghostkey/ghostkey/build/app/outputs/apk/debug/app-debug.apk
+          name: ghostkey-apk
+          path: /tmp/apk_upload/app-debug.apk
