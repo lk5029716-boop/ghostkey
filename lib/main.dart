@@ -30,14 +30,16 @@ class GhostKeyApp extends StatelessWidget {
           ),
           useMaterial3: true,
         ),
-        home: const HomeScreen(),
+        home: OnboardingScreen(prefs: prefs),
       ),
     );
   }
 }
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+// ─── ONBOARDING ───
+class OnboardingScreen extends StatelessWidget {
+  final SharedPreferences prefs;
+  const OnboardingScreen({super.key, required this.prefs});
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +47,6 @@ class HomeScreen extends StatelessWidget {
       backgroundColor: const Color(0xFF0F1226),
       body: SafeArea(
         child: Column(children: [
-          // Status bar
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
@@ -59,12 +60,10 @@ class HomeScreen extends StatelessWidget {
               ]),
             ]),
           ),
-          // Content
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                // Logo with glow
                 SizedBox(width: 128, height: 128,
                   child: Stack(alignment: Alignment.center, children: [
                     Container(width: 120, height: 120,
@@ -78,7 +77,6 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 const Text('Your digital legacy secured.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: Colors.white54, letterSpacing: 0.5)),
                 const SizedBox(height: 48),
-                // Features
                 SizedBox(width: 320, child: Column(children: [
                   _feat(Icons.vpn_key, 'Bank-grade encryption'),
                   const SizedBox(height: 24),
@@ -89,13 +87,12 @@ class HomeScreen extends StatelessWidget {
               ]),
             ),
           ),
-          // Bottom
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(children: [
               SizedBox(width: double.infinity,
                 child: FilledButton(
-                  onPressed: () {},
+                  onPressed: () { Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => PinSetupScreen(prefs: prefs))); },
                   style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1B6D24), foregroundColor: Colors.white, minimumSize: const Size.fromHeight(52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)), elevation: 4),
                   child: const Text('Get started', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                 ),
@@ -121,5 +118,119 @@ class HomeScreen extends StatelessWidget {
       const SizedBox(width: 16),
       Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white54)),
     ]);
+  }
+}
+
+// ─── PIN SETUP ───
+class PinSetupScreen extends StatefulWidget {
+  final SharedPreferences prefs;
+  const PinSetupScreen({super.key, required this.prefs});
+  @override
+  State<PinSetupScreen> createState() => _PinSetupScreenState();
+}
+
+class _PinSetupScreenState extends State<PinSetupScreen> {
+  String _pin = '';
+  bool _confirming = false;
+  String _firstPin = '';
+
+  void _onComplete() {
+    if (_pin.length < 6) return;
+    if (!_confirming) {
+      setState(() { _firstPin = _pin; _pin = ''; _confirming = true; });
+    } else if (_pin == _firstPin) {
+      widget.prefs.setString('pin', _pin);
+      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const DashboardScreen()));
+    } else {
+      setState(() { _pin = ''; _confirming = false; });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PINs do not match'), backgroundColor: Color(0xFF1C2040)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F1226),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent, elevation: 0,
+        leading: _confirming ? IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => setState(() { _confirming = false; _pin = ''; })) : null,
+        title: Text(_confirming ? 'Confirm PIN' : 'Create PIN', style: const TextStyle(color: Colors.white)),
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Text(_confirming ? 'Re-enter your 6-digit PIN' : 'Create a 6-digit PIN to secure your vault', style: const TextStyle(fontSize: 14, color: Colors.white54), textAlign: TextAlign.center),
+            const SizedBox(height: 32),
+            PinPad(onChanged: (p) => setState(() => _pin = p), onComplete: _onComplete),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── PIN PAD ───
+class PinPad extends StatefulWidget {
+  final void Function(String) onChanged;
+  final VoidCallback onComplete;
+  const PinPad({super.key, required this.onChanged, required this.onComplete});
+  @override
+  State<PinPad> createState() => _PinPadState();
+}
+
+class _PinPadState extends State<PinPad> {
+  String _pin = '';
+  void _onKey(String key) {
+    setState(() {
+      if (key == 'del') { if (_pin.isNotEmpty) _pin = _pin.substring(0, _pin.length - 1); }
+      else if (_pin.length < 6) _pin += key;
+    });
+    widget.onChanged(_pin);
+    if (_pin.length == 6) Future.delayed(const Duration(milliseconds: 200), widget.onComplete);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: [
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(6, (i) {
+        return AnimatedContainer(duration: const Duration(milliseconds: 150), width: 18, height: 18, margin: const EdgeInsets.symmetric(horizontal: 8), decoration: BoxDecoration(shape: BoxShape.circle, color: i < _pin.length ? const Color(0xFFF0D25A) : Colors.white24));
+      })),
+      const SizedBox(height: 48),
+      SizedBox(width: 270, child: GridView.count(shrinkWrap: true, crossAxisCount: 3, childAspectRatio: 1.6, mainAxisSpacing: 8, crossAxisSpacing: 8, children: [
+        ...['1','2','3','4','5','6','7','8','9'].map((k) => _kb(k, () => _onKey(k))),
+        _kb('', () => _onKey('del'), icon: Icons.backspace_outlined),
+        _kb('0', () => _onKey('0')),
+        const SizedBox.shrink(),
+      ])),
+    ]);
+  }
+
+  Widget _kb(String label, VoidCallback onTap, {IconData? icon}) {
+    return TextButton(
+      onPressed: onTap,
+      style: TextButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), backgroundColor: const Color(0xFF1C2040).withOpacity(0.5)),
+      child: icon != null ? Icon(icon, color: Colors.white, size: 22) : Text(label, style: const TextStyle(fontSize: 26, color: Colors.white)),
+    );
+  }
+}
+
+// ─── DASHBOARD (placeholder) ───
+class DashboardScreen extends StatelessWidget {
+  const DashboardScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F1226),
+      appBar: AppBar(title: const Text('My Vault', style: TextStyle(color: Colors.white)), backgroundColor: Colors.transparent, elevation: 0),
+      body: const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(Icons.check_circle, size: 64, color: Color(0xFF4CAF50)),
+        SizedBox(height: 16),
+        Text('GhostKey v2.0', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white)),
+        SizedBox(height: 8),
+        Text('New design loaded successfully', style: TextStyle(color: Colors.white54)),
+      ])),
+    );
   }
 }
