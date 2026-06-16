@@ -45,25 +45,17 @@ class _QrScannerScreenState extends State<QrScannerScreen>
     const surfaceContainerHighest = Color(0xFFE1E3E4);
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: surface,
       body: Stack(
         children: [
-          // Camera preview placeholder (dark gradient like camera)
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFF1A1A2E), Color(0xFF0F0F1A)],
-              ),
-            ),
-          ),
+          // White background with subtle pattern
+          Container(color: surface),
 
           // Semi-transparent overlay with cutout
           ClipPath(
             clipper: _ScannerOverlayClipper(),
             child: Container(
-              color: Colors.black.withOpacity(0.55),
+              color: Colors.black.withOpacity(0.08),
             ),
           ),
 
@@ -116,21 +108,21 @@ class _QrScannerScreenState extends State<QrScannerScreen>
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+                    icon: Icon(Icons.arrow_back, color: onSurface, size: 24),
                     onPressed: () => Navigator.pop(context),
                   ),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Scan QR Code',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Colors.white,
+                        color: onSurface,
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 48),
+                  SizedBox(width: 48),
                 ],
               ),
             ),
@@ -141,11 +133,11 @@ class _QrScannerScreenState extends State<QrScannerScreen>
             top: MediaQuery.of(context).size.height * 0.42,
             left: 0,
             right: 0,
-            child: const Text(
+            child: Text(
               'Align QR code within the frame to scan',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white70,
+                color: onSurfaceVariant,
                 fontSize: 16,
                 fontWeight: FontWeight.w400,
               ),
@@ -213,8 +205,8 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                           HapticFeedback.lightImpact();
                         },
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white70,
-                          side: const BorderSide(color: Colors.white24),
+                          foregroundColor: onSurface,
+                          side: BorderSide(color: surfaceContainerHighest),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
@@ -263,6 +255,11 @@ class _QrScannerScreenState extends State<QrScannerScreen>
     required VoidCallback onTap,
     bool active = false,
   }) {
+    const primary = Color(0xFF0D631B);
+    const onSurface = Color(0xFF191C1D);
+    const onSurfaceVariant = Color(0xFF40493D);
+    const surfaceContainerHighest = Color(0xFFE1E3E4);
+
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -272,16 +269,16 @@ class _QrScannerScreenState extends State<QrScannerScreen>
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: active ? const Color(0xFF0D631B) : Colors.white.withOpacity(0.12),
+              color: active ? primary : surfaceContainerHighest,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(icon, color: Colors.white, size: 28),
+            child: Icon(icon, color: active ? Colors.white : onSurface, size: 28),
           ),
           const SizedBox(height: 6),
           Text(
             label,
             style: TextStyle(
-              color: active ? const Color(0xFF88D982) : Colors.white70,
+              color: active ? primary : onSurfaceVariant,
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
