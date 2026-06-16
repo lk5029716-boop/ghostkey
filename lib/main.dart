@@ -10,8 +10,9 @@ import 'package:crypto/crypto.dart';
 import 'vault_data.dart';
 import 'vault_screens.dart';
 import 'qr_scanner_screen.dart';
-import 'pin_unlock_screen.dart';
+import 'pin_unlock_screen.dart' show PinScreen, PinScreenMode;
 import 'seed_phrase_restore_screen.dart';
+import 'splash_screen.dart';
 
 const Color kSurface = Color(0xFFF8F9FA);
 const Color kOnSurface = Color(0xFF191C1D);
@@ -62,12 +63,11 @@ class _GhostKeyAppState extends State<GhostKeyApp> {
     );
   }
 
-  Widget _buildHome() {
-    final hasPin = widget.prefs.getString('pin') != null;
-    if (hasPin) {
-      return PinUnlockScreen(onUnlock: _goToMain);
-    }
-    return const OnboardingScreen();
+  void _onSplashComplete() {
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+    );
   }
 
   @override
@@ -97,7 +97,9 @@ class _GhostKeyAppState extends State<GhostKeyApp> {
           ),
           useMaterial3: true,
         ),
-        home: _ready ? _buildHome() : const Scaffold(body: SizedBox.shrink()),
+        home: _ready
+            ? SplashScreen(onComplete: _onSplashComplete)
+            : const Scaffold(body: SizedBox.shrink()),
       ),
     );
   }
@@ -136,14 +138,14 @@ class OnboardingScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(children: [
               SizedBox(width: double.infinity, child: FilledButton(
-                onPressed: () { Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const PinSetupScreen())); },
+                onPressed: () {},
                 style: FilledButton.styleFrom(backgroundColor: kPrimary, foregroundColor: kOnPrimary, minimumSize: const Size.fromHeight(52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)), elevation: 4),
                 child: const Text('Get started', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
               )),
               const SizedBox(height: 16),
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 const Text('Already have an account? ', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
-                GestureDetector(onTap: () { Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => PinUnlockScreen(onUnlock: () { Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const MainShell())); }))); }, child: const Text('Sign in', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: kPrimary))),
+                GestureDetector(onTap: () {}, child: const Text('Sign in', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: kPrimary))),
               ]),
               const SizedBox(height: 32),
               FractionallySizedBox(widthFactor: 1 / 3, child: Container(height: 4, decoration: BoxDecoration(color: kOutlineVariant, borderRadius: BorderRadius.circular(2)))),
