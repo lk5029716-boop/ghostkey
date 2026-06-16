@@ -544,7 +544,7 @@ class _VaultPageState extends State<VaultPage> {
   List<VaultItem> get _filteredItems {
     if (_selectedFilter == 'All') return kVaultItems;
     if (_selectedFilter == '2FA') {
-      return kVaultItems.where((i) => i.fields.containsKey('TOTP Secret')).toList();
+      return kVaultItems.where((i) => i.id == 'google_2fa' || i.id == 'binance_2fa' || i.id == 'github_2fa').toList();
     }
     final cat = _filterToCategory(_selectedFilter);
     return kVaultItems.where((i) => i.category == cat).toList();
