@@ -38,6 +38,7 @@ jobs:
         with:
           name: build-log
           path: /tmp/build_output.txt
+          retention-days: 1
 
       - name: Upload to Firebase App Distribution
         if: success()
