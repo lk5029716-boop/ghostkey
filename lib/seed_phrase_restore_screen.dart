@@ -1,46 +1,51 @@
 // ═══════════════════════════════════════════════════════════════
 // SEED PHRASE RESTORE SCREEN
-// Restore vault from 24-word recovery phrase
-// Two modes: Manual (24 individual inputs) or Paste (single text area)
+// 12 or 24 word recovery phrase entry
+// Two modes: Manual (individual inputs) or Paste (single area)
 // ═══════════════════════════════════════════════════════════════
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class SeedPhraseRestoreScreen extends StatefulWidget {
-  final VoidCallback? onRestore;
-  final VoidCallback? onCancel;
-  const SeedPhraseRestoreScreen({super.key, this.onRestore, this.onCancel});
+  final ValueChanged<String>? onSave;
+  const SeedPhraseRestoreScreen({super.key, this.onSave});
 
   @override
   State<SeedPhraseRestoreScreen> createState() => _SeedPhraseRestoreScreenState();
 }
 
 class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
-  static const _wordCount = 24;
-
-  // Theme
+  // Theme — match GhostKey
   static const _primary = Color(0xFF0D631B);
   static const _onPrimary = Color(0xFFFFFFFF);
   static const _onSurface = Color(0xFF191C1D);
   static const _onSurfaceVariant = Color(0xFF40493D);
   static const _surface = Color(0xFFF8F9FA);
   static const _surfaceContainerLow = Color(0xFFF3F4F5);
-  static const _surfaceContainerHigh = Color(0xFFE7E8E9);
-  static const _surfaceContainerHighest = Color(0xFFE1E3E4);
   static const _outline = Color(0xFF707A6C);
   static const _outlineVariant = Color(0xFFBFCABA);
   static const _secondaryContainer = Color(0xFFACF4A4);
   static const _onSecondaryContainer = Color(0xFF307231);
-  static const _primaryFixedDim = Color(0xFF88D982);
-  static const _onPrimaryFixed = Color(0xFF002204);
-  static const _error = Color(0xFFBA1A1A);
+
+  // Word count: 12 or 24
+  static const List<int> _wordCounts = [12, 24];
+  int _wordCount = 24;
 
   bool _manualMode = true;
-  final List<TextEditingController> _wordCtrls =
-      List.generate(_wordCount, (_) => TextEditingController());
-  final List<FocusNode> _focusNodes =
-      List.generate(_wordCount, (_) => FocusNode());
   final TextEditingController _pasteCtrl = TextEditingController();
+  List<TextEditingController> _wordCtrls = [];
+  List<FocusNode> _focusNodes = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _initControllers(_wordCount);
+  }
+
+  void _initControllers(int n) {
+    _wordCtrls = List.generate(n, (_) => TextEditingController());
+    _focusNodes = List.generate(n, (_) => FocusNode());
+  }
 
   @override
   void dispose() {
@@ -50,24 +55,24 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
     super.dispose();
   }
 
+  void _setWordCount(int n) {
+    if (n == _wordCount) return;
+    for (final c in _wordCtrls) c.dispose();
+    for (final f in _focusNodes) f.dispose();
+    setState(() {
+      _wordCount = n;
+      _initControllers(n);
+    });
+  }
+
   void _onWordChanged(int index, String value) {
-    if (value.endsWith(' ') || value.contains(' ')) {
+    if (value.contains(RegExp(r'\s'))) {
       final words = value.trim().split(RegExp(r'\s+'));
       _distributeWords(words, index);
     } else if (value.isNotEmpty && index < _wordCount - 1) {
-      // Auto-advance to next field
       _focusNodes[index + 1].requestFocus();
     }
     setState(() {});
-  }
-
-  void _onWordKey(int index, KeyEvent event) {
-    if (event is KeyDownEvent &&
-        event.logicalKey == LogicalKeyboardKey.backspace &&
-        _wordCtrls[index].text.isEmpty &&
-        index > 0) {
-      _focusNodes[index - 1].requestFocus();
-    }
   }
 
   void _distributeWords(List<String> words, int startIdx) {
@@ -96,28 +101,19 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
     HapticFeedback.lightImpact();
   }
 
-  void _pastePasteModeToManual() {
-    final words = _pasteCtrl.text.trim().split(RegExp(r'\s+'));
-    _distributeWords(words, 0);
-  }
-
-  void _clearAll() {
-    for (final c in _wordCtrls) c.clear();
-    _pasteCtrl.clear();
-    setState(() {});
-  }
-
-  void _onRestore() {
+  void _onSave() {
     final words = _manualMode
         ? _wordCtrls.map((c) => c.text.trim()).toList()
         : _pasteCtrl.text.trim().split(RegExp(r'\s+'));
-    if (words.where((w) => w.isNotEmpty).length < 12) {
+    final filled = words.where((w) => w.isNotEmpty).toList();
+    if (filled.length < _wordCount) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter all 24 words')),
+        SnackBar(content: Text('Please enter all $_wordCount words')),
       );
       return;
     }
-    widget.onRestore?.call();
+    final phrase = filled.join(' ');
+    widget.onSave?.call(phrase);
   }
 
   @override
@@ -129,27 +125,39 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
           _buildAppBar(),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeader(),
-                  const SizedBox(height: 24),
-                  _buildPasteBar(),
-                  const SizedBox(height: 16),
+                  const Text('Recovery Phrase',
+                      style: TextStyle(
+                          fontSize: 28,
+                          height: 36 / 28,
+                          fontWeight: FontWeight.w600,
+                          color: _onSurface)),
+                  const SizedBox(height: 4),
+                  Text(
+                    _manualMode
+                        ? 'Enter your $_wordCount-word phrase in order'
+                        : 'Paste your $_wordCount-word phrase separated by spaces',
+                    style: const TextStyle(
+                        fontSize: 14,
+                        color: _onSurfaceVariant,
+                        height: 20 / 14),
+                  ),
+                  const SizedBox(height: 20),
+                  _buildWordCountSelector(),
+                  const SizedBox(height: 12),
                   _buildModeSelector(),
                   const SizedBox(height: 16),
-                  _manualMode
-                      ? _buildManualGrid()
-                      : _buildPasteArea(),
-                  const SizedBox(height: 24),
-                  _buildSecurityWarning(),
-                  const SizedBox(height: 24),
-                  _buildActionButtons(),
+                  _buildPasteBar(),
+                  const SizedBox(height: 12),
+                  _manualMode ? _buildManualGrid() : _buildPasteArea(),
                 ],
               ),
             ),
           ),
+          _buildSaveButton(),
         ],
       ),
     );
@@ -158,103 +166,58 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
   Widget _buildAppBar() {
     return Container(
       color: _surface,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: SafeArea(
         bottom: false,
         child: Row(
           children: [
             IconButton(
-              icon: Icon(Icons.arrow_back, color: _onSurfaceVariant),
-              onPressed: () => widget.onCancel?.call(),
+              icon: const Icon(Icons.arrow_back, color: _onSurface),
+              onPressed: () => Navigator.of(context).pop(),
             ),
-            const Text('GhostKey',
+            const Text('Recovery Phrase',
                 style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    color: _primary)),
-            const Spacer(),
-            const Icon(Icons.shield, color: _primary),
-            const SizedBox(width: 16),
-            Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                color: _primaryFixedDim,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.person,
-                  color: _onPrimaryFixed, size: 20),
-            ),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: _onSurface)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Enter Recovery Phrase',
-            style: TextStyle(
-                fontSize: 28,
-                height: 36 / 28,
-                fontWeight: FontWeight.w600,
-                color: _onSurface)),
-        const SizedBox(height: 8),
-        RichText(
-          text: const TextSpan(
-            style: TextStyle(
-                fontSize: 14,
-                height: 20 / 14,
-                color: _onSurfaceVariant),
-            children: [
-              TextSpan(text: 'This 24-word seed phrase is the '),
-              TextSpan(
-                text: 'only way',
-                style: TextStyle(
-                    color: _primary, fontWeight: FontWeight.w700),
-              ),
-              TextSpan(
-                text:
-                    ' to regain access to your encrypted vault. If lost, your digital assets cannot be recovered even by GhostKey support.',
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPasteBar() {
+  Widget _buildWordCountSelector() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        GestureDetector(
-          onTap: _pasteFromClipboard,
-          child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: _secondaryContainer,
-              borderRadius: BorderRadius.circular(9999),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Icon(Icons.content_paste,
-                    size: 18, color: _onSecondaryContainer),
-                SizedBox(width: 6),
-                Text('Paste from clipboard',
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: _onSecondaryContainer)),
-              ],
+      children: _wordCounts.map((n) {
+        final active = n == _wordCount;
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(right: n == 12 ? 8 : 0),
+            child: GestureDetector(
+              onTap: () => _setWordCount(n),
+              child: Container(
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: active ? _primary : _surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: active ? _primary : _outlineVariant,
+                  ),
+                ),
+                child: Text(
+                  '$n words',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: active ? _onPrimary : _onSurfaceVariant,
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
-      ],
+        );
+      }).toList(),
     );
   }
 
@@ -263,13 +226,13 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: _surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         children: [
           _modeChip('Manual', _manualMode, () {
             if (!_manualMode) {
-              _pastePasteModeToManual();
+              _pasteCtrlToManual();
               setState(() => _manualMode = true);
             }
           }),
@@ -289,6 +252,11 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
     );
   }
 
+  void _pasteCtrlToManual() {
+    final words = _pasteCtrl.text.trim().split(RegExp(r'\s+'));
+    _distributeWords(words, 0);
+  }
+
   Widget _modeChip(String label, bool active, VoidCallback onTap) {
     return Expanded(
       child: GestureDetector(
@@ -299,9 +267,9 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
           decoration: BoxDecoration(
             color: active ? _surface : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
-            border: active
-                ? Border.all(color: _outlineVariant)
-                : Border.all(color: Colors.transparent),
+            border: Border.all(
+              color: active ? _outlineVariant : Colors.transparent,
+            ),
           ),
           alignment: Alignment.center,
           child: Text(label,
@@ -314,10 +282,40 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
     );
   }
 
+  Widget _buildPasteBar() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        GestureDetector(
+          onTap: _pasteFromClipboard,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: _secondaryContainer,
+              borderRadius: BorderRadius.circular(9999),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.content_paste,
+                    size: 18, color: _onSecondaryContainer),
+                SizedBox(width: 6),
+                Text('Paste',
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: _onSecondaryContainer)),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildManualGrid() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 2 cols on narrow, 3 on medium, 4 on wide
         final crossAxisCount =
             constraints.maxWidth > 600 ? 4 : (constraints.maxWidth > 400 ? 3 : 2);
         return GridView.builder(
@@ -325,14 +323,12 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 2.2,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            childAspectRatio: 2.4,
           ),
           itemCount: _wordCount,
-          itemBuilder: (context, i) {
-            return _wordInput(i);
-          },
+          itemBuilder: (context, i) => _wordInput(i),
         );
       },
     );
@@ -340,15 +336,13 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
 
   Widget _wordInput(int i) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: _surfaceContainerLow,
         borderRadius: BorderRadius.circular(8),
         border: Border(
           bottom: BorderSide(
-            color: _wordCtrls[i].text.isNotEmpty
-                ? _primary
-                : Colors.transparent,
+            color: _wordCtrls[i].text.isNotEmpty ? _primary : Colors.transparent,
             width: 2,
           ),
         ),
@@ -377,12 +371,11 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
                 hintStyle: TextStyle(color: _outlineVariant),
                 contentPadding: EdgeInsets.zero,
               ),
-              style: const TextStyle(
-                  fontSize: 14, color: _onSurface),
+              style: const TextStyle(fontSize: 14, color: _onSurface),
               autocorrect: false,
               enableSuggestions: false,
+              textCapitalization: TextCapitalization.none,
               onChanged: (v) => _onWordChanged(i, v),
-              onTap: () => setState(() {}),
             ),
           ),
         ],
@@ -397,7 +390,7 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _outlineVariant),
       ),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       child: TextField(
         controller: _pasteCtrl,
         maxLines: 8,
@@ -411,7 +404,7 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
           isDense: true,
           border: InputBorder.none,
           hintText:
-              'Paste your 24-word recovery phrase here, separated by spaces.\n\nExample: word1 word2 word3 word4 ...',
+              'Paste your recovery phrase here, separated by spaces.',
           hintStyle: TextStyle(color: _outlineVariant),
         ),
         onChanged: (_) => setState(() {}),
@@ -419,84 +412,30 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
     );
   }
 
-  Widget _buildSecurityWarning() {
+  Widget _buildSaveButton() {
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _surfaceContainerHighest.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _outlineVariant.withOpacity(0.3)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.warning_amber_rounded,
-              color: _error, size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text('Security Protocol',
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: _onSurface)),
-                SizedBox(height: 4),
-                Text(
-                  'Ensure no one is watching your screen. GhostKey will perform a local decryption of your master key using this phrase. Your data never leaves your device unencrypted.',
-                  style: TextStyle(
-                      fontSize: 14,
-                      height: 20 / 14,
-                      color: _onSurfaceVariant),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Column(
-      children: [
-        SizedBox(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: _onRestore,
+            onPressed: _onSave,
             style: ElevatedButton.styleFrom(
               backgroundColor: _primary,
               foregroundColor: _onPrimary,
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 10),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
-              elevation: 2,
+              elevation: 0,
             ),
-            icon: const Icon(Icons.lock_open),
-            label: const Text('Decrypt & Restore',
+            icon: const Icon(Icons.check, size: 18),
+            label: const Text('Save',
                 style: TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w600)),
+                    fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.2)),
           ),
         ),
-        const SizedBox(height: 12),
-        TextButton(
-          onPressed: _clearAll,
-          child: const Text('Clear all',
-              style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: _outline)),
-        ),
-        TextButton(
-          onPressed: () => widget.onCancel?.call(),
-          child: const Text('Cancel and return to login',
-              style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: _outline)),
-        ),
-      ],
+      ),
     );
   }
 }

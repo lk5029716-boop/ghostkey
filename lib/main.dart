@@ -38,14 +38,42 @@ void main() async {
   runApp(GhostKeyApp(prefs: prefs));
 }
 
-class GhostKeyApp extends StatelessWidget {
+class GhostKeyApp extends StatefulWidget {
   final SharedPreferences prefs;
   const GhostKeyApp({super.key, required this.prefs});
 
   @override
+  State<GhostKeyApp> createState() => _GhostKeyAppState();
+}
+
+class _GhostKeyAppState extends State<GhostKeyApp> {
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ready = true;
+  }
+
+  void _goToMain() {
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const MainShell()),
+    );
+  }
+
+  Widget _buildHome() {
+    final hasPin = widget.prefs.getString('pin') != null;
+    if (hasPin) {
+      return PinUnlockScreen(onUnlock: _goToMain);
+    }
+    return const OnboardingScreen();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Provider<SharedPreferences>.value(
-      value: prefs,
+      value: widget.prefs,
       child: MaterialApp(
         title: 'GhostKey',
         debugShowCheckedModeBanner: false,
@@ -69,7 +97,7 @@ class GhostKeyApp extends StatelessWidget {
           ),
           useMaterial3: true,
         ),
-        home: const OnboardingScreen(),
+        home: _ready ? _buildHome() : const Scaffold(body: SizedBox.shrink()),
       ),
     );
   }
@@ -322,7 +350,6 @@ class _MainShellState extends State<MainShell> {
     const VaultDashboard(),
     VaultPage(),
     const HeirsPage(),
-    const _ActivityPlaceholder(),
     const SettingsScreen(),
   ];
 
@@ -341,7 +368,6 @@ class _MainShellState extends State<MainShell> {
         const VaultDashboard(),
         VaultPage(filterNotifier: _vaultFilterNotifier),
         const HeirsPage(),
-        const _ActivityPlaceholder(),
         const SettingsScreen(),
       ]),
       floatingActionButton: _currentIndex == 0
@@ -388,19 +414,10 @@ class _MainShellState extends State<MainShell> {
           NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home, color: kPrimary), label: 'Home'),
           NavigationDestination(icon: const Icon(Icons.lock_outlined), selectedIcon: const Icon(Icons.lock, color: kPrimary), label: 'Vault'),
           NavigationDestination(icon: const Icon(Icons.group_outlined), selectedIcon: const Icon(Icons.group, color: kPrimary), label: 'Heirs'),
-          NavigationDestination(icon: const Icon(Icons.notifications_outlined), selectedIcon: const Icon(Icons.notifications, color: kPrimary), label: 'Activity'),
           NavigationDestination(icon: const Icon(Icons.settings_outlined), selectedIcon: const Icon(Icons.settings, color: kPrimary), label: 'Settings'),
         ],
       ),
     );
-  }
-}
-
-class _ActivityPlaceholder extends StatelessWidget {
-  const _ActivityPlaceholder();
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(backgroundColor: kSurface, body: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.notifications, size: 64, color: kOutlineVariant), const SizedBox(height: 16), const Text('Activity \u2014 coming soon', style: TextStyle(color: kOnSurfaceVariant, fontSize: 16))])));
   }
 }
 
@@ -582,7 +599,6 @@ class _VaultPageState extends State<VaultPage> {
       backgroundColor: kSurface,
       body: SafeArea(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Row(children: [const Icon(Icons.menu, color: kPrimary, size: 24), const SizedBox(width: 12), Text('GhostKey', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kPrimary))]), Container(width: 32, height: 32, decoration: BoxDecoration(color: kSurfaceContainerHigh, shape: BoxShape.circle), child: const Icon(Icons.person, color: kOnSurfaceVariant, size: 18))])),
           Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Vault', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: kOnSurface)), IconButton(onPressed: () {}, icon: const Icon(Icons.create_new_folder, color: kOnSurfaceVariant, size: 28))])),
           Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Container(height: 48, padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: kSurfaceContainerLow, borderRadius: BorderRadius.circular(12), border: Border.all(color: kSurfaceContainerHighest)), child: Row(children: [const Icon(Icons.search, color: kOnSurfaceVariant, size: 20), const SizedBox(width: 12), const Expanded(child: TextField(style: TextStyle(color: kOnSurface, fontSize: 14), decoration: InputDecoration(hintText: 'Search secrets', hintStyle: TextStyle(color: kOnSurfaceVariant, fontSize: 14), border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero)))]))),
           SizedBox(height: 44, child: ListView.separated(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: _filters.length, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (context, index) { final f = _filters[index]; final isActive = f == _selectedFilter; return GestureDetector(onTap: () => _setFilter(f), child: Container(padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: isActive ? Border.all(color: kPrimary, width: 1.5) : Border.all(color: kSurfaceContainerHighest)), alignment: Alignment.center, child: Text(f, style: TextStyle(color: isActive ? kPrimary : kOnSurfaceVariant, fontSize: 14, fontWeight: FontWeight.w500)))); })),
@@ -1909,22 +1925,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(
         backgroundColor: surface,
         elevation: 0,
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Icon(Icons.shield, size: 24, color: primary),
-        ),
         title: Text('Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: primary)),
         centerTitle: false,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: kSecondaryContainer,
-              child: Icon(Icons.person, size: 18, color: onSurface),
-            ),
-          ),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16),
