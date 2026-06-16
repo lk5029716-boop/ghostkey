@@ -10,6 +10,8 @@ import 'package:crypto/crypto.dart';
 import 'vault_data.dart';
 import 'vault_screens.dart';
 import 'qr_scanner_screen.dart';
+import 'pin_unlock_screen.dart';
+import 'seed_phrase_restore_screen.dart';
 
 const Color kSurface = Color(0xFFF8F9FA);
 const Color kOnSurface = Color(0xFF191C1D);
@@ -354,6 +356,7 @@ class _MainShellState extends State<MainShell> {
                   valueListenable: _vaultFilterNotifier,
                   builder: (context, filter, _) {
                     final is2FA = filter == '2FA';
+                    final isSeeds = filter == 'Seeds';
                     return FloatingActionButton(
                       onPressed: is2FA
                           ? () {
@@ -361,7 +364,13 @@ class _MainShellState extends State<MainShell> {
                                 MaterialPageRoute(builder: (_) => const QrScannerScreen()),
                               );
                             }
-                          : () {},
+                          : isSeeds
+                              ? () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (_) => const SeedPhraseRestoreScreen()),
+                                  );
+                                }
+                              : () {},
                       backgroundColor: kPrimary,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       child: const Icon(Icons.add, color: kOnPrimary, size: 28),
