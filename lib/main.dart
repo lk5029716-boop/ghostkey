@@ -3,7 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'dart:math' as math;
+import 'package:crypto/crypto.dart';
 import 'vault_data.dart';
 import 'vault_screens.dart';
 
@@ -230,6 +233,51 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
+// ═══════════════════════════════════════════════════════════════
+// TOTP GENERATOR (for 2FA list items)
+// ═══════════════════════════════════════════════════════════════
+String _generateTOTP(String secret, {int period = 30, int digits = 6}) {
+  final key = _base32Decode(secret.toUpperCase().replaceAll(' ', ''));
+  if (key.isEmpty) return '------';
+  final time = DateTime.now().millisecondsSinceEpoch ~/ 1000 ~/ period;
+  final timeBytes = Uint8List(8);
+  final bd = ByteData.view(timeBytes.buffer);
+  bd.setUint64(0, time, Endian.big);
+  final hmac = Hmac(sha1, key);
+  final hash = hmac.convert(timeBytes).bytes;
+  final offset = hash[hash.length - 1] & 0x0F;
+  final binary = ((hash[offset] & 0x7F) << 24) |
+      ((hash[offset + 1] & 0xFF) << 16) |
+      ((hash[offset + 2] & 0xFF) << 8) |
+      (hash[offset + 3] & 0xFF);
+  final otp = binary % _pow10(digits);
+  return otp.toString().padLeft(digits, '0');
+}
+
+Uint8List _base32Decode(String input) {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  final output = <int>[];
+  int buffer = 0;
+  int bitsLeft = 0;
+  for (final char in input.codeUnits) {
+    final idx = alphabet.codeUnits.indexOf(char);
+    if (idx < 0) continue;
+    buffer = (buffer << 5) | idx;
+    bitsLeft += 5;
+    if (bitsLeft >= 8) {
+      bitsLeft -= 8;
+      output.add((buffer >> bitsLeft) & 0xFF);
+    }
+  }
+  return Uint8List.fromList(output);
+}
+
+int _pow10(int n) {
+  int r = 1;
+  for (int i = 0; i < n; i++) r *= 10;
+  return r;
+}
+
 void _showAddSecretSheet(BuildContext context, {String? filter}) {
   final allOptions = [
     _AddSecretItem(icon: Icons.lock, iconColor: const Color(0xFF1976D2), bgColor: const Color(0xFFBBDEFB), title: 'Password', subtitle: 'Store website or app passwords'),
@@ -358,6 +406,131 @@ class _ActivityPlaceholder extends StatelessWidget {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// 2FA TOTP LIST ITEM — shows live code + circular timer inline
+// ═══════════════════════════════════════════════════════════════
+class _TotpListItem extends StatefulWidget {
+  final VaultItem item;
+  const _TotpListItem({required this.item});
+
+  @override
+  State<_TotpListItem> createState() => _TotpListItemState();
+}
+
+class _TotpListItemState extends State<_TotpListItem> {
+  Timer? _timer;
+  String _currentCode = '';
+  int _secondsLeft = 30;
+
+  @override
+  void initState() {
+    super.initState();
+    _generateCode();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _generateCode() {
+    final secret = widget.item.fields['TOTP Secret'] ?? '';
+    if (secret.isNotEmpty) {
+      _currentCode = _generateTOTP(secret);
+    }
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    _secondsLeft = 30 - (now % 30);
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
+      setState(() => _secondsLeft--);
+      if (_secondsLeft <= 0) {
+        _generateCode();
+        setState(() => _secondsLeft = 30);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = (30 - _secondsLeft) / 30.0;
+    final codeFormatted = _currentCode.length == 6
+        ? '${_currentCode.substring(0, 3)} ${_currentCode.substring(3)}'
+        : _currentCode;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+      child: Row(
+        children: [
+          // Service icon
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: kSurfaceContainer,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(widget.item.icon, size: 20, color: widget.item.iconColor),
+          ),
+          const SizedBox(width: 16),
+          // Title + subtitle
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(widget.item.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: kOnSurface)),
+                const SizedBox(height: 2),
+                Text(widget.item.subtitle, style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Live code
+          Text(
+            codeFormatted,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              fontFamily: 'monospace',
+              color: kPrimary,
+              letterSpacing: 3,
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Circular countdown timer
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CustomPaint(
+                  size: const Size(32, 32),
+                  painter: _CircularProgressPainter(
+                    progress: progress,
+                    backgroundColor: kSurfaceContainerHighest,
+                    progressColor: kPrimary,
+                    strokeWidth: 3,
+                  ),
+                ),
+                Text(
+                  '${_secondsLeft}s',
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: kOnSurface),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class VaultPage extends StatefulWidget {
   const VaultPage({super.key});
   @override
@@ -410,6 +583,10 @@ class _VaultPageState extends State<VaultPage> {
               separatorBuilder: (_, __) => Container(margin: const EdgeInsets.only(left: 56), height: 1, color: kSurfaceContainerHighest),
               itemBuilder: (context, index) {
                 final item = items[index];
+                // 2FA filter: show live code + timer inline
+                if (_selectedFilter == '2FA') {
+                  return _TotpListItem(item: item);
+                }
                 return InkWell(
                   onTap: () {
                     Widget? page;
