@@ -299,7 +299,14 @@ class _VaultPageState extends State<VaultPage> {
             final titles = ['Google Account', 'Binance Account', 'Ledger Seed Phrase', 'AWS Root Key', 'Recovery Codes', 'Crypto.com API'];
             final subs = ['alex@gmail.com', 'alex@gmail.com', '24 words', 'AKIA....EXAMPLE', '8 codes', 'Read-only'];
             final dates = ['May 28, 2024', 'May 27, 2024', 'May 26, 2024', 'May 26, 2024', 'May 25, 2024', 'May 24, 2024'];
-            return InkWell(onTap: () {}, child: Padding(padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4), child: Row(children: [Container(width: 40, height: 40, decoration: BoxDecoration(color: kSurfaceContainer, shape: BoxShape.circle), child: Icon(icons[index], size: 20, color: kOnSurfaceVariant)), const SizedBox(width: 16), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(titles[index], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: kOnSurface)), const SizedBox(height: 2), Text(subs[index], style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant))])), const SizedBox(width: 8), Text(dates[index], style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant)), const SizedBox(width: 4), const Icon(Icons.chevron_right, size: 16, color: kOutlineVariant)])));
+            return InkWell(
+              onTap: () {
+                if (index == 2) { // Ledger Seed Phrase
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LedgerScreen()));
+                }
+              },
+              child: Padding(padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4), child: Row(children: [Container(width: 40, height: 40, decoration: BoxDecoration(color: kSurfaceContainer, shape: BoxShape.circle), child: Icon(icons[index], size: 20, color: kOnSurfaceVariant)), const SizedBox(width: 16), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(titles[index], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: kOnSurface)), const SizedBox(height: 2), Text(subs[index], style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant))])), const SizedBox(width: 8), Text(dates[index], style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant)), const SizedBox(width: 4), const Icon(Icons.chevron_right, size: 16, color: kOutlineVariant)])),
+            );
           })),
         ]),
       ),
