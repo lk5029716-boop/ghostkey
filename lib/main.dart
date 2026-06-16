@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'dart:math' as math;
+import 'vault_data.dart';
+import 'vault_screens.dart';
 
 const Color kSurface = Color(0xFFF8F9FA);
 const Color kOnSurface = Color(0xFF191C1D);
@@ -230,7 +232,13 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
-  final _pages = const [VaultDashboard(), VaultPage(), HeirsPage(), _ActivityPlaceholder(), SettingsScreen()];
+  final _pages = <Widget>[
+    const VaultDashboard(),
+    VaultPage(),
+    const HeirsPage(),
+    const _ActivityPlaceholder(),
+    const SettingsScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -282,10 +290,27 @@ class VaultPage extends StatefulWidget {
 
 class _VaultPageState extends State<VaultPage> {
   String _selectedFilter = 'All';
-  final _filters = ['All', 'Passwords', 'Seeds', 'API Keys', 'Codes'];
+  final _filters = ['All', 'Password', 'Seeds', 'API Keys', 'Codes'];
+
+  List<VaultItem> get _filteredItems {
+    if (_selectedFilter == 'All') return kVaultItems;
+    final cat = _filterToCategory(_selectedFilter);
+    return kVaultItems.where((i) => i.category == cat).toList();
+  }
+
+  VaultCategory _filterToCategory(String filter) {
+    switch (filter) {
+      case 'Password': return VaultCategory.password;
+      case 'Seeds': return VaultCategory.seeds;
+      case 'API Keys': return VaultCategory.apiKeys;
+      case 'Codes': return VaultCategory.codes;
+      default: return VaultCategory.password;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final items = _filteredItems;
     return Scaffold(
       backgroundColor: kSurface,
       body: SafeArea(
@@ -298,23 +323,26 @@ class _VaultPageState extends State<VaultPage> {
           Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: 6,
+              itemCount: items.length,
               separatorBuilder: (_, __) => Container(margin: const EdgeInsets.only(left: 56), height: 1, color: kSurfaceContainerHighest),
               itemBuilder: (context, index) {
-                final icons = [Icons.vpn_key, Icons.currency_bitcoin, Icons.memory, Icons.dialpad, Icons.play_circle_fill, Icons.vpn_key];
-                final titles = ['Google Account', 'Binance Account', 'Ledger Seed Phrase', 'AWS Root Key', 'Recovery Codes', 'Crypto.com API'];
-                final subs = ['alex@gmail.com', 'alex@gmail.com', '24 words', 'AKIA....EXAMPLE', '8 codes', 'Read-only'];
-                final dates = ['May 28, 2024', 'May 27, 2024', 'May 26, 2024', 'May 26, 2024', 'May 25, 2024', 'May 24, 2024'];
+                final item = items[index];
                 return InkWell(
                   onTap: () {
                     Widget page;
-                    switch (index) {
-                      case 0: page = const GoogleAccountScreen(); break;
-                      case 1: page = const BinanceAccountScreen(); break;
-                      case 2: page = const LedgerScreen(); break;
-                      case 3: page = const AwsRootKeyScreen(); break;
-                      case 4: page = const RecoveryCodesScreen(); break;
-                      default: return;
+                    switch (item.category) {
+                      case VaultCategory.password:
+                        page = PasswordDetailScreen(item: item);
+                        break;
+                      case VaultCategory.seeds:
+                        page = SeedsDetailScreen(item: item);
+                        break;
+                      case VaultCategory.apiKeys:
+                        page = ApiKeysDetailScreen(item: item);
+                        break;
+                      case VaultCategory.codes:
+                        page = CodesDetailScreen(item: item);
+                        break;
                     }
                     Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
                   },
@@ -322,15 +350,15 @@ class _VaultPageState extends State<VaultPage> {
                     padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
                     child: Row(
                       children: [
-                        Container(width: 40, height: 40, decoration: BoxDecoration(color: kSurfaceContainer, shape: BoxShape.circle), child: Icon(icons[index], size: 20, color: kOnSurfaceVariant)),
+                        Container(width: 40, height: 40, decoration: BoxDecoration(color: item.iconBgColor, shape: BoxShape.circle), child: Icon(item.icon, size: 20, color: item.iconColor)),
                         const SizedBox(width: 16),
                         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(titles[index], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: kOnSurface)),
+                          Text(item.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: kOnSurface)),
                           const SizedBox(height: 2),
-                          Text(subs[index], style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
+                          Text(item.subtitle, style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
                         ])),
                         const SizedBox(width: 8),
-                        Text(dates[index], style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant)),
+                        Text(item.date, style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant)),
                         const SizedBox(width: 4),
                         const Icon(Icons.chevron_right, size: 16, color: kOutlineVariant),
                       ],
@@ -342,9 +370,9 @@ class _VaultPageState extends State<VaultPage> {
           ),
         ],
       ),
-      ),
-    );
-  }
+    ),
+  );
+}
 }
 
 // Ledger Screen - matches HTML design
