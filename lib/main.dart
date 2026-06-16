@@ -306,8 +306,6 @@ class _VaultPageState extends State<VaultPage> {
 }
 
 // Ledger Screen - matches HTML design
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'dart:async';
 
 class LedgerScreen extends StatefulWidget {
