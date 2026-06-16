@@ -324,12 +324,14 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _pages),
-      floatingActionButton: FloatingActionButton(
-              onPressed: () {},
+      floatingActionButton: _currentIndex == 0
+          ? FloatingActionButton(
+              onPressed: () => _showAddSecretSheet(context),
               backgroundColor: kPrimary,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: const Icon(Icons.qr_code_scanner, color: kOnPrimary, size: 28),
-            ),
+              child: const Icon(Icons.add, color: kOnPrimary, size: 28),
+            )
+          : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
@@ -410,7 +412,7 @@ class _VaultPageState extends State<VaultPage> {
                 final item = items[index];
                 return InkWell(
                   onTap: () {
-                    Widget page;
+                    Widget? page;
                     switch (item.category) {
                       case VaultCategory.password:
                         page = PasswordDetailScreen(item: item);
@@ -422,10 +424,11 @@ class _VaultPageState extends State<VaultPage> {
                         page = ApiKeysDetailScreen(item: item);
                         break;
                       case VaultCategory.codes:
-                        page = CodesDetailScreen(item: item);
                         break;
                     }
-                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+                    if (page != null) {
+                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => page!));
+                    }
                   },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
