@@ -82,13 +82,14 @@ class _GhostKeyAppState extends State<GhostKeyApp> {
 
   Widget _unlockScreen() {
     final stored = widget.prefs.getString('pin') ?? '';
+    final navigator = Navigator.of(context);
     return PinScreen(
       title: 'Unlock GhostKey',
       subtitle: 'Use your biometric or PIN to continue',
       mode: PinScreenMode.unlock,
       expectedPin: stored,
       onUnlock: (_) {
-        Navigator.of(context).pushReplacement(
+        navigator.pushReplacement(
           MaterialPageRoute(builder: (_) => const MainShell()),
         );
       },
@@ -129,7 +130,25 @@ class OnboardingScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(children: [
               SizedBox(width: double.infinity, child: FilledButton(
-                onPressed: () { Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => PinScreen(title: 'Create PIN', subtitle: 'Set a 6-digit PIN to secure your vault', mode: PinScreenMode.setup, onUnlock: (pin) { context.read<SharedPreferences>().setString('pin', pin); Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const MainShell())); }))); },
+                onPressed: () {
+                  final prefs = context.read<SharedPreferences>();
+                  final navigator = Navigator.of(context);
+                  navigator.pushReplacement(
+                    MaterialPageRoute(
+                      builder: (_) => PinScreen(
+                        title: 'Create PIN',
+                        subtitle: 'Set a 6-digit PIN to secure your vault',
+                        mode: PinScreenMode.setup,
+                        onUnlock: (pin) {
+                          prefs.setString('pin', pin);
+                          navigator.pushReplacement(
+                            MaterialPageRoute(builder: (_) => const MainShell()),
+                          );
+                        },
+                      ),
+                    ),
+                  );
+                },
                 style: FilledButton.styleFrom(backgroundColor: kPrimary, foregroundColor: kOnPrimary, minimumSize: const Size.fromHeight(52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)), elevation: 4),
                 child: const Text('Get started', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
               )),
