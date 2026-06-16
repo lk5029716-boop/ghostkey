@@ -12,7 +12,6 @@ import 'vault_screens.dart';
 import 'qr_scanner_screen.dart';
 import 'pin_unlock_screen.dart' show PinScreen, PinScreenMode;
 import 'seed_phrase_restore_screen.dart';
-import 'splash_screen.dart';
 
 const Color kSurface = Color(0xFFF8F9FA);
 const Color kOnSurface = Color(0xFF191C1D);
@@ -48,30 +47,9 @@ class GhostKeyApp extends StatefulWidget {
 }
 
 class _GhostKeyAppState extends State<GhostKeyApp> {
-  bool _ready = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _ready = true;
-  }
-
-  void _goToMain() {
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const MainShell()),
-    );
-  }
-
-  void _onSplashComplete() {
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final hasPin = widget.prefs.getString('pin') != null;
     return Provider<SharedPreferences>.value(
       value: widget.prefs,
       child: MaterialApp(
@@ -97,10 +75,23 @@ class _GhostKeyAppState extends State<GhostKeyApp> {
           ),
           useMaterial3: true,
         ),
-        home: _ready
-            ? SplashScreen(onComplete: _onSplashComplete)
-            : const Scaffold(body: SizedBox.shrink()),
+        home: hasPin ? _unlockScreen() : const OnboardingScreen(),
       ),
+    );
+  }
+
+  Widget _unlockScreen() {
+    final stored = widget.prefs.getString('pin') ?? '';
+    return PinScreen(
+      title: 'Unlock GhostKey',
+      subtitle: 'Use your biometric or PIN to continue',
+      mode: PinScreenMode.unlock,
+      expectedPin: stored,
+      onUnlock: (_) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainShell()),
+        );
+      },
     );
   }
 }
@@ -138,7 +129,7 @@ class OnboardingScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(children: [
               SizedBox(width: double.infinity, child: FilledButton(
-                onPressed: () {},
+                onPressed: () { Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => PinScreen(title: 'Create PIN', subtitle: 'Set a 6-digit PIN to secure your vault', mode: PinScreenMode.setup, onUnlock: (pin) { context.read<SharedPreferences>().setString('pin', pin); Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const MainShell())); }))); },
                 style: FilledButton.styleFrom(backgroundColor: kPrimary, foregroundColor: kOnPrimary, minimumSize: const Size.fromHeight(52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)), elevation: 4),
                 child: const Text('Get started', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
               )),
