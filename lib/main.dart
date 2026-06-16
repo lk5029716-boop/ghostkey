@@ -233,6 +233,7 @@ class MainShell extends StatefulWidget {
 void _showAddSecretSheet(BuildContext context) {
   showModalBottomSheet(
     context: context,
+    isScrollControlled: true,
     backgroundColor: kSurface,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
     builder: (ctx) {
@@ -252,13 +253,18 @@ void _showAddSecretSheet(BuildContext context) {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(child: Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: kOutlineVariant, borderRadius: BorderRadius.circular(2)))),
+              Center(child: Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 12), decoration: BoxDecoration(color: kOutlineVariant, borderRadius: BorderRadius.circular(2)))),
               const Text('Add Secret', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: kOnSurface)),
               const SizedBox(height: 4),
               const Text('Select the type of secret you want to add', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
-              const SizedBox(height: 16),
-              ...options.map((item) => _buildAddSheetItem(ctx, item)),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: options.map((item) => _buildAddSheetItem(ctx, item)).toList(),
+                ),
+              ),
+              const SizedBox(height: 8),
             ],
           ),
         ),
@@ -359,7 +365,7 @@ class _VaultPageState extends State<VaultPage> {
   List<VaultItem> get _filteredItems {
     if (_selectedFilter == 'All') return kVaultItems;
     if (_selectedFilter == '2FA') {
-      return kVaultItems.where((i) => i.fields.containsKey('TOTP Secret') || i.fields.containsKey('Backup Codes')).toList();
+      return kVaultItems.where((i) => i.fields.containsKey('TOTP Secret')).toList();
     }
     final cat = _filterToCategory(_selectedFilter);
     return kVaultItems.where((i) => i.category == cat).toList();
