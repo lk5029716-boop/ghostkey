@@ -305,6 +305,336 @@ class _VaultPageState extends State<VaultPage> {
   }
 }
 
+// Ledger Screen - matches HTML design
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:async';
+
+class LedgerScreen extends StatefulWidget {
+  const LedgerScreen({super.key});
+
+  @override
+  State<LedgerScreen> createState() => _LedgerScreenState();
+}
+
+class _LedgerScreenState extends State<LedgerScreen> {
+  bool _revealed = false;
+  int _timer = 30;
+  Timer? _t;
+
+  final List<String> _words = List.generate(24, (i) => 'word${i + 1}');
+
+  // Color constants from HTML design
+  static const Color kBackground = Color(0xFFF8F9FA);
+  static const Color kSurface = Color(0xFFF8F9FA);
+  static const Color kSurfaceContainerLowest = Color(0xFFFFFFFF);
+  static const Color kSurfaceContainerLow = Color(0xFFF3F4F5);
+  static const Color kSurfaceContainerHigh = Color(0xFFE7E8E9);
+  static const Color kSurfaceContainerHighest = Color(0xFFE1E3E4);
+  static const Color kPrimary = Color(0xFF0D631B);
+  static const Color kOnPrimary = Color(0xFFFFFFFF);
+  static const Color kOnSurface = Color(0xFF191C1D);
+  static const Color kOnSurfaceVariant = Color(0xFF40493D);
+  static const Color kSecondaryContainer = Color(0xFFACF4A4);
+  static const Color kOnSecondaryContainer = Color(0xFF002203);
+  static const Color kOutlineVariant = Color(0xFFBFCABA);
+  static const Color kError = Color(0xFFBA1A1A);
+  static const Color kErrorContainer = Color(0xFFFFDAD6);
+  static const Color kOnErrorContainer = Color(0xFF93000A);
+  static const Color kWarning = Color(0xFFF59E0B);
+
+  @override
+  void dispose() {
+    _t?.cancel();
+    super.dispose();
+  }
+
+  void _reveal() {
+    setState(() {
+      _revealed = true;
+      _timer = 30;
+    });
+    _t?.cancel();
+    _t = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) { timer.cancel(); return; }
+      setState(() => _timer--);
+      if (_timer <= 0) {
+        timer.cancel();
+        if (mounted) setState(() => _revealed = false);
+      }
+    });
+  }
+
+  double get _progress => _revealed ? (30 - _timer) / 30 : 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kBackground,
+      appBar: AppBar(
+        backgroundColor: kBackground,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: kOnSurfaceVariant, size: 24),
+          onPressed: () => Navigator.pop(context),
+          style: IconButton.styleFrom(
+            backgroundColor: kSurfaceContainerLow,
+            shape: const CircleBorder(),
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.more_vert, color: kOnSurfaceVariant, size: 24),
+            onPressed: () {},
+            style: IconButton.styleFrom(
+              backgroundColor: kSurfaceContainerLow,
+              shape: const CircleBorder(),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          children: [
+            const SizedBox(height: 24),
+            // Hero Icon & Title
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: kSecondaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.vpn_key, size: 48, color: kOnSecondaryContainer),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Ledger Seed Phrase',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: kOnSurface, height: 32/24),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Seed Phrase',
+              style: TextStyle(fontSize: 14, color: kOnSurfaceVariant, height: 20/14),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            // Blurred Secret Container
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: kSurfaceContainerLowest,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: kSurfaceContainerHighest),
+              ),
+              child: Stack(
+                children: [
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: _revealed
+                        ? GridView.count(
+                            key: const ValueKey('revealed'),
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            crossAxisCount: 4,
+                            mainAxisSpacing: 16,
+                            crossAxisSpacing: 16,
+                            children: _words.map((w) => Center(
+                              child: Text(w, style: const TextStyle(fontSize: 16, color: kOnSurface, fontWeight: FontWeight.w400)),
+                            )).toList(),
+                          )
+                        : GridView.count(
+                            key: const ValueKey('blurred'),
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            crossAxisCount: 4,
+                            mainAxisSpacing: 16,
+                            crossAxisSpacing: 16,
+                            children: _words.map((w) => Center(
+                              child: Text(w, style: const TextStyle(fontSize: 16, color: kOnSurface, fontWeight: FontWeight.w400)),
+                            )).toList(),
+                          ),
+                  ),
+                  if (!_revealed)
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: kSurfaceContainerLowest.withOpacity(0.85),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Center(
+                          child: ElevatedButton.icon(
+                            onPressed: _reveal,
+                            icon: const Icon(Icons.visibility, size: 20, color: kOnSecondaryContainer),
+                            label: const Text('Reveal', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: kOnSecondaryContainer, letterSpacing: 0.1)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: kSecondaryContainer,
+                              foregroundColor: kOnSecondaryContainer,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9999)),
+                              elevation: 1,
+                              shadowColor: Colors.black26,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Warning Message
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.warning_amber_rounded, size: 16, color: kWarning),
+                const SizedBox(width: 8),
+                Text(
+                  'Make sure no one is watching your screen.',
+                  style: TextStyle(fontSize: 12, color: kWarning, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            // Actions List
+            Container(
+              decoration: BoxDecoration(
+                color: kSurfaceContainerLowest,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: kSurfaceContainerHighest),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: kSurfaceContainerLow,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                    ),
+                    child: const Text(
+                      'Actions',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, letterSpacing: 0.5, color: kOnSurfaceVariant, textBaseline: TextBaseline.alphabetic),
+                    ),
+                  ),
+                  _actionTile(Icons.content_copy_outlined, 'Copy to clipboard', () {
+                    Clipboard.setData(ClipboardData(text: _words.join(' ')));
+                    HapticFeedback.lightImpact();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Copied to clipboard'), duration: Duration(seconds: 2)),
+                    );
+                  }),
+                  const Divider(height: 1, thickness: 1, color: kSurfaceContainerHighest, indent: 56, endIndent: 16),
+                  _actionTile(Icons.upload_outlined, 'Export', () {}),
+                  const Divider(height: 1, thickness: 1, color: kSurfaceContainerHighest, indent: 56, endIndent: 16),
+                  _actionTile(Icons.edit_outlined, 'Edit', () {}),
+                  const Divider(height: 1, thickness: 1, color: kSurfaceContainerHighest, indent: 56, endIndent: 16),
+                  _actionTile(Icons.delete_outlined, 'Delete', () {}, isError: true),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Auto-hide Timer
+            AnimatedOpacity(
+              opacity: _revealed ? 1 : 0,
+              duration: const Duration(milliseconds: 300),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.timer_outlined, size: 16, color: kOnSurfaceVariant),
+                  const SizedBox(width: 8),
+                  Text('Auto-hide in $_timer s', style: TextStyle(fontSize: 12, color: kOnSurfaceVariant, fontWeight: FontWeight.w500)),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: CustomPaint(
+                      painter: _CircularProgressPainter(
+                        progress: _progress,
+                        backgroundColor: kSurfaceContainerHigh,
+                        progressColor: kPrimary,
+                        strokeWidth: 3,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _actionTile(IconData icon, String label, VoidCallback onTap, {bool isError = false}) {
+    return InkWell(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Icon(icon, size: 24, color: isError ? kError : kOnSurfaceVariant),
+            const SizedBox(width: 16),
+            Expanded(child: Text(label, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: isError ? kError : kOnSurface))),
+            Icon(Icons.chevron_right, size: 20, color: isError ? kError : kOnSurfaceVariant),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CircularProgressPainter extends CustomPainter {
+  final double progress;
+  final Color backgroundColor;
+  final Color progressColor;
+  final double strokeWidth;
+
+  _CircularProgressPainter({
+    required this.progress,
+    required this.backgroundColor,
+    required this.progressColor,
+    required this.strokeWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - strokeWidth / 2;
+    
+    // Background circle
+    canvas.drawCircle(center, radius, Paint()
+      ..color = backgroundColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round);
+    
+    // Progress arc
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -3.14159 / 2, // -90 degrees (start at top)
+      2 * 3.14159 * progress,
+      false,
+      Paint()
+        ..color = progressColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _CircularProgressPainter old) => old.progress != progress;
+}
+
 class HeirsPage extends StatelessWidget {
   const HeirsPage({super.key});
 
