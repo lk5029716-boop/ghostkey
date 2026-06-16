@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 import 'dart:math' as math;
 
 const Color kSurface = Color(0xFFF8F9FA);
@@ -306,7 +308,6 @@ class _VaultPageState extends State<VaultPage> {
 }
 
 // Ledger Screen - matches HTML design
-import 'dart:async';
 
 class LedgerScreen extends StatefulWidget {
   const LedgerScreen({super.key});
