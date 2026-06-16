@@ -179,7 +179,7 @@ class OnboardingScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 24),
                           _FeatureItem(
-                            icon: Icons.shield_person,
+                            icon: Icons.shield,
                             label: 'Secure inheritance',
                           ),
                         ],

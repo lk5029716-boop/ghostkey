@@ -1,5 +1,21 @@
 import 'package:flutter/material.dart';
 
+// ─── App Colors (matching HTML design system) ───
+class AppColors {
+  static const Color background = Color(0xFF0F1226);
+  static const Color surface = Color(0xFF151833);
+  static const Color surfaceCard = Color(0xFF1C2040);
+  static const Color primary = Color(0xFFF0D25A);
+  static const Color primaryGreen = Color(0xFF1B6D24);
+  static const Color primaryFixed = Color(0xFF88D982);
+  static const Color textPrimary = Colors.white;
+  static const Color textSecondary = Colors.white54;
+  static const Color textMuted = Colors.white24;
+  static const Color error = Color(0xFFBA1A1A);
+  static const Color warning = Color(0xFFFFA726);
+  static const Color success = Color(0xFF4CAF50);
+}
+
 // ─── Pin Keypad Input Widget ───
 class PinKeypadInput extends StatefulWidget {
   final void Function(String pin) onPinChanged;

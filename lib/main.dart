@@ -22,6 +22,7 @@ const Color kOutline = Color(0xFF707A6C);
 const Color kSurfaceVariant = Color(0xFFE1E3E4);
 const Color kOnSurfaceVariant = Color(0xFF40493D);
 const Color kError = Color(0xFFBA1A1A);
+const Color kWarning = Color(0xFFF59E0B);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -294,28 +295,53 @@ class _VaultPageState extends State<VaultPage> {
           Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Container(height: 48, padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: kSurfaceContainerLow, borderRadius: BorderRadius.circular(12), border: Border.all(color: kSurfaceContainerHighest)), child: Row(children: [const Icon(Icons.search, color: kOnSurfaceVariant, size: 20), const SizedBox(width: 12), const Expanded(child: TextField(style: TextStyle(color: kOnSurface, fontSize: 14), decoration: InputDecoration(hintText: 'Search secrets', hintStyle: TextStyle(color: kOnSurfaceVariant, fontSize: 14), border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero)))]))),
           SizedBox(height: 44, child: ListView.separated(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: _filters.length, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (context, index) { final f = _filters[index]; final isActive = f == _selectedFilter; return GestureDetector(onTap: () => setState(() => _selectedFilter = f), child: Container(padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: isActive ? kPrimary : kSurfaceContainer, borderRadius: BorderRadius.circular(20), border: isActive ? null : Border.all(color: kSurfaceContainerHighest)), alignment: Alignment.center, child: Text(f, style: TextStyle(color: isActive ? kOnPrimary : kOnSurfaceVariant, fontSize: 14, fontWeight: FontWeight.w500)))); })),
           const SizedBox(height: 8),
-          Expanded(child: ListView.separated(padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: 6, separatorBuilder: (_, __) => Container(margin: const EdgeInsets.only(left: 56), height: 1, color: kSurfaceContainerHighest), itemBuilder: (context, index) {
-            final icons = [Icons.vpn_key, Icons.currency_bitcoin, Icons.memory, Icons.dialpad, Icons.play_circle_fill, Icons.vpn_key];
-            final titles = ['Google Account', 'Binance Account', 'Ledger Seed Phrase', 'AWS Root Key', 'Recovery Codes', 'Crypto.com API'];
-            final subs = ['alex@gmail.com', 'alex@gmail.com', '24 words', 'AKIA....EXAMPLE', '8 codes', 'Read-only'];
-            final dates = ['May 28, 2024', 'May 27, 2024', 'May 26, 2024', 'May 26, 2024', 'May 25, 2024', 'May 24, 2024'];
-            return InkWell(
-              onTap: () {
-                Widget page;
-                switch (index) {
-                  case 0: page = const GoogleAccountScreen(); break;
-                  case 1: page = const BinanceAccountScreen(); break;
-                  case 2: page = const LedgerScreen(); break;
-                  case 3: page = const AwsRootKeyScreen(); break;
-                  case 4: page = const RecoveryCodesScreen(); break;
-                  default: return;
-                }
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: 6,
+              separatorBuilder: (_, __) => Container(margin: const EdgeInsets.only(left: 56), height: 1, color: kSurfaceContainerHighest),
+              itemBuilder: (context, index) {
+                final icons = [Icons.vpn_key, Icons.currency_bitcoin, Icons.memory, Icons.dialpad, Icons.play_circle_fill, Icons.vpn_key];
+                final titles = ['Google Account', 'Binance Account', 'Ledger Seed Phrase', 'AWS Root Key', 'Recovery Codes', 'Crypto.com API'];
+                final subs = ['alex@gmail.com', 'alex@gmail.com', '24 words', 'AKIA....EXAMPLE', '8 codes', 'Read-only'];
+                final dates = ['May 28, 2024', 'May 27, 2024', 'May 26, 2024', 'May 26, 2024', 'May 25, 2024', 'May 24, 2024'];
+                return InkWell(
+                  onTap: () {
+                    Widget page;
+                    switch (index) {
+                      case 0: page = const GoogleAccountScreen(); break;
+                      case 1: page = const BinanceAccountScreen(); break;
+                      case 2: page = const LedgerScreen(); break;
+                      case 3: page = const AwsRootKeyScreen(); break;
+                      case 4: page = const RecoveryCodesScreen(); break;
+                      default: return;
+                    }
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+                    child: Row(
+                      children: [
+                        Container(width: 40, height: 40, decoration: BoxDecoration(color: kSurfaceContainer, shape: BoxShape.circle), child: Icon(icons[index], size: 20, color: kOnSurfaceVariant)),
+                        const SizedBox(width: 16),
+                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(titles[index], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: kOnSurface)),
+                          const SizedBox(height: 2),
+                          Text(subs[index], style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
+                        ])),
+                        const SizedBox(width: 8),
+                        Text(dates[index], style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant)),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.chevron_right, size: 16, color: kOutlineVariant),
+                      ],
+                    ),
+                  ),
+                );
               },
-              child: Padding(padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4), child: Row(children: [Container(width: 40, height: 40, decoration: BoxDecoration(color: kSurfaceContainer, shape: BoxShape.circle), child: Icon(icons[index], size: 20, color: kOnSurfaceVariant)), const SizedBox(width: 16), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(titles[index], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: kOnSurface)), const SizedBox(height: 2), Text(subs[index], style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant))])), const SizedBox(width: 8), Text(dates[index], style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant)), const SizedBox(width: 4), const Icon(Icons.chevron_right, size: 16, color: kOutlineVariant)])),
-
-            );
-          })),
+            ),
+          ),
+        ],
+      ),
       ),
     );
   }
@@ -1222,6 +1248,7 @@ class _BinanceAccountScreenState extends State<BinanceAccountScreen> {
             revealed: _passwordRevealed,
             onReveal: () { setState(() => _passwordRevealed = true); _startTimer(() => setState(() => _passwordRevealed = false)); },
             warning: true,
+            onCopy: () { Clipboard.setData(ClipboardData(text: 'Bin@nce!Secure#9921')); HapticFeedback.lightImpact(); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied'), duration: Duration(seconds: 1))); },
           ),
           const SizedBox(height: 12),
           // 2FA Backup
