@@ -516,20 +516,225 @@ class _ProgressRing extends CustomPainter {
   bool shouldRepaint(covariant _ProgressRing old) => old.progress != progress;
 }
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool _biometric = true;
+  bool _emergencyAlerts = true;
+  bool _checkinReminders = true;
+
   @override
   Widget build(BuildContext context) {
+    final primary = kPrimary;
+    final onSurface = kOnSurface;
+    final onSurfaceVar = kOnSurfaceVariant;
+    final surface = kSurface;
+    final surfaceContainer = kSurfaceContainer;
+    final outlineVar = kOutlineVariant;
+    final error = kError;
+
     return Scaffold(
-      backgroundColor: kSurface,
-      appBar: AppBar(title: const Text('Settings', style: TextStyle(color: kOnSurface)), backgroundColor: kSurface, elevation: 0),
-      body: ListView(padding: const EdgeInsets.all(16), children: [
-        ListTile(leading: const Icon(Icons.timer, color: kOnSurfaceVariant), title: const Text('Inactivity Timer', style: TextStyle(color: kOnSurface)), subtitle: const Text('Configure timer duration', style: TextStyle(color: kOnSurfaceVariant)), trailing: const Icon(Icons.chevron_right, color: kOutline), onTap: () {}),
-        ListTile(leading: const Icon(Icons.people, color: kOnSurfaceVariant), title: const Text('Manage Heirs', style: TextStyle(color: kOnSurface)), subtitle: const Text('Add or remove heirs', style: TextStyle(color: kOnSurfaceVariant)), trailing: const Icon(Icons.chevron_right, color: kOutline), onTap: () {}),
-        ListTile(leading: const Icon(Icons.security, color: kOnSurfaceVariant), title: const Text('Change PIN', style: TextStyle(color: kOnSurface)), subtitle: const Text('Update your security PIN', style: TextStyle(color: kOnSurfaceVariant)), trailing: const Icon(Icons.chevron_right, color: kOutline), onTap: () {}),
-        ListTile(leading: const Icon(Icons.vpn_key, color: kOnSurfaceVariant), title: const Text('2FA', style: TextStyle(color: kOnSurface)), subtitle: const Text('Two-factor authentication', style: TextStyle(color: kOnSurfaceVariant)), trailing: const Icon(Icons.chevron_right, color: kOutline), onTap: () {}),
-        const Divider(),
-        ListTile(leading: const Icon(Icons.logout, color: kError), title: const Text('Lock Vault', style: TextStyle(color: kError)), onTap: () { Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const SplashScreen()), (r) => false); }),
+      backgroundColor: surface,
+      appBar: AppBar(
+        backgroundColor: surface,
+        elevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Icon(Icons.shield, size: 24, color: primary),
+        ),
+        title: Text('Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: primary)),
+        centerTitle: false,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: CircleAvatar(
+              radius: 16,
+              backgroundColor: kSecondaryContainer,
+              child: Icon(Icons.person, size: 18, color: onSurface),
+            ),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: [
+          const SizedBox(height: 8),
+          // Pro card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: surfaceContainer,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: outlineVar.withOpacity(0.3)),
+            ),
+            child: Row(children: [
+              Container(
+                width: 48, height: 48,
+                decoration: BoxDecoration(color: primary, shape: BoxShape.circle),
+                child: const Icon(Icons.workspace_premium, color: Colors.white),
+              ),
+              const SizedBox(width: 16),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('GhostKey Pro', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: onSurface)),
+                Text('Active until Oct 2025', style: TextStyle(fontSize: 14, color: onSurfaceVar)),
+              ])),
+              Icon(Icons.chevron_right, color: primary),
+            ]),
+          ),
+          const SizedBox(height: 24),
+
+          // Security section
+          _sectionHeader('Security', primary),
+          const SizedBox(height: 8),
+          _card([
+            _switchRow(Icons.fingerprint, 'Biometric Lock', _biometric, (v) => setState(() => _biometric = v)),
+            _divider(outlineVar),
+            _row(Icons.vpn_key, 'Change Master Password', chevron: true),
+            _divider(outlineVar),
+            _row(Icons.vibration, 'Two-Factor Authentication (2FA)', trailing: Text('Enabled', style: TextStyle(color: primary, fontSize: 12, fontWeight: FontWeight.w500))),
+            _divider(outlineVar),
+            _row(Icons.verified_user, 'Security Audit', trailing: Icon(Icons.warning, color: error, size: 20)),
+          ]),
+          const SizedBox(height: 24),
+
+          // Vault & Timer section
+          _sectionHeader('Vault & Timer', primary),
+          const SizedBox(height: 8),
+          _card([
+            _row(Icons.alarm_on, "Dead Man's Switch Duration", trailing: Text('6 Months', style: TextStyle(fontSize: 14, color: onSurfaceVar))),
+            _divider(outlineVar),
+            _row(Icons.update, 'Check-in Frequency', trailing: Text('Monthly', style: TextStyle(fontSize: 14, color: onSurfaceVar))),
+            _divider(outlineVar),
+            _row(Icons.ios_share, 'Data Export (Encrypted)', trailing: Icon(Icons.download, color: onSurfaceVar, size: 20)),
+          ]),
+          const SizedBox(height: 24),
+
+          // Notifications section
+          _sectionHeader('Notifications', primary),
+          const SizedBox(height: 8),
+          _card([
+            _switchRow(Icons.emergency, 'Emergency Alerts', _emergencyAlerts, (v) => setState(() => _emergencyAlerts = v)),
+            _divider(outlineVar),
+            _switchRow(Icons.event_available, 'Check-in Reminders', _checkinReminders, (v) => setState(() => _checkinReminders = v)),
+          ]),
+          const SizedBox(height: 24),
+
+          // Account & Plan section
+          _sectionHeader('Account & Plan', primary),
+          const SizedBox(height: 8),
+          _card([
+            _row(Icons.credit_card, 'Payment Methods', chevron: true),
+            _divider(outlineVar),
+            _row(Icons.person, 'Manage Account', chevron: true),
+          ]),
+          const SizedBox(height: 24),
+
+          // About section
+          _sectionHeader('About', primary),
+          const SizedBox(height: 8),
+          _card([
+            _row(Icons.policy, 'Privacy Policy', trailing: Icon(Icons.open_in_new, color: onSurfaceVar, size: 18)),
+            _divider(outlineVar),
+            _row(Icons.gavel, 'Terms of Service', trailing: Icon(Icons.open_in_new, color: onSurfaceVar, size: 18)),
+            _divider(outlineVar),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text('Version 1.0.4', style: TextStyle(fontSize: 12, color: onSurfaceVar)),
+                Text('Stable Release', style: TextStyle(fontSize: 12, color: onSurfaceVar)),
+              ]),
+            ),
+          ]),
+          const SizedBox(height: 24),
+
+          // Sign Out
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const SplashScreen()),
+                  (r) => false,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red[50],
+                foregroundColor: Colors.red[900],
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Icon(Icons.logout, size: 20),
+                const SizedBox(width: 8),
+                Text('Sign Out', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Center(child: Text('© 2024 GhostKey Security. All rights reserved.', style: TextStyle(fontSize: 12, color: onSurfaceVar.withOpacity(0.6)))),
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionHeader(String title, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: color, letterSpacing: 0.1)),
+    );
+  }
+
+  Widget _card(List<Widget> children) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFBFCABA).withOpacity(0.2)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4, offset: const Offset(0, 1))],
+      ),
+      child: Column(children: children),
+    );
+  }
+
+  Widget _divider(Color color) {
+    return Divider(height: 1, thickness: 1, color: color.withOpacity(0.1), indent: 56);
+  }
+
+  Widget _row(IconData icon, String title, {Widget? trailing, bool chevron = false}) {
+    return InkWell(
+      onTap: () {},
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(children: [
+          Icon(icon, size: 22, color: const Color(0xFF40493D)),
+          const SizedBox(width: 16),
+          Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: Color(0xFF191C1D)))),
+          trailing ?? (chevron ? const Icon(Icons.chevron_right, color: Color(0xFF40493D)) : const SizedBox.shrink()),
+        ]),
+      ),
+    );
+  }
+
+  Widget _switchRow(IconData icon, String title, bool value, ValueChanged<bool> onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(children: [
+        Icon(icon, size: 22, color: const Color(0xFF40493D)),
+        const SizedBox(width: 16),
+        Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: Color(0xFF191C1D)))),
+        Switch(
+          value: value,
+          onChanged: onChanged,
+          activeColor: const Color(0xFF2e7d32),
+          activeTrackColor: const Color(0xFF2e7d32).withOpacity(0.3),
+        ),
       ]),
     );
   }
