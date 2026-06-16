@@ -1,7 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:math' as math;
+
+const Color kSurface = Color(0xFFF8F9FA);
+const Color kOnSurface = Color(0xFF191C1D);
+const Color kSurfaceContainer = Color(0xFFF3F4F5);
+const Color kSurfaceContainerLow = Color(0xFFF3F4F5);
+const Color kSurfaceContainerHigh = Color(0xFFE1E3E4);
+const Color kSurfaceContainerHighest = Color(0xFFE1E3E4);
+const Color kPrimary = Color(0xFF0D631B);
+const Color kOnPrimary = Colors.white;
+const Color kSecondary = Color(0xFF2A6B2C);
+const Color kOnSecondary = Colors.white;
+const Color kSecondaryContainer = Color(0xFFACF4A4);
+const Color kOnSecondaryContainer = Color(0xFF002203);
+const Color kOutlineVariant = Color(0xFFBFCABA);
+const Color kOutline = Color(0xFF707A6C);
+const Color kSurfaceVariant = Color(0xFFE1E3E4);
+const Color kOnSurfaceVariant = Color(0xFF40493D);
+const Color kError = Color(0xFFBA1A1A);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,13 +39,22 @@ class GhostKeyApp extends StatelessWidget {
         title: 'GhostKey',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          brightness: Brightness.dark,
-          scaffoldBackgroundColor: const Color(0xFF0F1226),
-          colorScheme: const ColorScheme.dark(
-            primary: Color(0xFFF0D25A),
-            secondary: Color(0xFF1C2040),
-            surface: Color(0xFF151833),
-            onSurface: Colors.white,
+          brightness: Brightness.light,
+          scaffoldBackgroundColor: kSurface,
+          colorScheme: const ColorScheme.light(
+            primary: kPrimary,
+            onPrimary: kOnPrimary,
+            secondary: kSecondary,
+            onSecondary: kOnSecondary,
+            secondaryContainer: kSecondaryContainer,
+            onSecondaryContainer: kOnSecondaryContainer,
+            surface: kSurface,
+            onSurface: kOnSurface,
+            surfaceVariant: kSurfaceVariant,
+            onSurfaceVariant: kOnSurfaceVariant,
+            outline: kOutline,
+            outlineVariant: kOutlineVariant,
+            error: kError,
           ),
           useMaterial3: true,
         ),
@@ -39,7 +66,6 @@ class GhostKeyApp extends StatelessWidget {
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
-
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
@@ -48,14 +74,6 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: Color(0xFF0F1226),
-        systemNavigationBarIconBrightness: Brightness.light,
-      ),
-    );
     _navigate();
   }
 
@@ -72,11 +90,19 @@ class _SplashScreenState extends State<SplashScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF0F1226),
       body: Center(
-        child: Image.asset(
-          'assets/logo.png',
-          width: 140,
-          height: 140,
-          fit: BoxFit.contain,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: kPrimary,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.shield, size: 56, color: kOnPrimary),
+            ),
+          ],
         ),
       ),
     );
@@ -89,25 +115,18 @@ class OnboardingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F1226),
+      backgroundColor: kSurface,
       body: SafeArea(
         child: Column(children: [
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                SizedBox(width: 128, height: 128,
-                  child: Stack(alignment: Alignment.center, children: [
-                    Container(width: 120, height: 120,
-                      decoration: BoxDecoration(shape: BoxShape.circle, color: Color(0xFFF0D25A).withOpacity(0.2),
-                        boxShadow: [BoxShadow(color: Color(0xFFF0D25A).withOpacity(0.15), blurRadius: 40, spreadRadius: 20)])),
-                    const Icon(Icons.shield, size: 72, color: Color(0xFFF0D25A)),
-                  ]),
-                ),
+                Container(width: 128, height: 128, decoration: BoxDecoration(shape: BoxShape.circle, color: kPrimary.withOpacity(0.1), boxShadow: [BoxShadow(color: kPrimary.withOpacity(0.15), blurRadius: 40, spreadRadius: 20)]), child: const Icon(Icons.shield, size: 72, color: kPrimary)),
                 const SizedBox(height: 32),
-                const Text('GhostKey', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: -0.25)),
+                const Text('GhostKey', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: kOnSurface, letterSpacing: -0.25)),
                 const SizedBox(height: 8),
-                const Text('Your digital legacy secured.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: Colors.white54, letterSpacing: 0.5)),
+                const Text('Your digital legacy secured.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: kOnSurfaceVariant, letterSpacing: 0.5)),
                 const SizedBox(height: 48),
                 SizedBox(width: 320, child: Column(children: [
                   _feat(Icons.vpn_key, 'Bank-grade encryption'),
@@ -122,20 +141,18 @@ class OnboardingScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(children: [
-              SizedBox(width: double.infinity,
-                child: FilledButton(
-                  onPressed: () { Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const PinSetupScreen())); },
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1B6D24), foregroundColor: Colors.white, minimumSize: const Size.fromHeight(52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)), elevation: 4),
-                  child: const Text('Get started', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                ),
-              ),
+              SizedBox(width: double.infinity, child: FilledButton(
+                onPressed: () { Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const PinSetupScreen())); },
+                style: FilledButton.styleFrom(backgroundColor: kPrimary, foregroundColor: kOnPrimary, minimumSize: const Size.fromHeight(52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)), elevation: 4),
+                child: const Text('Get started', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+              )),
               const SizedBox(height: 16),
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                const Text('Already have an account? ', style: TextStyle(fontSize: 14, color: Colors.white54)),
-                GestureDetector(onTap: () {}, child: const Text('Sign in', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF88D982)))),
+                const Text('Already have an account? ', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
+                GestureDetector(onTap: () {}, child: const Text('Sign in', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: kPrimary))),
               ]),
               const SizedBox(height: 32),
-              FractionallySizedBox(widthFactor: 1 / 3, child: Container(height: 4, decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(2)))),
+              FractionallySizedBox(widthFactor: 1 / 3, child: Container(height: 4, decoration: BoxDecoration(color: kOutlineVariant, borderRadius: BorderRadius.circular(2)))),
               const SizedBox(height: 8),
             ]),
           ),
@@ -146,16 +163,15 @@ class OnboardingScreen extends StatelessWidget {
 
   static Widget _feat(IconData icon, String label) {
     return Row(children: [
-      Container(width: 32, height: 32, decoration: BoxDecoration(color: Color(0xFF88D982).withOpacity(0.1), shape: BoxShape.circle), child: Icon(icon, size: 18, color: Color(0xFF88D982))),
+      Container(width: 32, height: 32, decoration: BoxDecoration(color: kPrimary.withOpacity(0.1), shape: BoxShape.circle), child: Icon(icon, size: 18, color: kPrimary)),
       const SizedBox(width: 16),
-      Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white54)),
+      Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: kOnSurfaceVariant)),
     ]);
   }
 }
 
 class PinSetupScreen extends StatefulWidget {
   const PinSetupScreen({super.key});
-
   @override
   State<PinSetupScreen> createState() => _PinSetupScreenState();
 }
@@ -167,549 +183,353 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
 
   void _onKeyTap(String key) {
     setState(() {
-      if (key == 'del') {
-        if (_pin.isNotEmpty) _pin = _pin.substring(0, _pin.length - 1);
-      } else if (_pin.length < 6) {
-        _pin += key;
-      }
+      if (key == 'del') { if (_pin.isNotEmpty) _pin = _pin.substring(0, _pin.length - 1); } 
+      else if (_pin.length < 6) { _pin += key; }
     });
-
     if (_pin.length == 6) {
-      if (!_confirming) {
-        _firstPin = _pin;
-        _pin = '';
-        setState(() => _confirming = true);
-      } else if (_pin == _firstPin) {
-        final prefs = context.read<SharedPreferences>();
-        prefs.setString('pin', _pin);
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const VaultDashboard()),
-        );
-      } else {
-        _pin = '';
-        setState(() => _confirming = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('PINs do not match. Try again.')),
-        );
-      }
+      if (!_confirming) { _firstPin = _pin; _pin = ''; setState(() => _confirming = true); } 
+      else if (_pin == _firstPin) { context.read<SharedPreferences>().setString('pin', _pin); Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const MainShell())); } 
+      else { _pin = ''; setState(() => _confirming = false); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PINs do not match.'))); }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: kSurface,
+      appBar: AppBar(backgroundColor: kSurface, elevation: 0, leading: _confirming ? IconButton(icon: const Icon(Icons.arrow_back, color: kOnSurface), onPressed: () { setState(() { _confirming = false; _pin = ''; }); }) : null, title: Text(_confirming ? 'Confirm PIN' : 'Create PIN', style: const TextStyle(color: kOnSurface))),
+      body: SafeArea(
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Text(_confirming ? 'Re-enter your 6-digit PIN' : 'Create a 6-digit PIN', style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
+          const SizedBox(height: 32),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(6, (i) => AnimatedContainer(duration: const Duration(milliseconds: 150), width: 18, height: 18, margin: const EdgeInsets.symmetric(horizontal: 8), decoration: BoxDecoration(shape: BoxShape.circle, color: i < _pin.length ? kPrimary : kSurfaceContainerHighest)))),
+          const SizedBox(height: 48),
+          _buildKeypad(),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildKeypad() {
+    final keys = ['1','2','3','4','5','6','7','8','9','del','0','ok'];
+    return SizedBox(width: 260, child: GridView.count(shrinkWrap: true, crossAxisCount: 3, childAspectRatio: 1.6, mainAxisSpacing: 8, crossAxisSpacing: 8, children: keys.map((k) {
+      if (k == 'ok') return const SizedBox.shrink();
+      return TextButton(onPressed: () => _onKeyTap(k), style: TextButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), child: k == 'del' ? const Icon(Icons.backspace_outlined, color: kOnSurface, size: 22) : Text(k, style: const TextStyle(fontSize: 26, color: kOnSurface)));
+    }).toList()));
+  }
+}
+
+class MainShell extends StatefulWidget {
+  const MainShell({super.key});
+  @override
+  State<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends State<MainShell> {
+  int _currentIndex = 0;
+  final _pages = const [VaultDashboard(), VaultPage(), HeirsPage(), _ActivityPlaceholder(), SettingsScreen()];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(index: _currentIndex, children: _pages),
+      floatingActionButton: _currentIndex == 0 || _currentIndex == 1
+          ? FloatingActionButton(
+              onPressed: () {
+                if (_currentIndex == 1) {
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AddSecretPage()));
+                }
+              },
+              backgroundColor: kPrimary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: const Icon(Icons.add, color: kOnPrimary, size: 28),
+            )
+          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (i) => setState(() => _currentIndex = i),
+        backgroundColor: kSurfaceContainer,
+        indicatorColor: kSecondaryContainer,
+        destinations: [
+          NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home, color: kPrimary), label: 'Home'),
+          NavigationDestination(icon: const Icon(Icons.lock_outlined), selectedIcon: const Icon(Icons.lock, color: kPrimary), label: 'Vault'),
+          NavigationDestination(icon: const Icon(Icons.group_outlined), selectedIcon: const Icon(Icons.group, color: kPrimary), label: 'Heirs'),
+          NavigationDestination(icon: const Icon(Icons.notifications_outlined), selectedIcon: const Icon(Icons.notifications, color: kPrimary), label: 'Activity'),
+          NavigationDestination(icon: const Icon(Icons.settings_outlined), selectedIcon: const Icon(Icons.settings, color: kPrimary), label: 'Settings'),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActivityPlaceholder extends StatelessWidget {
+  const _ActivityPlaceholder();
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(backgroundColor: kSurface, body: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.notifications, size: 64, color: kOutlineVariant), const SizedBox(height: 16), const Text('Activity \u2014 coming soon', style: TextStyle(color: kOnSurfaceVariant, fontSize: 16))])));
+  }
+}
+
+class VaultPage extends StatefulWidget {
+  const VaultPage({super.key});
+  @override
+  State<VaultPage> createState() => _VaultPageState();
+}
+
+class _VaultPageState extends State<VaultPage> {
+  String _selectedFilter = 'All';
+  final _filters = ['All', 'Passwords', 'Seeds', 'API Keys', 'Codes'];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kSurface,
+      body: SafeArea(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Row(children: [const Icon(Icons.menu, color: kPrimary, size: 24), const SizedBox(width: 12), Text('GhostKey', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kPrimary))]), Container(width: 32, height: 32, decoration: BoxDecoration(color: kSurfaceContainerHigh, shape: BoxShape.circle), child: const Icon(Icons.person, color: kOnSurfaceVariant, size: 18))])),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Vault', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: kOnSurface)), IconButton(onPressed: () {}, icon: const Icon(Icons.create_new_folder, color: kOnSurfaceVariant))])),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Container(height: 48, padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: kSurfaceContainerLow, borderRadius: BorderRadius.circular(12), border: Border.all(color: kSurfaceContainerHighest)), child: Row(children: [const Icon(Icons.search, color: kOnSurfaceVariant, size: 20), const SizedBox(width: 12), const Expanded(child: TextField(style: TextStyle(color: kOnSurface, fontSize: 14), decoration: InputDecoration(hintText: 'Search secrets', hintStyle: TextStyle(color: kOnSurfaceVariant, fontSize: 14), border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero)))]))),
+          SizedBox(height: 44, child: ListView.separated(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: _filters.length, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (context, index) { final f = _filters[index]; final isActive = f == _selectedFilter; return GestureDetector(onTap: () => setState(() => _selectedFilter = f), child: Container(padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: isActive ? kPrimary : kSurfaceContainer, borderRadius: BorderRadius.circular(20), border: isActive ? null : Border.all(color: kSurfaceContainerHighest)), alignment: Alignment.center, child: Text(f, style: TextStyle(color: isActive ? kOnPrimary : kOnSurfaceVariant, fontSize: 14, fontWeight: FontWeight.w500)))); })),
+          const SizedBox(height: 8),
+          Expanded(child: ListView.separated(padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: 6, separatorBuilder: (_, __) => Container(margin: const EdgeInsets.only(left: 56), height: 1, color: kSurfaceContainerHighest), itemBuilder: (context, index) {
+            final icons = [Icons.vpn_key, Icons.currency_bitcoin, Icons.memory, Icons.dialpad, Icons.play_circle_fill, Icons.vpn_key];
+            final titles = ['Google Account', 'Binance Account', 'Ledger Seed Phrase', 'AWS Root Key', 'Recovery Codes', 'Crypto.com API'];
+            final subs = ['alex@gmail.com', 'alex@gmail.com', '24 words', 'AKIA....EXAMPLE', '8 codes', 'Read-only'];
+            final dates = ['May 28, 2024', 'May 27, 2024', 'May 26, 2024', 'May 26, 2024', 'May 25, 2024', 'May 24, 2024'];
+            return InkWell(onTap: () {}, child: Padding(padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4), child: Row(children: [Container(width: 40, height: 40, decoration: BoxDecoration(color: kSurfaceContainer, shape: BoxShape.circle), child: Icon(icons[index], size: 20, color: kOnSurfaceVariant)), const SizedBox(width: 16), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(titles[index], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: kOnSurface)), const SizedBox(height: 2), Text(subs[index], style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant))])), const SizedBox(width: 8), Text(dates[index], style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant)), const SizedBox(width: 4), const Icon(Icons.chevron_right, size: 16, color: kOutlineVariant)])));
+          })),
+        ]),
+      ),
+    );
+  }
+}
+
+class HeirsPage extends StatelessWidget {
+  const HeirsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kSurface,
+      body: SafeArea(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Text('Heirs', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kPrimary))),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Heirs', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: kOnSurface)), const SizedBox(height: 4), const Text('Add trusted people who can inherit your assets', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant))])),
+          const SizedBox(height: 24),
+          Expanded(child: ListView.separated(padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: 3, separatorBuilder: (_, __) => const SizedBox(height: 8), itemBuilder: (context, index) {
+            final names = ['Sarah Ahmed', 'Ahmed Rahman', 'John Smith'];
+            final relations = ['Sister', 'Brother', 'Lawyer'];
+            final shares = ['2/5 shares', '1/5 shares', '1/5 shares'];
+            final avatars = ['S', 'A', 'J'];
+            return Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: kOutlineVariant.withOpacity(0.3)),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 1))],
+              ),
+              child: Row(
+                children: [
+                  Container(width: 48, height: 48, decoration: BoxDecoration(color: kSurfaceContainer, shape: BoxShape.circle), child: Center(child: Text(avatars[index], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurfaceVariant)))),
+                  const SizedBox(width: 16),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(names[index], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: kOnSurface)),
+                    const SizedBox(height: 2),
+                    Text('${relations[index]}  \u2022  ${shares[index]}', style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
+                  ])),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.mail_outlined, color: kOnSurfaceVariant, size: 20),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.more_vert, color: kOnSurfaceVariant, size: 20),
+                ],
+              ),
+            );
+          })),
+          Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, kSurface.withOpacity(0.9), kSurface], stops: const [0.0, 0.3, 1.0])), child: SafeArea(top: false, child: SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: () {}, icon: const Icon(Icons.add, size: 20), label: const Text('Add Heir', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)), style: FilledButton.styleFrom(backgroundColor: kPrimary, foregroundColor: kOnPrimary, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))))),
+        ]),
+      ),
+    );
+  }
+}
+
+class AddSecretPage extends StatelessWidget {
+  const AddSecretPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      _AddSecretItem(icon: Icons.lock, iconColor: const Color(0xFF1976D2), bgColor: const Color(0xFFBBDEFB), title: 'Password', subtitle: 'Store website or app passwords'),
+      _AddSecretItem(icon: Icons.key, iconColor: kPrimary, bgColor: const Color(0xFFC8E6C9), title: 'Seed Phrase', subtitle: 'Store crypto seed phrases'),
+      _AddSecretItem(icon: Icons.vpn_key, iconColor: const Color(0xFFF57C00), bgColor: const Color(0xFFFFE0B2), title: 'Private Key', subtitle: 'Store private keys'),
+      _AddSecretItem(icon: Icons.code, iconColor: const Color(0xFF7B1FA2), bgColor: const Color(0xFFE1BEE7), title: 'API Key', subtitle: 'Store API keys (read-only)'),
+      _AddSecretItem(icon: Icons.grid_view, iconColor: const Color(0xFFC2185B), bgColor: const Color(0xFFF8BBD0), title: 'Recovery Code', subtitle: 'Store backup codes'),
+      _AddSecretItem(icon: Icons.description, iconColor: const Color(0xFF00796B), bgColor: const Color(0xFFB2DFDB), title: 'Secure Note', subtitle: 'Store encrypted notes or docs'),
+    ];
+
+    return Scaffold(
+      backgroundColor: kSurface,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: kSurface,
         elevation: 0,
-        leading: _confirming
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () {
-                  setState(() {
-                    _confirming = false;
-                    _pin = '';
-                  });
-                },
-              )
-            : null,
-        title: Text(_confirming ? 'Confirm PIN' : 'Create PIN'),
+        leading: IconButton(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(Icons.arrow_back, color: kOnSurface),
+        ),
+        automaticallyImplyLeading: false,
       ),
       body: SafeArea(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           children: [
-            Text(
-              _confirming ? 'Re-enter your 6-digit PIN' : 'Create a 6-digit PIN to secure your vault',
-              style: const TextStyle(fontSize: 14, color: Colors.white70),
-            ),
+            const SizedBox(height: 8),
+            const Text('Add Secret', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: kOnSurface)),
+            const SizedBox(height: 4),
+            const Text('Select the type of secret you want to add', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
+            const SizedBox(height: 24),
+            ...items.map((item) => _buildItem(context, item)),
             const SizedBox(height: 32),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(6, (i) {
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  width: 18,
-                  height: 18,
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: i < _pin.length
-                        ? const Color(0xFFF0D25A)
-                        : Colors.white24,
-                  ),
-                );
-              }),
-            ),
-            const SizedBox(height: 48),
-            _buildKeypad(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildKeypad() {
-    final keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'del', '0', 'ok'];
-    return SizedBox(
-      width: 260,
-      child: GridView.count(
-        shrinkWrap: true,
-        crossAxisCount: 3,
-        childAspectRatio: 1.6,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-        children: keys.map((k) {
-          if (k == 'ok') return const SizedBox.shrink();
-          return TextButton(
-            onPressed: () => _onKeyTap(k),
-            style: TextButton.styleFrom(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+  Widget _buildItem(BuildContext context, _AddSecretItem item) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        elevation: 0,
+        shadowColor: Colors.black.withOpacity(0.05),
+        child: InkWell(
+          onTap: () {},
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: kSurfaceContainerHigh),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 1))],
             ),
-            child: k == 'del'
-                ? const Icon(Icons.backspace_outlined, color: Colors.white, size: 22)
-                : Text(
-                    k,
-                    style: const TextStyle(fontSize: 26, color: Colors.white),
-                  ),
-          );
-        }).toList(),
+            child: Row(children: [
+              Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(color: item.bgColor, borderRadius: BorderRadius.circular(8)),
+                child: Icon(item.icon, color: item.iconColor, size: 22),
+              ),
+              const SizedBox(width: 16),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(item.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: kOnSurface)),
+                const SizedBox(height: 2),
+                Text(item.subtitle, style: const TextStyle(fontSize: 13, color: kOnSurfaceVariant)),
+              ])),
+              const Icon(Icons.chevron_right, size: 20, color: kOutlineVariant),
+            ]),
+          ),
+        ),
       ),
     );
   }
 }
 
+class _AddSecretItem {
+  final IconData icon;
+  final Color iconColor;
+  final Color bgColor;
+  final String title;
+  final String subtitle;
+  _AddSecretItem({required this.icon, required this.iconColor, required this.bgColor, required this.title, required this.subtitle});
+}
+
 class VaultDashboard extends StatefulWidget {
   const VaultDashboard({super.key});
-
   @override
   State<VaultDashboard> createState() => _VaultDashboardState();
 }
 
 class _VaultDashboardState extends State<VaultDashboard> {
-  int _daysRemaining = 45;
-  final List<Map<String, String>> _secrets = [];
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Vault'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              );
-            },
-            icon: const Icon(Icons.settings),
-          ),
-        ],
-      ),
-      body: _secrets.isEmpty ? _buildEmptyState() : _buildSecretList(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Add secret — coming soon')),
-          );
-        },
-        backgroundColor: const Color(0xFFF0D25A),
-        child: const Icon(Icons.add, color: Color(0xFF0F1226)),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Timer card
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1C2040),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF0D25A),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.timer, color: Color(0xFF0F1226)),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Inactivity Timer',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$_daysRemaining days remaining',
-                      style: const TextStyle(color: Colors.white54),
-                    ),
-                  ],
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  setState(() => _daysRemaining = 45);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Timer reset!')),
-                  );
-                },
-                child: const Text('Check-in', style: TextStyle(color: Color(0xFFF0D25A))),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-        // Heirs card
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1C2040),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF1C2040),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.people, color: Color(0xFFF0D25A)),
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Heirs', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                    SizedBox(height: 4),
-                    Text('No heirs added', style: TextStyle(color: Colors.white54)),
-                  ],
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Heir management — coming soon')),
-                  );
-                },
-                child: const Text('Add', style: TextStyle(color: Color(0xFFF0D25A))),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 32),
-        // Empty secrets
-        const Center(
-          child: Column(
-            children: [
-              Icon(Icons.lock_open, size: 56, color: Colors.white24),
-              SizedBox(height: 12),
-              Text('No secrets yet', style: TextStyle(color: Colors.white54, fontSize: 16)),
-              SizedBox(height: 4),
-              Text('Tap + to add your first secret', style: TextStyle(color: Colors.white30, fontSize: 13)),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSecretList() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Timer card (compact)
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1C2040),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.timer, color: Color(0xFFF0D25A)),
-              const SizedBox(width: 12),
-              Expanded(child: Text('$_daysRemaining days remaining')),
-              TextButton(
-                onPressed: () => setState(() => _daysRemaining = 45),
-                child: const Text('Check-in', style: TextStyle(color: Color(0xFFF0D25A))),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        const Text('Secrets', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
-        ..._secrets.map((s) => Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFF151833),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF1C2040)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.key, color: Color(0xFFF0D25A)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(s['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
-                        Text(s['description'] ?? '', style: const TextStyle(color: Colors.white54, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.lock, size: 14, color: Colors.white30),
-                ],
-              ),
-            )),
-      ],
-    );
-  }
-}
-
-class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
-
-  @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends State<SettingsScreen> {
-  bool _biometric = true;
-  bool _emergencyAlerts = true;
-  bool _checkinReminders = true;
-
-  @override
-  Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-    final onSurfaceVar = Theme.of(context).colorScheme.onSurfaceVariant;
-    final primary = Theme.of(context).colorScheme.primary;
-    final surface = Theme.of(context).colorScheme.surface;
-    final surfaceContainer = Theme.of(context).colorScheme.surfaceContainer;
-    final outlineVar = Theme.of(context).colorScheme.outlineVariant;
-    final error = Theme.of(context).colorScheme.error;
-    final errorContainer = Theme.of(context).colorScheme.errorContainer;
-    final onErrorContainer = Theme.of(context).colorScheme.onErrorContainer;
-
-    return Scaffold(
-      backgroundColor: surface,
-      appBar: AppBar(
-        backgroundColor: surface,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Icon(Icons.shield, size: 24, color: primary),
-        ),
-        title: Text('Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: primary)),
-        centerTitle: false,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-              child: Icon(Icons.person, size: 18, color: onSurface),
-            ),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        children: [
-          const SizedBox(height: 8),
-          // Pro card
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: surfaceContainer,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: outlineVar.withOpacity(0.3)),
-            ),
-            child: Row(children: [
-              Container(
-                width: 48, height: 48,
-                decoration: BoxDecoration(color: primary, shape: BoxShape.circle),
-                child: const Icon(Icons.workspace_premium, color: Colors.white),
-              ),
-              const SizedBox(width: 16),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('GhostKey Pro', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: onSurface)),
-                Text('Active until Oct 2025', style: TextStyle(fontSize: 14, color: onSurfaceVar)),
-              ])),
-              Icon(Icons.chevron_right, color: primary),
-            ]),
-          ),
+      backgroundColor: kSurface,
+      body: SafeArea(
+        child: ListView(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16), children: [
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('GhostKey', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: kOnSurface)), Stack(children: [const Icon(Icons.notifications_outlined, size: 28, color: kOnSurface), Positioned(right: 2, top: 2, child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: kError, shape: BoxShape.circle)))])]),
           const SizedBox(height: 24),
-
-          // Security section
-          _sectionHeader('Security', primary),
-          const SizedBox(height: 8),
-          _card([
-            _switchRow(Icons.fingerprint, 'Biometric Lock', _biometric, (v) => setState(() => _biometric = v)),
-            _divider(outlineVar),
-            _row(Icons.vpn_key, 'Change Master Password', chevron: true),
-            _divider(outlineVar),
-            _row(Icons.vibration, 'Two-Factor Authentication (2FA)', trailing: Text('Enabled', style: TextStyle(color: primary, fontSize: 12, fontWeight: FontWeight.w500))),
-            _divider(outlineVar),
-            _row(Icons.verified_user, 'SecurityAudit', trailing: Icon(Icons.warning, color: error, size: 20)),
-          ]),
+          const Text('Good morning,', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
+          const Text('Alex \u{1F44B}', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: kOnSurface)),
           const SizedBox(height: 24),
-
-          // Vault & Timer section
-          _sectionHeader('Vault & Timer', primary),
-          const SizedBox(height: 8),
-          _card([
-            _row(Icons.alarm_on, "Dead Man's Switch Duration", trailing: Text('6 Months', style: TextStyle(fontSize: 14, color: onSurfaceVar))),
-            _divider(outlineVar),
-            _row(Icons.update, 'Check-in Frequency', trailing: Text('Monthly', style: TextStyle(fontSize: 14, color: onSurfaceVar))),
-            _divider(outlineVar),
-            _row(Icons.ios_share, 'Data Export (Encrypted)', trailing: Icon(Icons.download, color: onSurfaceVar, size: 20)),
-          ]),
-          const SizedBox(height: 24),
-
-          // Notifications section
-          _sectionHeader('Notifications', primary),
-          const SizedBox(height: 8),
-          _card([
-            _switchRow(Icons.emergency, 'Emergency Alerts', _emergencyAlerts, (v) => setState(() => _emergencyAlerts = v)),
-            _divider(outlineVar),
-            _switchRow(Icons.event_available, 'Check-in Reminders', _checkinReminders, (v) => setState(() => _checkinReminders = v)),
-          ]),
-          const SizedBox(height: 24),
-
-          // Account & Plan section
-          _sectionHeader('Account & Plan', primary),
-          const SizedBox(height: 8),
-          _card([
-            _row(Icons.credit_card, 'Payment Methods', chevron: true),
-            _divider(outlineVar),
-            _row(Icons.person, 'Manage Account', chevron: true),
-          ]),
-          const SizedBox(height: 24),
-
-          // About section
-          _sectionHeader('About', primary),
-          const SizedBox(height: 8),
-          _card([
-            _row(Icons.policy, 'Privacy Policy', trailing: Icon(Icons.open_in_new, color: onSurfaceVar, size: 18)),
-            _divider(outlineVar),
-            _row(Icons.gavel, 'Terms of Service', trailing: Icon(Icons.open_in_new, color: onSurfaceVar, size: 18)),
-            _divider(outlineVar),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text('Version 1.0.4', style: TextStyle(fontSize: 12, color: onSurfaceVar)),
-                Text('Stable Release', style: TextStyle(fontSize: 12, color: onSurfaceVar)),
-              ]),
-            ),
-          ]),
-          const SizedBox(height: 24),
-
-          // Sign Out
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const SplashScreen()),
-                  (r) => false,
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: errorContainer,
-                foregroundColor: onErrorContainer,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
-              ),
-              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(Icons.logout, size: 20),
-                const SizedBox(width: 8),
-                Text('Sign Out', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-              ]),
-            ),
-          ),
+          _buildDeadManCard(),
           const SizedBox(height: 16),
-          Center(child: Text('© 2024 GhostKey Security. All rights reserved.', style: TextStyle(fontSize: 12, color: onSurfaceVar.withOpacity(0.6)))),
-          const SizedBox(height: 32),
-        ],
-      ),
-    );
-  }
-
-  Widget _sectionHeader(String title, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4),
-      child: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: color, letterSpacing: 0.1)),
-    );
-  }
-
-  Widget _card(List<Widget> children) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFBFCABA).withOpacity(0.2)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4, offset: const Offset(0, 1))],
-      ),
-      child: Column(children: children),
-    );
-  }
-
-  Widget _divider(Color color) {
-    return Divider(height: 1, thickness: 1, color: color.withOpacity(0.1), indent: 56);
-  }
-
-  Widget _row(IconData icon, String title, {Widget? trailing, bool chevron = false}) {
-    return InkWell(
-      onTap: () {},
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(children: [
-          Icon(icon, size: 22, color: const Color(0xFF40493D)),
-          const SizedBox(width: 16),
-          Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: Color(0xFF191C1D)))),
-          trailing ?? (chevron ? const Icon(Icons.chevron_right, color: Color(0xFF40493D)) : const SizedBox.shrink()),
+          Row(children: [_statCard('34', 'Secrets'), const SizedBox(width: 12), _statCard('12', 'Crypto Assets'), const SizedBox(width: 12), _statCard('3', 'Heirs')]),
+          const SizedBox(height: 24),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Recent Activity', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface)), TextButton(onPressed: () {}, child: const Text('View all', style: TextStyle(color: kPrimary, fontSize: 12)))]),
+          const SizedBox(height: 8),
+          _buildActivityList(),
+          const SizedBox(height: 100),
         ]),
       ),
     );
   }
 
-  Widget _switchRow(IconData icon, String title, bool value, ValueChanged<bool> onChanged) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(children: [
-        Icon(icon, size: 22, color: const Color(0xFF40493D)),
-        const SizedBox(width: 16),
-        Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: Color(0xFF191C1D)))),
-        Switch(
-          value: value,
-          onChanged: onChanged,
-          activeColor: const Color(0xFF2e7d32),
-          activeTrackColor: const Color(0xFF2e7d32).withOpacity(0.3),
-        ),
+  Widget _buildDeadManCard() {
+    return Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: kOutlineVariant.withOpacity(0.3)), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 1))]), child: Row(children: [
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text("Dead Man's Switch", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface)), const SizedBox(height: 4), Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [const Text('65', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: kPrimary)), const SizedBox(width: 4), const Text('days left', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant))]), const SizedBox(height: 4), const Text('Next check-in: Tomorrow', style: TextStyle(fontSize: 12, color: kOnSurfaceVariant)), const SizedBox(height: 12), OutlinedButton(onPressed: () {}, style: OutlinedButton.styleFrom(side: const BorderSide(color: kPrimary), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))), child: const Text('Check in now', style: TextStyle(color: kPrimary, fontSize: 14)))])),
+      const SizedBox(width: 16),
+      SizedBox(width: 96, height: 96, child: CustomPaint(painter: _ProgressRing(0.65), child: const Center(child: Text('65%', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface))))),
+    ]));
+  }
+
+  Widget _statCard(String value, String label) {
+    return Expanded(child: Container(padding: const EdgeInsets.symmetric(vertical: 16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: kOutlineVariant.withOpacity(0.3)), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 1))]), child: Column(children: [Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: kOnSurface)), const SizedBox(height: 4), Text(label, style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant), textAlign: TextAlign.center)])));
+  }
+
+  Widget _buildActivityList() {
+    return Container(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: kOutlineVariant.withOpacity(0.3))), child: Column(children: [
+      _activityRow(Icons.vpn_key, 'Secret viewed', 'Google Account', 'Today, 9:20 AM', kOnSurfaceVariant),
+      const Divider(color: kSurfaceContainerHighest, height: 1),
+      _activityRow(Icons.verified_user, 'Check-in successful', '', 'Today, 9:00 AM', kPrimary),
+      const Divider(color: kSurfaceContainerHighest, height: 1),
+      _activityRow(Icons.person_add, 'Heir added: Sarah', '', 'Yesterday, 3:15 PM', kOnSurfaceVariant),
+    ]));
+  }
+
+  Widget _activityRow(IconData icon, String title, String subtitle, String time, Color iconColor) {
+    return Padding(padding: const EdgeInsets.all(16), child: Row(children: [Container(width: 40, height: 40, decoration: BoxDecoration(color: kSurfaceContainer, shape: BoxShape.circle), child: Icon(icon, size: 20, color: iconColor)), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: kOnSurface)), if (subtitle.isNotEmpty) Text(subtitle, style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant))])), Text(time, style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant))]));
+  }
+}
+
+class _ProgressRing extends CustomPainter {
+  final double progress;
+  _ProgressRing(this.progress);
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 8;
+    canvas.drawCircle(center, radius, Paint()..color = kSurfaceContainerHighest..style = PaintingStyle.stroke..strokeWidth = 6..strokeCap = StrokeCap.round);
+    canvas.drawArc(Rect.fromCircle(center: center, radius: radius), -math.pi / 2, 2 * math.pi * progress, false, Paint()..color = kPrimary..style = PaintingStyle.stroke..strokeWidth = 6..strokeCap = StrokeCap.round);
+  }
+  @override
+  bool shouldRepaint(covariant _ProgressRing old) => old.progress != progress;
+}
+
+class SettingsScreen extends StatelessWidget {
+  const SettingsScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kSurface,
+      appBar: AppBar(title: const Text('Settings', style: TextStyle(color: kOnSurface)), backgroundColor: kSurface, elevation: 0),
+      body: ListView(padding: const EdgeInsets.all(16), children: [
+        ListTile(leading: const Icon(Icons.timer, color: kOnSurfaceVariant), title: const Text('Inactivity Timer', style: TextStyle(color: kOnSurface)), subtitle: const Text('Configure timer duration', style: TextStyle(color: kOnSurfaceVariant)), trailing: const Icon(Icons.chevron_right, color: kOutline), onTap: () {}),
+        ListTile(leading: const Icon(Icons.people, color: kOnSurfaceVariant), title: const Text('Manage Heirs', style: TextStyle(color: kOnSurface)), subtitle: const Text('Add or remove heirs', style: TextStyle(color: kOnSurfaceVariant)), trailing: const Icon(Icons.chevron_right, color: kOutline), onTap: () {}),
+        ListTile(leading: const Icon(Icons.security, color: kOnSurfaceVariant), title: const Text('Change PIN', style: TextStyle(color: kOnSurface)), subtitle: const Text('Update your security PIN', style: TextStyle(color: kOnSurfaceVariant)), trailing: const Icon(Icons.chevron_right, color: kOutline), onTap: () {}),
+        ListTile(leading: const Icon(Icons.vpn_key, color: kOnSurfaceVariant), title: const Text('2FA', style: TextStyle(color: kOnSurface)), subtitle: const Text('Two-factor authentication', style: TextStyle(color: kOnSurfaceVariant)), trailing: const Icon(Icons.chevron_right, color: kOutline), onTap: () {}),
+        const Divider(),
+        ListTile(leading: const Icon(Icons.logout, color: kError), title: const Text('Lock Vault', style: TextStyle(color: kError)), onTap: () { Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const SplashScreen()), (r) => false); }),
       ]),
     );
   }
