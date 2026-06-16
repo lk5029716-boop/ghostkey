@@ -369,19 +369,20 @@ class _MainShellState extends State<MainShell> {
     const SettingsScreen(),
   ];
 
-  bool get _isVault2FAFilterActive {
-    // Check if VaultPage's 2FA filter is active via GlobalKey
-    return _vaultPageKey.currentState?._selectedFilter == '2FA';
-  }
+  final ValueNotifier<String> _vaultFilterNotifier = ValueNotifier<String>('All');
 
-  final GlobalKey<_VaultPageState> _vaultPageKey = GlobalKey<_VaultPageState>();
+  @override
+  void dispose() {
+    _vaultFilterNotifier.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: [
         const VaultDashboard(),
-        VaultPage(key: _vaultPageKey),
+        VaultPage(filterNotifier: _vaultFilterNotifier),
         const HeirsPage(),
         const _ActivityPlaceholder(),
         const SettingsScreen(),
@@ -394,17 +395,23 @@ class _MainShellState extends State<MainShell> {
               child: const Icon(Icons.add, color: kOnPrimary, size: 28),
             )
           : _currentIndex == 1
-              ? FloatingActionButton(
-                  onPressed: _isVault2FAFilterActive
-                      ? () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const QrScannerScreen()),
-                          );
-                        }
-                      : () {},
-                  backgroundColor: kPrimary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  child: const Icon(Icons.add, color: kOnPrimary, size: 28),
+              ? ValueListenableBuilder<String>(
+                  valueListenable: _vaultFilterNotifier,
+                  builder: (context, filter, _) {
+                    final is2FA = filter == '2FA';
+                    return FloatingActionButton(
+                      onPressed: is2FA
+                          ? () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const QrScannerScreen()),
+                              );
+                            }
+                          : () {},
+                      backgroundColor: kPrimary,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      child: const Icon(Icons.add, color: kOnPrimary, size: 28),
+                    );
+                  },
                 )
               : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -559,7 +566,8 @@ class _TotpListItemState extends State<_TotpListItem> {
 }
 
 class VaultPage extends StatefulWidget {
-  const VaultPage({super.key});
+  final ValueNotifier<String>? filterNotifier;
+  const VaultPage({super.key, this.filterNotifier});
   @override
   State<VaultPage> createState() => _VaultPageState();
 }
@@ -567,6 +575,18 @@ class VaultPage extends StatefulWidget {
 class _VaultPageState extends State<VaultPage> {
   String _selectedFilter = 'All';
   final _filters = ['All', 'Password', 'Seeds', 'API Keys', '2FA', 'Codes'];
+
+  @override
+  void initState() {
+    super.initState();
+    // Sync initial value to notifier
+    widget.filterNotifier?.value = _selectedFilter;
+  }
+
+  void _setFilter(String f) {
+    setState(() => _selectedFilter = f);
+    widget.filterNotifier?.value = f;
+  }
 
   List<VaultItem> get _filteredItems {
     if (_selectedFilter == 'All') return kVaultItems;
@@ -601,7 +621,7 @@ class _VaultPageState extends State<VaultPage> {
           Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Row(children: [const Icon(Icons.menu, color: kPrimary, size: 24), const SizedBox(width: 12), Text('GhostKey', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kPrimary))]), Container(width: 32, height: 32, decoration: BoxDecoration(color: kSurfaceContainerHigh, shape: BoxShape.circle), child: const Icon(Icons.person, color: kOnSurfaceVariant, size: 18))])),
           Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Vault', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: kOnSurface)), IconButton(onPressed: () {}, icon: const Icon(Icons.create_new_folder, color: kOnSurfaceVariant, size: 28))])),
           Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Container(height: 48, padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: kSurfaceContainerLow, borderRadius: BorderRadius.circular(12), border: Border.all(color: kSurfaceContainerHighest)), child: Row(children: [const Icon(Icons.search, color: kOnSurfaceVariant, size: 20), const SizedBox(width: 12), const Expanded(child: TextField(style: TextStyle(color: kOnSurface, fontSize: 14), decoration: InputDecoration(hintText: 'Search secrets', hintStyle: TextStyle(color: kOnSurfaceVariant, fontSize: 14), border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero)))]))),
-          SizedBox(height: 44, child: ListView.separated(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: _filters.length, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (context, index) { final f = _filters[index]; final isActive = f == _selectedFilter; return GestureDetector(onTap: () => setState(() => _selectedFilter = f), child: Container(padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: isActive ? Border.all(color: kPrimary, width: 1.5) : Border.all(color: kSurfaceContainerHighest)), alignment: Alignment.center, child: Text(f, style: TextStyle(color: isActive ? kPrimary : kOnSurfaceVariant, fontSize: 14, fontWeight: FontWeight.w500)))); })),
+          SizedBox(height: 44, child: ListView.separated(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: _filters.length, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (context, index) { final f = _filters[index]; final isActive = f == _selectedFilter; return GestureDetector(onTap: () => _setFilter(f), child: Container(padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: isActive ? Border.all(color: kPrimary, width: 1.5) : Border.all(color: kSurfaceContainerHighest)), alignment: Alignment.center, child: Text(f, style: TextStyle(color: isActive ? kPrimary : kOnSurfaceVariant, fontSize: 14, fontWeight: FontWeight.w500)))); })),
           const SizedBox(height: 8),
           Expanded(
             child: ListView.separated(
