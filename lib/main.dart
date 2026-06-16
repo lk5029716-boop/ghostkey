@@ -301,14 +301,21 @@ class _VaultPageState extends State<VaultPage> {
             final dates = ['May 28, 2024', 'May 27, 2024', 'May 26, 2024', 'May 26, 2024', 'May 25, 2024', 'May 24, 2024'];
             return InkWell(
               onTap: () {
-                if (index == 2) { // Ledger Seed Phrase
-                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LedgerScreen()));
+                Widget page;
+                switch (index) {
+                  case 0: page = const GoogleAccountScreen(); break;
+                  case 1: page = const BinanceAccountScreen(); break;
+                  case 2: page = const LedgerScreen(); break;
+                  case 3: page = const AwsRootKeyScreen(); break;
+                  case 4: page = const RecoveryCodesScreen(); break;
+                  default: return;
                 }
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
               },
               child: Padding(padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4), child: Row(children: [Container(width: 40, height: 40, decoration: BoxDecoration(color: kSurfaceContainer, shape: BoxShape.circle), child: Icon(icons[index], size: 20, color: kOnSurfaceVariant)), const SizedBox(width: 16), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(titles[index], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: kOnSurface)), const SizedBox(height: 2), Text(subs[index], style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant))])), const SizedBox(width: 8), Text(dates[index], style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant)), const SizedBox(width: 4), const Icon(Icons.chevron_right, size: 16, color: kOutlineVariant)])),
+
             );
           })),
-        ]),
       ),
     );
   }
@@ -639,6 +646,701 @@ class _CircularProgressPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CircularProgressPainter old) => old.progress != progress;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Google Account Detail Screen
+// ═══════════════════════════════════════════════════════════════
+class GoogleAccountScreen extends StatefulWidget {
+  const GoogleAccountScreen({super.key});
+  @override
+  State<GoogleAccountScreen> createState() => _GoogleAccountScreenState();
+}
+
+class _GoogleAccountScreenState extends State<GoogleAccountScreen> {
+  bool _passwordRevealed = false;
+  bool _emailRevealed = false;
+  bool _backupRevealed = false;
+  int _timer = 30;
+  Timer? _t;
+
+  @override
+  void dispose() { _t?.cancel(); super.dispose(); }
+
+  void _startTimer(void Function() onTimeout) {
+    _t?.cancel();
+    setState(() => _timer = 30);
+    _t = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
+      setState(() => _timer--);
+      if (_timer <= 0) { t.cancel(); if (mounted) onTimeout(); }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kSurface,
+      appBar: AppBar(
+        backgroundColor: kSurface,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: kOnSurface),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('Google Account', style: TextStyle(color: kOnSurface)),
+        actions: [
+          IconButton(icon: const Icon(Icons.more_vert, color: kOnSurfaceVariant), onPressed: () {}),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const SizedBox(height: 16),
+          // Header
+          Center(child: Column(children: [
+            Container(width: 72, height: 72, decoration: BoxDecoration(color: const Color(0xFF4285F4).withOpacity(0.12), shape: BoxShape.circle), child: const Icon(Icons.email, size: 36, color: Color(0xFF4285F4))),
+            const SizedBox(height: 12),
+            const Text('Google Account', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: kOnSurface)),
+            const SizedBox(height: 4), Text('alex@gmail.com', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
+          ])),
+          const SizedBox(height: 32),
+          // Email field
+          _fieldCard(
+            icon: Icons.alternate_email,
+            label: 'Email',
+            value: 'alex@gmail.com',
+            revealed: _emailRevealed,
+            onReveal: () {
+              setState(() => _emailRevealed = true);
+              _startTimer(() => setState(() => _emailRevealed = false));
+            },
+          ),
+          const SizedBox(height: 12),
+          // Password field
+          _fieldCard(
+            icon: Icons.lock_outline,
+            label: 'Password',
+            value: 'Str0ng!P@ssw0rd#2024',
+            revealed: _passwordRevealed,
+            onReveal: () {
+              setState(() => _passwordRevealed = true);
+              _startTimer(() => setState(() => _passwordRevealed = false));
+            },
+            warning: true,
+          ),
+          const SizedBox(height: 12),
+          // Backup codes
+          _buildBackupCodes(),
+          const SizedBox(height: 12),
+          // Recovery email
+          _fieldCard(
+            icon: Icons.replay,
+            label: 'Recovery Email',
+            value: 'alex.backup@gmail.com',
+            revealed: true,
+            onReveal: () {},
+            noBlur: true,
+          ),
+          const SizedBox(height: 24),
+          // Timer
+          if (_passwordRevealed || _emailRevealed)
+            Center(child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.timer_outlined, size: 16, color: kWarning),
+              const SizedBox(width: 8),
+              Text('Auto-hide in $_timer s', style: const TextStyle(fontSize: 12, color: kWarning, fontWeight: FontWeight.w500)),
+            ])),
+          const SizedBox(height: 32),
+        ]),
+      ),
+    );
+  }
+
+  Widget _fieldCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    required bool revealed,
+    required VoidCallback onReveal,
+    bool warning = false,
+    bool noBlur = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: warning ? kWarning.withOpacity(0.3) : kOutlineVariant.withOpacity(0.3)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(icon, size: 18, color: warning ? kWarning : kOnSurfaceVariant),
+          const SizedBox(width: 8),
+          Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: warning ? kWarning : kOnSurfaceVariant)),
+          const Spacer(),
+          if (!noBlur)
+            GestureDetector(
+              onTap: revealed ? null : onReveal,
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(revealed ? Icons.visibility_off : Icons.visibility, size: 16, color: kPrimary),
+                const SizedBox(width: 4),
+                Text(revealed ? 'Hide' : 'Reveal', style: const TextStyle(fontSize: 12, color: kPrimary, fontWeight: FontWeight.w500)),
+              ]),
+            ),
+        ]),
+        const SizedBox(height: 10),
+        Row(children: [
+          Expanded(
+            child: Text(
+              revealed || noBlur ? value : '••••••••••••',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: kOnSurface, letterSpacing: 0.5),
+            ),
+          ),
+          if (revealed || noBlur)
+            GestureDetector(
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: value));
+                HapticFeedback.lightImpact();
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied'), duration: Duration(seconds: 1)));
+              },
+              child: const Icon(Icons.copy, size: 18, color: kOnSurfaceVariant),
+            ),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _buildBackupCodes() {
+    final codes = ['8472-9910', '5531-0087', '2294-7763', '1108-4456', '6677-3321', '9901-5543', '3344-8899', '7755-1122'];
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kWarning.withOpacity(0.3)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Icon(Icons.security, size: 18, color: kWarning),
+          const SizedBox(width: 8),
+          const Text('2FA Backup Codes', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: kWarning)),
+          const Spacer(),
+          GestureDetector(
+            onTap: () {
+              setState(() => _backupRevealed = !_backupRevealed);
+              if (!_backupRevealed) _startTimer(() => setState(() => _backupRevealed = false));
+            },
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(_backupRevealed ? Icons.visibility_off : Icons.visibility, size: 16, color: kPrimary),
+              const SizedBox(width: 4),
+              Text(_backupRevealed ? 'Hide' : 'Reveal', style: const TextStyle(fontSize: 12, color: kPrimary, fontWeight: FontWeight.w500)),
+            ]),
+          ),
+        ]),
+        const SizedBox(height: 12),
+        Wrap(spacing: 8, runSpacing: 8, children: codes.map((c) {
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: kSurfaceContainerLow,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: _backupRevealed
+                ? Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text(c, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: kOnSurface, letterSpacing: 1)),
+                    const SizedBox(width: 8),
+                    GestureDetector(onTap: () { Clipboard.setData(ClipboardData(text: c)); HapticFeedback.lightImpact(); }, child: const Icon(Icons.copy, size: 14, color: kOnSurfaceVariant)),
+                  ])
+                : const Text('••••-••••', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant, letterSpacing: 1)),
+          );
+        }).toList()),
+      ]),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AWS Root Key Detail Screen
+// ═══════════════════════════════════════════════════════════════
+class AwsRootKeyScreen extends StatefulWidget {
+  const AwsRootKeyScreen({super.key});
+  @override
+  State<AwsRootKeyScreen> createState() => _AwsRootKeyScreenState();
+}
+
+class _AwsRootKeyScreenState extends State<AwsRootKeyScreen> {
+  bool _secretRevealed = false;
+  bool _accessIdRevealed = false;
+  int _timer = 30;
+  Timer? _t;
+
+  @override
+  void dispose() { _t?.cancel(); super.dispose(); }
+
+  void _startTimer(void Function() onTimeout) {
+    _t?.cancel();
+    setState(() => _timer = 30);
+    _t = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
+      setState(() => _timer--);
+      if (_timer <= 0) { t.cancel(); if (mounted) onTimeout(); }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kSurface,
+      appBar: AppBar(
+        backgroundColor: kSurface,
+        elevation: 0,
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: kOnSurface), onPressed: () => Navigator.pop(context)),
+        title: const Text('AWS Root Key', style: TextStyle(color: kOnSurface)),
+        actions: [
+          IconButton(icon: const Icon(Icons.more_vert, color: kOnSurfaceVariant), onPressed: () {}),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const SizedBox(height: 16),
+          Center(child: Column(children: [
+            Container(width: 72, height: 72, decoration: BoxDecoration(color: const Color(0xFFFF9900).withOpacity(0.12), shape: BoxShape.circle), child: const Icon(Icons.cloud, size: 36, color: Color(0xFFFF9900))),
+            const SizedBox(height: 12),
+            const Text('AWS Root Key', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: kOnSurface)),
+            const SizedBox(height: 4), Text('Amazon Web Services', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
+          ])),
+          const SizedBox(height: 32),
+          // Warning banner
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: kWarning.withOpacity(0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: kWarning.withOpacity(0.3))),
+            child: Row(children: [
+              const Icon(Icons.warning_amber_rounded, size: 20, color: kWarning),
+              const SizedBox(width: 10),
+              Expanded(child: Text('Root keys grant FULL access to your AWS account. Never share publicly.', style: TextStyle(fontSize: 13, color: kWarning, fontWeight: FontWeight.w500))),
+            ]),
+          ),
+          const SizedBox(height: 16),
+          // Access Key ID
+          _awsField(
+            label: 'Access Key ID',
+            value: 'AKIAIOSFODNN7EXAMPLE',
+            revealed: _accessIdRevealed,
+            onReveal: () { setState(() => _accessIdRevealed = true); _startTimer(() => setState(() => _accessIdRevealed = false)); },
+          ),
+          const SizedBox(height: 12),
+          // Secret Access Key
+          _awsField(
+            label: 'Secret Access Key',
+            value: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+            revealed: _secretRevealed,
+            onReveal: () { setState(() => _secretRevealed = true); _startTimer(() => setState(() => _secretRevealed = false)); },
+            isSecret: true,
+          ),
+          const SizedBox(height: 12),
+          // Info card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: kOutlineVariant.withOpacity(0.3))),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              _infoRow('IAM User', 'admin@company.com'),
+              const Divider(height: 20, color: kSurfaceContainerHighest),
+              _infoRow('Region', 'us-east-1 (N. Virginia)'),
+              const Divider(height: 20, color: kSurfaceContainerHighest),
+              _infoRow('Console URL', 'https://console.aws.amazon.com'),
+              const Divider(height: 20, color: kSurfaceContainerHighest),
+              _infoRow('Created', 'May 15, 2024'),
+            ]),
+          ),
+          const SizedBox(height: 24),
+          if (_secretRevealed || _accessIdRevealed)
+            Center(child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.timer_outlined, size: 16, color: kWarning),
+              const SizedBox(width: 8),
+              Text('Auto-hide in $_timer s', style: const TextStyle(fontSize: 12, color: kWarning, fontWeight: FontWeight.w500)),
+            ])),
+          const SizedBox(height: 32),
+        ]),
+      ),
+    );
+  }
+
+  Widget _awsField({required String label, required String value, required bool revealed, required VoidCallback onReveal, bool isSecret = false}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isSecret ? kWarning.withOpacity(0.3) : kOutlineVariant.withOpacity(0.3)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: kSurfaceContainer, borderRadius: BorderRadius.circular(6)), child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: kOnSurfaceVariant))),
+          const Spacer(),
+          GestureDetector(
+            onTap: revealed ? null : onReveal,
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(revealed ? Icons.visibility_off : Icons.visibility, size: 16, color: kPrimary),
+              const SizedBox(width: 4),
+              Text(revealed ? 'Hide' : 'Reveal', style: const TextStyle(fontSize: 12, color: kPrimary, fontWeight: FontWeight.w500)),
+            ]),
+          ),
+        ]),
+        const SizedBox(height: 10),
+        Row(children: [
+          Expanded(child: Text(revealed ? value : '••••••••••••••••••••••••••••', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, fontFamily: 'monospace', color: kOnSurface))),
+          if (revealed)
+            GestureDetector(
+              onTap: () { Clipboard.setData(ClipboardData(text: value)); HapticFeedback.lightImpact(); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied'), duration: Duration(seconds: 1))); },
+              child: const Icon(Icons.copy, size: 18, color: kOnSurfaceVariant),
+            ),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _infoRow(String label, String value) {
+    return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+      Text(label, style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
+      Expanded(child: Text(value, textAlign: TextAlign.right, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: kOnSurface))),
+    ]);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Recovery Codes Detail Screen
+// ═══════════════════════════════════════════════════════════════
+class RecoveryCodesScreen extends StatefulWidget {
+  const RecoveryCodesScreen({super.key});
+  @override
+  State<RecoveryCodesScreen> createState() => _RecoveryCodesScreenState();
+}
+
+class _RecoveryCodesScreenState extends State<RecoveryCodesScreen> {
+  final Set<int> _revealed = {};
+
+  @override
+  Widget build(BuildContext context) {
+    final codes = [
+      ('Google', '8472-9910'),
+      ('Google', '5531-0087'),
+      ('Google', '2294-7763'),
+      ('GitHub', '1108-4456'),
+      ('GitHub', '6677-3321'),
+      ('GitHub', '9901-5543'),
+      ('Discord', '3344-8899'),
+      ('Discord', '7755-1122'),
+    ];
+
+    return Scaffold(
+      backgroundColor: kSurface,
+      appBar: AppBar(
+        backgroundColor: kSurface,
+        elevation: 0,
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: kOnSurface), onPressed: () => Navigator.pop(context)),
+        title: const Text('Recovery Codes', style: TextStyle(color: kOnSurface)),
+        actions: [
+          IconButton(icon: const Icon(Icons.more_vert, color: kOnSurfaceVariant), onPressed: () {}),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const SizedBox(height: 16),
+          Center(child: Column(children: [
+            Container(width: 72, height: 72, decoration: BoxDecoration(color: const Color(0xFF7B1FA2).withOpacity(0.12), shape: BoxShape.circle), child: const Icon(Icons.grid_view, size: 36, color: Color(0xFF7B1FA2))),
+            const SizedBox(height: 12),
+            const Text('Recovery Codes', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: kOnSurface)),
+            const SizedBox(height: 4), Text('Backup access codes', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
+          ])),
+          const SizedBox(height: 24),
+          // Warning
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: kWarning.withOpacity(0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: kWarning.withOpacity(0.3))),
+            child: Row(children: [
+              const Icon(Icons.info_outline, size: 20, color: kWarning),
+              const SizedBox(width: 10),
+              Expanded(child: Text('Store these codes safely. Each code works only once.', style: TextStyle(fontSize: 13, color: kWarning, fontWeight: FontWeight.w500))),
+            ]),
+          ),
+          const SizedBox(height: 16),
+          // Header row
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            const Text('Codes', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: kOnSurfaceVariant)),
+            GestureDetector(
+              onTap: () {
+                final all = codes.map((c) => c.$2).join('\n');
+                Clipboard.setData(ClipboardData(text: all));
+                HapticFeedback.lightImpact();
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('All codes copied'), duration: Duration(seconds: 1)));
+              },
+              child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.copy_all, size: 16, color: kPrimary),
+                SizedBox(width: 4),
+                Text('Copy all', style: TextStyle(fontSize: 13, color: kPrimary, fontWeight: FontWeight.w500)),
+              ]),
+            ),
+          ]),
+          const SizedBox(height: 12),
+          _buildServiceSection('Google', codes.where((c) => c.$1 == 'Google').toList()),
+          const SizedBox(height: 16),
+          _buildServiceSection('GitHub', codes.where((c) => c.$1 == 'GitHub').toList()),
+          const SizedBox(height: 16),
+          _buildServiceSection('Discord', codes.where((c) => c.$1 == 'Discord').toList()),
+          const SizedBox(height: 32),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildServiceSection(String service, List<(String, String)> codes) {
+    final serviceIndex = {'Google': 0, 'GitHub': 1, 'Discord': 2}[service] ?? 0;
+    final sectionColor = [const Color(0xFF4285F4), const Color(0xFF333333), const Color(0xFF5865F2)][serviceIndex];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: kOutlineVariant.withOpacity(0.3))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(width: 28, height: 28, decoration: BoxDecoration(color: sectionColor.withOpacity(0.12), borderRadius: BorderRadius.circular(8)), child: Icon(Icons.verified_user, size: 16, color: sectionColor)),
+          const SizedBox(width: 10),
+          Text(service, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: kOnSurface)),
+          const Spacer(), Text('${codes.length} codes', style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant)),
+        ]),
+        const SizedBox(height: 12),
+        ...codes.asMap().entries.map((entry) {
+          final globalIndex = serviceIndex * 100 + entry.key;
+          final isRevealed = _revealed.contains(globalIndex);
+          final code = entry.value.$2;
+          return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(color: kSurfaceContainerLow, borderRadius: BorderRadius.circular(8)),
+            child: Row(children: [
+              Container(width: 6, height: 6, decoration: BoxDecoration(color: sectionColor, shape: BoxShape.circle)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  isRevealed ? code : '••••-••••',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, fontFamily: 'monospace', color: isRevealed ? kOnSurface : kOnSurfaceVariant, letterSpacing: 1),
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    if (isRevealed) _revealed.remove(globalIndex);
+                    else _revealed.add(globalIndex);
+                  });
+                },
+                child: Icon(isRevealed ? Icons.visibility_off : Icons.visibility, size: 16, color: kPrimary),
+              ),
+              const SizedBox(width: 12),
+              if (isRevealed)
+                GestureDetector(
+                  onTap: () { Clipboard.setData(ClipboardData(text: code)); HapticFeedback.lightImpact(); },
+                  child: const Icon(Icons.copy, size: 16, color: kOnSurfaceVariant),
+                ),
+            ]),
+          );
+        }),
+      ]),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Binance Account Detail Screen
+// ═══════════════════════════════════════════════════════════════
+class BinanceAccountScreen extends StatefulWidget {
+  const BinanceAccountScreen({super.key});
+  @override
+  State<BinanceAccountScreen> createState() => _BinanceAccountScreenState();
+}
+
+class _BinanceAccountScreenState extends State<BinanceAccountScreen> {
+  bool _passwordRevealed = false;
+  bool _twoFaRevealed = false;
+  int _timer = 30;
+  Timer? _t;
+
+  @override
+  void dispose() { _t?.cancel(); super.dispose(); }
+
+  void _startTimer(void Function() onTimeout) {
+    _t?.cancel();
+    setState(() => _timer = 30);
+    _t = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
+      setState(() => _timer--);
+      if (_timer <= 0) { t.cancel(); if (mounted) onTimeout(); }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kSurface,
+      appBar: AppBar(
+        backgroundColor: kSurface,
+        elevation: 0,
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: kOnSurface), onPressed: () => Navigator.pop(context)),
+        title: const Text('Binance Account', style: TextStyle(color: kOnSurface)),
+        actions: [
+          IconButton(icon: const Icon(Icons.more_vert, color: kOnSurfaceVariant), onPressed: () {}),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const SizedBox(height: 16),
+          Center(child: Column(children: [
+            Container(width: 72, height: 72, decoration: BoxDecoration(color: const Color(0xFFF0B90B).withOpacity(0.12), shape: BoxShape.circle), child: const Icon(Icons.currency_bitcoin, size: 36, color: Color(0xFFF0B90B))),
+            const SizedBox(height: 12),
+            const Text('Binance Account', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: kOnSurface)),
+            const SizedBox(height: 4), Text('alex@gmail.com', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
+          ])),
+          const SizedBox(height: 32),
+          // Email
+          _fieldCard(
+            icon: Icons.alternate_email,
+            label: 'Account Email',
+            value: 'alex@gmail.com',
+            onCopy: () { Clipboard.setData(ClipboardData(text: 'alex@gmail.com')); HapticFeedback.lightImpact(); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied'), duration: Duration(seconds: 1))); },
+          ),
+          const SizedBox(height: 12),
+          // Password
+          _fieldCard(
+            icon: Icons.lock_outline,
+            label: 'Password',
+            value: 'Bin@nce!Secure#9921',
+            revealed: _passwordRevealed,
+            onReveal: () { setState(() => _passwordRevealed = true); _startTimer(() => setState(() => _passwordRevealed = false)); },
+            warning: true,
+          ),
+          const SizedBox(height: 12),
+          // 2FA Backup
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: kWarning.withOpacity(0.3))),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                const Icon(Icons.security, size: 18, color: kWarning),
+                const SizedBox(width: 8),
+                const Text('2FA Backup Key', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: kWarning)),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () {
+                    setState(() => _twoFaRevealed = !_twoFaRevealed);
+                    if (!_twoFaRevealed) _startTimer(() => setState(() => _twoFaRevealed = false));
+                  },
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(_twoFaRevealed ? Icons.visibility_off : Icons.visibility, size: 16, color: kPrimary),
+                    const SizedBox(width: 4),
+                    Text(_twoFaRevealed ? 'Hide' : 'Reveal', style: const TextStyle(fontSize: 12, color: kPrimary, fontWeight: FontWeight.w500)),
+                  ]),
+                ),
+              ]),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(
+                  child: Text(
+                    _twoFaRevealed ? 'JBSWY3DPEHPK3PXP' : '••••••••••••••••',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, fontFamily: 'monospace', color: kOnSurface, letterSpacing: 2),
+                  ),
+                ),
+                if (_twoFaRevealed)
+                  GestureDetector(
+                    onTap: () { Clipboard.setData(ClipboardData(text: 'JBSWY3DPEHPK3PXP')); HapticFeedback.lightImpact(); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied'), duration: Duration(seconds: 1))); },
+                    child: const Icon(Icons.copy, size: 18, color: kOnSurfaceVariant),
+                  ),
+              ]),
+            ]),
+          ),
+          const SizedBox(height: 12),
+          // Info
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: kOutlineVariant.withOpacity(0.3))),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              _infoRow('Account Type', 'Verified'),
+              const Divider(height: 20, color: kSurfaceContainerHighest),
+              _infoRow('Created', 'Jan 12, 2023'),
+              const Divider(height: 20, color: kSurfaceContainerHighest),
+              _infoRow('Last Login', 'May 27, 2024'),
+            ]),
+          ),
+          const SizedBox(height: 24),
+          if (_passwordRevealed || _twoFaRevealed)
+            Center(child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.timer_outlined, size: 16, color: kWarning),
+              const SizedBox(width: 8),
+              Text('Auto-hide in $_timer s', style: const TextStyle(fontSize: 12, color: kWarning, fontWeight: FontWeight.w500)),
+            ])),
+          const SizedBox(height: 32),
+        ]),
+      ),
+    );
+  }
+
+  Widget _fieldCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    required VoidCallback onCopy,
+    bool revealed = false,
+    bool warning = false,
+    VoidCallback? onReveal,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: warning ? kWarning.withOpacity(0.3) : kOutlineVariant.withOpacity(0.3)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(icon, size: 18, color: warning ? kWarning : kOnSurfaceVariant),
+          const SizedBox(width: 8),
+          Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: warning ? kWarning : kOnSurfaceVariant)),
+          const Spacer(),
+          if (onReveal != null)
+            GestureDetector(
+              onTap: revealed ? null : onReveal,
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(revealed ? Icons.visibility_off : Icons.visibility, size: 16, color: kPrimary),
+                const SizedBox(width: 4),
+                Text(revealed ? 'Hide' : 'Reveal', style: const TextStyle(fontSize: 12, color: kPrimary, fontWeight: FontWeight.w500)),
+              ]),
+            ),
+        ]),
+        const SizedBox(height: 10),
+        Row(children: [
+          Expanded(
+            child: Text(
+              revealed || onReveal == null ? value : '••••••••••••',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: kOnSurface, letterSpacing: onReveal != null ? 0.5 : 0),
+            ),
+          ),
+          if ((revealed || onReveal == null) && onCopy != null)
+            GestureDetector(onTap: onCopy, child: const Icon(Icons.copy, size: 18, color: kOnSurfaceVariant)),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _infoRow(String label, String value) {
+    return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+      Text(label, style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
+      Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: kOnSurface)),
+    ]);
+  }
 }
 
 class HeirsPage extends StatelessWidget {
