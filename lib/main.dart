@@ -9,6 +9,7 @@ import 'dart:math' as math;
 import 'package:crypto/crypto.dart';
 import 'vault_data.dart';
 import 'vault_screens.dart';
+import 'qr_scanner_screen.dart';
 
 const Color kSurface = Color(0xFFF8F9FA);
 const Color kOnSurface = Color(0xFF191C1D);
@@ -368,10 +369,23 @@ class _MainShellState extends State<MainShell> {
     const SettingsScreen(),
   ];
 
+  bool get _isVault2FAFilterActive {
+    // Check if VaultPage's 2FA filter is active via GlobalKey
+    return _vaultPageKey.currentState?._selectedFilter == '2FA';
+  }
+
+  final GlobalKey<_VaultPageState> _vaultPageKey = GlobalKey<_VaultPageState>();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _pages),
+      body: IndexedStack(index: _currentIndex, children: [
+        const VaultDashboard(),
+        VaultPage(key: _vaultPageKey),
+        const HeirsPage(),
+        const _ActivityPlaceholder(),
+        const SettingsScreen(),
+      ]),
       floatingActionButton: _currentIndex == 0
           ? FloatingActionButton(
               onPressed: () => _showAddSecretSheet(context),
@@ -381,7 +395,13 @@ class _MainShellState extends State<MainShell> {
             )
           : _currentIndex == 1
               ? FloatingActionButton(
-                  onPressed: () {},
+                  onPressed: _isVault2FAFilterActive
+                      ? () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const QrScannerScreen()),
+                          );
+                        }
+                      : () {},
                   backgroundColor: kPrimary,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   child: const Icon(Icons.add, color: kOnPrimary, size: 28),
