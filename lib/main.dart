@@ -115,7 +115,7 @@ class OnboardingScreen extends StatelessWidget {
               const SizedBox(height: 16),
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 const Text('Already have an account? ', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
-                GestureDetector(onTap: () {}, child: const Text('Sign in', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: kPrimary))),
+                GestureDetector(onTap: () { Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => PinUnlockScreen(onUnlock: () { Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const MainShell())); }))); }, child: const Text('Sign in', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: kPrimary))),
               ]),
               const SizedBox(height: 32),
               FractionallySizedBox(widthFactor: 1 / 3, child: Container(height: 4, decoration: BoxDecoration(color: kOutlineVariant, borderRadius: BorderRadius.circular(2)))),
