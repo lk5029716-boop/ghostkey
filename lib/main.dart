@@ -335,7 +335,7 @@ class _VaultPageState extends State<VaultPage> {
                         page = PasswordDetailScreen(item: item);
                         break;
                       case VaultCategory.seeds:
-                        page = SeedsDetailScreen(item: item);
+                        page = item.id == 'ledger' ? const LedgerScreen() : SeedsDetailScreen(item: item);
                         break;
                       case VaultCategory.apiKeys:
                         page = ApiKeysDetailScreen(item: item);
