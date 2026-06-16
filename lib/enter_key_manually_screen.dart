@@ -28,6 +28,7 @@ class _EnterKeyManuallyScreenState extends State<EnterKeyManuallyScreen> {
 
   String _authType = 'TOTP';
   String _algorithm = 'SHA1';
+  bool _showAdvanced = false;
 
   void _pasteClipboard() async {
     final data = await Clipboard.getData('text/plain');
@@ -142,6 +143,96 @@ class _EnterKeyManuallyScreenState extends State<EnterKeyManuallyScreen> {
         ),
       );
 
+  Widget _advancedConfigSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: outlineVariant.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => setState(() => _showAdvanced = !_showAdvanced),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Text(
+                    'Advanced Configuration',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: primary, letterSpacing: 1.2),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    _showAdvanced ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    color: primary,
+                    size: 24,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 200),
+            crossFadeState: _showAdvanced ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            firstChild: const SizedBox(width: double.infinity, height: 0),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, bottom: 8),
+                    child: Text('AUTH TYPE', style: TextStyle(fontSize: 12, color: onSurfaceVariant, fontWeight: FontWeight.w500)),
+                  ),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _choiceChip('TOTP', _authType == 'TOTP', () => setState(() => _authType = 'TOTP')),
+                      _choiceChip('HOTP', _authType == 'HOTP', () => setState(() => _authType = 'HOTP')),
+                      _choiceChip('Steam', _authType == 'Steam', () => setState(() => _authType = 'Steam')),
+                      _choiceChip('Yandex', _authType == 'Yandex', () => setState(() => _authType = 'Yandex')),
+                      _choiceChip('MOTP', _authType == 'MOTP', () => setState(() => _authType = 'MOTP')),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, bottom: 8),
+                    child: Text('ALGORITHM', style: TextStyle(fontSize: 12, color: onSurfaceVariant, fontWeight: FontWeight.w500)),
+                  ),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _choiceChip('SHA1', _algorithm == 'SHA1', () => setState(() => _algorithm = 'SHA1')),
+                      _choiceChip('SHA224', _algorithm == 'SHA224', () => setState(() => _algorithm = 'SHA224')),
+                      _choiceChip('SHA256', _algorithm == 'SHA256', () => setState(() => _algorithm = 'SHA256')),
+                      _choiceChip('SHA384', _algorithm == 'SHA384', () => setState(() => _algorithm = 'SHA384')),
+                      _choiceChip('SHA512', _algorithm == 'SHA512', () => setState(() => _algorithm = 'SHA512')),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(child: _m3Input(label: 'Refresh Time (s)', controller: _refreshCtrl, placeholder: '30', keyboardType: TextInputType.number)),
+                      const SizedBox(width: 12),
+                      Expanded(child: _m3Input(label: 'Digits', controller: _digitsCtrl, placeholder: '6', keyboardType: TextInputType.number)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _m3Input(label: 'Usage Count (HOTP)', controller: _usageCtrl, placeholder: '0', keyboardType: TextInputType.number),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -214,47 +305,7 @@ class _EnterKeyManuallyScreenState extends State<EnterKeyManuallyScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                _sectionLabel('Advanced Configuration'),
-                const SizedBox(height: 12),
-                Padding(
-                  padding: const EdgeInsets.only(left: 4, bottom: 8),
-                  child: Text('AUTH TYPE', style: TextStyle(fontSize: 12, color: onSurfaceVariant, fontWeight: FontWeight.w500)),
-                ),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _choiceChip('TOTP', _authType == 'TOTP', () => setState(() => _authType = 'TOTP')),
-                    _choiceChip('HOTP', _authType == 'HOTP', () => setState(() => _authType = 'HOTP')),
-                    _choiceChip('Steam', _authType == 'Steam', () => setState(() => _authType = 'Steam')),
-                    _choiceChip('Yandex', _authType == 'Yandex', () => setState(() => _authType = 'Yandex')),
-                    _choiceChip('MOTP', _authType == 'MOTP', () => setState(() => _authType = 'MOTP')),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.only(left: 4, bottom: 8),
-                  child: Text('ALGORITHM', style: TextStyle(fontSize: 12, color: onSurfaceVariant, fontWeight: FontWeight.w500)),
-                ),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _choiceChip('SHA1', _algorithm == 'SHA1', () => setState(() => _algorithm = 'SHA1')),
-                    _choiceChip('SHA256', _algorithm == 'SHA256', () => setState(() => _algorithm = 'SHA256')),
-                    _choiceChip('SHA512', _algorithm == 'SHA512', () => setState(() => _algorithm = 'SHA512')),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(child: _m3Input(label: 'Refresh Time (s)', controller: _refreshCtrl, placeholder: '30', keyboardType: TextInputType.number)),
-                    const SizedBox(width: 12),
-                    Expanded(child: _m3Input(label: 'Digits', controller: _digitsCtrl, placeholder: '6', keyboardType: TextInputType.number)),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _m3Input(label: 'Usage Count (HOTP)', controller: _usageCtrl, placeholder: '0', keyboardType: TextInputType.number),
+                _advancedConfigSection(),
                 const SizedBox(height: 100),
               ],
             ),
