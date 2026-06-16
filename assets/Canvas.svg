@@ -8,15 +8,7 @@
 		<clipPath id="mask_2">
 			<rect x="1033.46" y="850.98" width="4775.88" height="4775.88" />
 		</clipPath>
-	<radialGradient id="fadeGradient" cx="0.5" cy="0.5" r="0.5">
-		<stop offset="0%" stop-color="white" stop-opacity="1"/>
-		<stop offset="65%" stop-color="white" stop-opacity="1"/>
-		<stop offset="100%" stop-color="white" stop-opacity="0"/>
-	</radialGradient>
-	<mask id="fadeMask">
-		<rect width="8379.65" height="8379.65" fill="url(#fadeGradient)"/>
-	</mask>
-	</defs><g mask="url(#fadeMask)">
+	</defs>
 	<g id="Frame2" transform="matrix(0.0013658262323588133, -0.9999986290931702, 0.9999986290931702, 0.0013658262323588133, 4189.82568359375, 4189.82568359375)" clip-path="url(#mask_1)" />
 	<rect transform="matrix(0.9999105334281921, -0.013364641927182674, 0.013364641927182674, 0.9999105334281921, 1983.883056640625, 3626.732666015625)" x="-331.28" y="-1114.67" width="662.56" height="2229.34" style="fill:#88FF5F;" />
 	<rect transform="matrix(0.6191802024841309, -0.7852482795715332, 0.7852482795715332, 0.6191802024841309, 3109.87060546875, 6500.5595703125)" x="-261.62" y="-581.18" width="523.24" height="1162.35" style="fill:#88FF5F;" />
@@ -83,6 +75,5 @@
 	<rect transform="matrix(0.08065170794725418, 0.9967415928840637, 0.9967415928840637, -0.08065170794725418, 6189.228515625, 2784.31982421875)" x="-243.33" y="-273.37" width="486.66" height="546.73" style="fill:#88FF5F;" />
 	<rect transform="matrix(-0.43804728984832764, 0.89895099401474, 0.89895099401474, 0.43804728984832764, 6413.7099609375, 2531.14990234375)" x="-29.15" y="-32.3" width="58.3" height="64.59" style="fill:#88FF5F;" />
 	<rect transform="matrix(-0.43804728984832764, 0.89895099401474, 0.89895099401474, 0.43804728984832764, 6438.58984375, 3025.22314453125)" x="-38.63" y="-39.73" width="77.26" height="79.46" style="fill:#88FF5F;" />
-	</g>
 	<g id="Frame 22" clip-path="url(#mask_2)" />
 </svg>
