@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'enter_key_manually_screen.dart';
 
 // ═══════════════════════════════════════════════════════════════
 // QR SCANNER SCREEN — Light/white theme matching GhostKey
@@ -203,6 +204,9 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                       child: OutlinedButton(
                         onPressed: () {
                           HapticFeedback.lightImpact();
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const EnterKeyManuallyScreen()),
+                          );
                         },
                         style: OutlinedButton.styleFrom(
                           foregroundColor: onSurface,
