@@ -230,22 +230,28 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-void _showAddSecretSheet(BuildContext context) {
+void _showAddSecretSheet(BuildContext context, {String? filter}) {
+  final allOptions = [
+    _AddSecretItem(icon: Icons.lock, iconColor: const Color(0xFF1976D2), bgColor: const Color(0xFFBBDEFB), title: 'Password', subtitle: 'Store website or app passwords'),
+    _AddSecretItem(icon: Icons.key, iconColor: kPrimary, bgColor: const Color(0xFFC8E6C9), title: 'Seed Phrase', subtitle: 'Store crypto seed phrases'),
+    _AddSecretItem(icon: Icons.vpn_key, iconColor: const Color(0xFFF57C00), bgColor: const Color(0xFFFFE0B2), title: 'Private Key', subtitle: 'Store private keys'),
+    _AddSecretItem(icon: Icons.code, iconColor: const Color(0xFF7B1FA2), bgColor: const Color(0xFFE1BEE7), title: 'API Key', subtitle: 'Store API keys (read-only)'),
+    _AddSecretItem(icon: Icons.security, iconColor: const Color(0xFFF59E0B), bgColor: const Color(0xFFFFF3CD), title: '2FA', subtitle: 'Store TOTP secrets and backup codes'),
+    _AddSecretItem(icon: Icons.grid_view, iconColor: const Color(0xFFC2185B), bgColor: const Color(0xFFF8BBD0), title: 'Recovery Code', subtitle: 'Store backup codes'),
+    _AddSecretItem(icon: Icons.description, iconColor: const Color(0xFF00796B), bgColor: const Color(0xFFB2DFDB), title: 'Secure Note', subtitle: 'Store encrypted notes or docs'),
+  ];
+
+  final options = filter != null
+      ? allOptions.where((o) => o.title == filter).toList()
+      : allOptions;
+  final title = filter != null ? 'Add $filter' : 'Add Secret';
+
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: kSurface,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
     builder: (ctx) {
-      final options = [
-        _AddSecretItem(icon: Icons.lock, iconColor: const Color(0xFF1976D2), bgColor: const Color(0xFFBBDEFB), title: 'Password', subtitle: 'Store website or app passwords'),
-        _AddSecretItem(icon: Icons.key, iconColor: kPrimary, bgColor: const Color(0xFFC8E6C9), title: 'Seed Phrase', subtitle: 'Store crypto seed phrases'),
-        _AddSecretItem(icon: Icons.vpn_key, iconColor: const Color(0xFFF57C00), bgColor: const Color(0xFFFFE0B2), title: 'Private Key', subtitle: 'Store private keys'),
-        _AddSecretItem(icon: Icons.code, iconColor: const Color(0xFF7B1FA2), bgColor: const Color(0xFFE1BEE7), title: 'API Key', subtitle: 'Store API keys (read-only)'),
-        _AddSecretItem(icon: Icons.security, iconColor: const Color(0xFFF59E0B), bgColor: const Color(0xFFFFF3CD), title: '2FA', subtitle: 'Store TOTP secrets and backup codes'),
-        _AddSecretItem(icon: Icons.grid_view, iconColor: const Color(0xFFC2185B), bgColor: const Color(0xFFF8BBD0), title: 'Recovery Code', subtitle: 'Store backup codes'),
-        _AddSecretItem(icon: Icons.description, iconColor: const Color(0xFF00796B), bgColor: const Color(0xFFB2DFDB), title: 'Secure Note', subtitle: 'Store encrypted notes or docs'),
-      ];
       return SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -254,9 +260,9 @@ void _showAddSecretSheet(BuildContext context) {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Center(child: Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 12), decoration: BoxDecoration(color: kOutlineVariant, borderRadius: BorderRadius.circular(2)))),
-              const Text('Add Secret', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: kOnSurface)),
+              Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: kOnSurface)),
               const SizedBox(height: 4),
-              const Text('Select the type of secret you want to add', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
+              Text(filter != null ? 'Add a new $filter entry' : 'Select the type of secret you want to add', style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
               const SizedBox(height: 12),
               Flexible(
                 child: ListView(
@@ -318,7 +324,7 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _pages),
-      floatingActionButton: _currentIndex == 0 || _currentIndex == 1
+      floatingActionButton: _currentIndex == 0
           ? FloatingActionButton(
               onPressed: () => _showAddSecretSheet(context),
               backgroundColor: kPrimary,
@@ -393,7 +399,7 @@ class _VaultPageState extends State<VaultPage> {
       body: SafeArea(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Row(children: [const Icon(Icons.menu, color: kPrimary, size: 24), const SizedBox(width: 12), Text('GhostKey', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kPrimary))]), Container(width: 32, height: 32, decoration: BoxDecoration(color: kSurfaceContainerHigh, shape: BoxShape.circle), child: const Icon(Icons.person, color: kOnSurfaceVariant, size: 18))])),
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Vault', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: kOnSurface)), IconButton(onPressed: () => _showAddSheet(context), icon: const Icon(Icons.create_new_folder, color: kOnSurfaceVariant))])),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Vault', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: kOnSurface)), IconButton(onPressed: () {}, icon: const Icon(Icons.create_new_folder, color: kOnSurfaceVariant))])),
           Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Container(height: 48, padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: kSurfaceContainerLow, borderRadius: BorderRadius.circular(12), border: Border.all(color: kSurfaceContainerHighest)), child: Row(children: [const Icon(Icons.search, color: kOnSurfaceVariant, size: 20), const SizedBox(width: 12), const Expanded(child: TextField(style: TextStyle(color: kOnSurface, fontSize: 14), decoration: InputDecoration(hintText: 'Search secrets', hintStyle: TextStyle(color: kOnSurfaceVariant, fontSize: 14), border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero)))]))),
           SizedBox(height: 44, child: ListView.separated(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: _filters.length, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (context, index) { final f = _filters[index]; final isActive = f == _selectedFilter; return GestureDetector(onTap: () => setState(() => _selectedFilter = f), child: Container(padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: isActive ? kPrimary : kSurfaceContainer, borderRadius: BorderRadius.circular(20), border: isActive ? null : Border.all(color: kSurfaceContainerHighest)), alignment: Alignment.center, child: Text(f, style: TextStyle(color: isActive ? kOnPrimary : kOnSurfaceVariant, fontSize: 14, fontWeight: FontWeight.w500)))); })),
           const SizedBox(height: 8),
