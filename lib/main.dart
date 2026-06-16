@@ -13,6 +13,8 @@ import 'qr_scanner_screen.dart';
 import 'pin_unlock_screen.dart' show PinScreen, PinScreenMode;
 import 'seed_phrase_restore_screen.dart';
 
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
 const Color kSurface = Color(0xFFF8F9FA);
 const Color kOnSurface = Color(0xFF191C1D);
 const Color kSurfaceContainer = Color(0xFFF3F4F5);
@@ -53,6 +55,7 @@ class _GhostKeyAppState extends State<GhostKeyApp> {
     return Provider<SharedPreferences>.value(
       value: widget.prefs,
       child: MaterialApp(
+        navigatorKey: rootNavigatorKey,
         title: 'GhostKey',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
@@ -82,14 +85,13 @@ class _GhostKeyAppState extends State<GhostKeyApp> {
 
   Widget _unlockScreen() {
     final stored = widget.prefs.getString('pin') ?? '';
-    final navigator = Navigator.of(context);
     return PinScreen(
       title: 'Unlock GhostKey',
       subtitle: 'Use your biometric or PIN to continue',
       mode: PinScreenMode.unlock,
       expectedPin: stored,
       onUnlock: (_) {
-        navigator.pushReplacement(
+        rootNavigatorKey.currentState?.pushReplacement(
           MaterialPageRoute(builder: (_) => const MainShell()),
         );
       },
@@ -132,8 +134,7 @@ class OnboardingScreen extends StatelessWidget {
               SizedBox(width: double.infinity, child: FilledButton(
                 onPressed: () {
                   final prefs = context.read<SharedPreferences>();
-                  final navigator = Navigator.of(context);
-                  navigator.pushReplacement(
+                  Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
                       builder: (_) => PinScreen(
                         title: 'Create PIN',
@@ -141,7 +142,7 @@ class OnboardingScreen extends StatelessWidget {
                         mode: PinScreenMode.setup,
                         onUnlock: (pin) {
                           prefs.setString('pin', pin);
-                          navigator.pushReplacement(
+                          rootNavigatorKey.currentState?.pushReplacement(
                             MaterialPageRoute(builder: (_) => const MainShell()),
                           );
                         },
