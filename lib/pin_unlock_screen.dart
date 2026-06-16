@@ -158,115 +158,74 @@ class _PinScreenState extends State<PinScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      body: Stack(
-        children: [
-          // Subtle background gradient
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    const Color(0xFFF8F9FA),
-                    const Color(0xFFF3F4F5),
-                  ],
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            children: [
+              const SizedBox(height: 48),
+              // Headlines
+              Text(
+                widget.title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 28,
+                  height: 36 / 28,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF191C1D),
                 ),
               ),
-            ),
-          ),
-          SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                    child: IntrinsicHeight(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 32),
-                            // Headlines
-                            Column(
-                              children: [
-                                Text(
-                                  widget.title,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    fontSize: 28,
-                                    height: 36 / 28,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF191C1D),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  _displaySubtitle,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: _errorText != null
-                                        ? const Color(0xFFBA1A1A)
-                                        : const Color(0xFF40493D),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const Spacer(),
-                            const SizedBox(height: 24),
-                            // Biometric button + PIN dots
-                            if (widget.mode == PinScreenMode.unlock)
-                              _buildBiometricButton()
-                            else
-                              const SizedBox(height: 96),
-                            const SizedBox(height: 16),
-                            if (widget.mode == PinScreenMode.unlock)
-                              const Text(
-                                'OR ENTER PIN',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  letterSpacing: 1.0,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF40493D),
-                                ),
-                              )
-                            else
-                              const SizedBox(height: 8),
-                            const SizedBox(height: 16),
-                            // PIN dots with shake
-                            AnimatedBuilder(
-                              animation: _shakeAnim,
-                              builder: (context, child) {
-                                final dx = (_shakeAnim.value == 0)
-                                    ? 0.0
-                                    : 10 *
-                                        (1 - _shakeAnim.value) *
-                                        ((_shakeAnim.value * 12).toInt().isEven
-                                            ? 1
-                                            : -1);
-                                return Transform.translate(
-                                  offset: Offset(dx, 0),
-                                  child: child,
-                                );
-                              },
-                              child: _buildPinDots(),
-                            ),
-                            const Spacer(),
-                            const SizedBox(height: 24),
-                            // Number pad
-                            _buildKeypad(),
-                            const SizedBox(height: 16),
-                          ],
-                        ),
-                      ),
-                    ),
+              const SizedBox(height: 4),
+              Text(
+                _displaySubtitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: _errorText != null
+                      ? const Color(0xFFBA1A1A)
+                      : const Color(0xFF40493D),
+                ),
+              ),
+              const SizedBox(height: 32),
+              // Biometric button (unlock mode only)
+              if (widget.mode == PinScreenMode.unlock) ...[
+                _buildBiometricButton(),
+                const SizedBox(height: 16),
+                const Text(
+                  'OR ENTER PIN',
+                  style: TextStyle(
+                    fontSize: 12,
+                    letterSpacing: 1.0,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF40493D),
                   ),
-                );
-              },
-            ),
+                ),
+              ] else
+                const SizedBox(height: 64),
+              const SizedBox(height: 24),
+              // PIN dots with shake
+              AnimatedBuilder(
+                animation: _shakeAnim,
+                builder: (context, child) {
+                  final dx = (_shakeAnim.value == 0)
+                      ? 0.0
+                      : 10 *
+                          (1 - _shakeAnim.value) *
+                          ((_shakeAnim.value * 12).toInt().isEven ? 1 : -1);
+                  return Transform.translate(
+                    offset: Offset(dx, 0),
+                    child: child,
+                  );
+                },
+                child: _buildPinDots(),
+              ),
+              const Spacer(),
+              // Number pad
+              _buildKeypad(),
+              const SizedBox(height: 24),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
