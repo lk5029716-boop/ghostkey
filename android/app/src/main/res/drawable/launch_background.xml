@@ -3,8 +3,8 @@
     <item android:drawable="@color/ic_launcher_background"/>
     <item
         android:gravity="center"
-        android:width="220dp"
-        android:height="220dp">
-        <bitmap android:src="@drawable/ic_launcher_foreground"/>
+        android:width="280dp"
+        android:height="280dp">
+        <bitmap android:src="@drawable/splash_logo"/>
     </item>
 </layer-list>
