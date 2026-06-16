@@ -12,6 +12,7 @@ import 'vault_screens.dart';
 import 'qr_scanner_screen.dart';
 import 'pin_unlock_screen.dart' show PinScreen, PinScreenMode;
 import 'seed_phrase_restore_screen.dart';
+import 'screens/auth_screen.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -78,9 +79,17 @@ class _GhostKeyAppState extends State<GhostKeyApp> {
           ),
           useMaterial3: true,
         ),
-        home: hasPin ? _unlockScreen() : const OnboardingScreen(),
+        home: _resolveHome(),
       ),
     );
+  }
+
+  Widget _resolveHome() {
+    final hasPin = widget.prefs.getString('pin') != null;
+    final onboarded = widget.prefs.getBool('onboarded') ?? false;
+    if (!onboarded) return const OnboardingScreen();
+    if (hasPin) return _unlockScreen();
+    return const MainShell();
   }
 
   Widget _unlockScreen() {
@@ -133,21 +142,8 @@ class OnboardingScreen extends StatelessWidget {
             child: Column(children: [
               SizedBox(width: double.infinity, child: FilledButton(
                 onPressed: () {
-                  final prefs = context.read<SharedPreferences>();
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (_) => PinScreen(
-                        title: 'Create PIN',
-                        subtitle: 'Set a 6-digit PIN to secure your vault',
-                        mode: PinScreenMode.setup,
-                        onUnlock: (pin) {
-                          prefs.setString('pin', pin);
-                          rootNavigatorKey.currentState?.pushReplacement(
-                            MaterialPageRoute(builder: (_) => const MainShell()),
-                          );
-                        },
-                      ),
-                    ),
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AuthScreen(mode: AuthMode.signup)),
                   );
                 },
                 style: FilledButton.styleFrom(backgroundColor: kPrimary, foregroundColor: kOnPrimary, minimumSize: const Size.fromHeight(52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)), elevation: 4),
@@ -156,7 +152,14 @@ class OnboardingScreen extends StatelessWidget {
               const SizedBox(height: 16),
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 const Text('Already have an account? ', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
-                GestureDetector(onTap: () {}, child: const Text('Sign in', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: kPrimary))),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AuthScreen(mode: AuthMode.signin)),
+                    );
+                  },
+                  child: const Text('Sign in', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: kPrimary)),
+                ),
               ]),
               const SizedBox(height: 32),
               FractionallySizedBox(widthFactor: 1 / 3, child: Container(height: 4, decoration: BoxDecoration(color: kOutlineVariant, borderRadius: BorderRadius.circular(2)))),
@@ -212,6 +215,16 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
           Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(6, (i) => AnimatedContainer(duration: const Duration(milliseconds: 150), width: 18, height: 18, margin: const EdgeInsets.symmetric(horizontal: 8), decoration: BoxDecoration(shape: BoxShape.circle, color: i < _pin.length ? kPrimary : kSurfaceContainerHighest)))),
           const SizedBox(height: 48),
           _buildKeypad(),
+          const SizedBox(height: 16),
+          TextButton(
+            onPressed: () {
+              context.read<SharedPreferences>().setBool('onboarded', true);
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const MainShell()),
+              );
+            },
+            child: const Text('Skip for now', style: TextStyle(color: kOnSurfaceVariant, fontSize: 13, fontWeight: FontWeight.w500)),
+          ),
         ]),
       ),
     );
