@@ -1,22 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'vault_store.dart';
-
-// ─── App Colors (matching HTML design system) ───
-class AppColors {
-  static const Color background = Color(0xFF0F1226);
-  static const Color surface = Color(0xFF151833);
-  static const Color surfaceCard = Color(0xFF1C2040);
-  static const Color primary = Color(0xFFF0D25A);
-  static const Color primaryGreen = Color(0xFF1B6D24);
-  static const Color primaryFixed = Color(0xFF88D982);
-  static const Color textPrimary = Colors.white;
-  static const Color textSecondary = Colors.white54;
-  static const Color textMuted = Colors.white24;
-  static const Color error = Color(0xFFBA1A1A);
-  static const Color warning = Color(0xFFFFA726);
-  static const Color success = Color(0xFF4CAF50);
-}
 
 // ─── Pin Keypad Input Widget ───
 class PinKeypadInput extends StatefulWidget {
@@ -63,7 +45,7 @@ class _PinKeypadInputState extends State<PinKeypadInput> {
               margin: const EdgeInsets.symmetric(horizontal: 8),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: i < _pin.length ? AppColors.primary : Colors.white24,
+                color: i < _pin.length ? const Color(0xFFF0D25A) : Colors.white24,
               ),
             );
           }),
@@ -107,81 +89,11 @@ class _KeyBtn extends StatelessWidget {
       onPressed: onTap,
       style: TextButton.styleFrom(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        backgroundColor: AppColors.surfaceCard.withOpacity(0.5),
+        backgroundColor: const Color(0xFF1C2040).withOpacity(0.5),
       ),
       child: icon != null
-          ? Icon(icon, color: AppColors.textPrimary, size: 22)
-          : Text(label!, style: const TextStyle(fontSize: 26, color: AppColors.textPrimary)),
-    );
-  }
-}
-
-// ─── Timer Card Widget ───
-class TimerCard extends StatelessWidget {
-  final bool compact;
-  const TimerCard({super.key, this.compact = false});
-
-  @override
-  Widget build(BuildContext context) {
-    final store = context.watch<VaultStore>();
-    final days = store.daysRemaining;
-    final status = store.timerStatus;
-
-    Color statusColor;
-    IconData statusIcon;
-    switch (status) {
-      case TimerStatus.active:
-        statusColor = AppColors.primary;
-        statusIcon = Icons.timer;
-        break;
-      case TimerStatus.warning:
-        statusColor = AppColors.warning;
-        statusIcon = Icons.warning_amber;
-        break;
-      case TimerStatus.expired:
-        statusColor = AppColors.error;
-        statusIcon = Icons.error;
-        break;
-    }
-
-    return Container(
-      padding: EdgeInsets.all(compact ? 16 : 20),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: compact ? 40 : 52,
-            height: compact ? 40 : 52,
-            decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
-            child: Icon(statusIcon, color: AppColors.background, size: compact ? 20 : 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Inactivity Timer',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                Text(
-                  days > 0 ? '$days days remaining' : 'Expired',
-                  style: TextStyle(
-                    color: status == TimerStatus.expired ? AppColors.error : AppColors.textSecondary,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: () => store.checkIn(),
-            child: const Text('Check-in', style: TextStyle(color: AppColors.primary)),
-          ),
-        ],
-      ),
+          ? Icon(icon, color: Colors.white, size: 22)
+          : Text(label!, style: const TextStyle(fontSize: 26, color: Colors.white)),
     );
   }
 }
@@ -201,8 +113,8 @@ class PrimaryButton extends StatelessWidget {
       child: FilledButton(
         onPressed: loading ? null : onPressed,
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.background,
+          backgroundColor: const Color(0xFFF0D25A),
+          foregroundColor: const Color(0xFF0F1226),
           minimumSize: const Size.fromHeight(52),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         ),
