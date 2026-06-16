@@ -26,15 +26,6 @@ jobs:
       - name: Flutter version
         run: flutter --version
 
-      - name: Generate Android project with correct package name
-        run: |
-          mkdir -p /tmp/flutter_gen
-          cd /tmp/flutter_gen
-          flutter create --org com.ghostkey --project-name app --platforms android temp_app
-          rm -rf /home/runner/work/ghostkey/ghostkey/android
-          cp -r /tmp/flutter_gen/temp_app/android /home/runner/work/ghostkey/ghostkey/android
-          cd /home/runner/work/ghostkey/ghostkey
-
       - name: Install dependencies
         run: flutter pub get
 
@@ -46,4 +37,4 @@ jobs:
         with:
           appId: ${{ secrets.FIREBASE_APP_ID }}
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          file: /home/runner/work/ghostkey/ghostkey/build/app/outputs/flutter-apk/app-debug.apk
+          file: build/app/outputs/flutter-apk/app-debug.apk
