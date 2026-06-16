@@ -54,7 +54,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [0xFF1A1A2E, 0xFF0F0F1A],
+                colors: [Color(0xFF1A1A2E), Color(0xFF0F0F1A)],
               ),
             ),
           ),
