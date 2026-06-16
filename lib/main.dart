@@ -424,7 +424,11 @@ class _VaultPageState extends State<VaultPage> {
                         page = ApiKeysDetailScreen(item: item);
                         break;
                       case VaultCategory.codes:
-                        page = CodesDetailScreen(item: item);
+                        if (item.fields.containsKey('TOTP Secret')) {
+                          page = TwoFactorDetailScreen(item: item);
+                        } else {
+                          page = CodesDetailScreen(item: item);
+                        }
                         break;
                     }
                     Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));

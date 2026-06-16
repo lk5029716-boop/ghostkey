@@ -139,4 +139,19 @@ final List<VaultItem> kVaultItems = [
       'Discord': '3344-8899\n7755-1122',
     },
   ),
+  // 2FA
+  VaultItem(
+    id: 'github_2fa',
+    title: 'GitHub',
+    subtitle: 'dev_alex',
+    category: VaultCategory.codes,
+    icon: Icons.code,
+    iconColor: const Color(0xFF24292E),
+    iconBgColor: const Color(0xFFE1E3E4),
+    date: 'May 25, 2024',
+    fields: {
+      'TOTP Secret': 'JBSWY3DPEHPK3PXP',
+      'Username': 'dev_alex',
+    },
+  ),
 ];

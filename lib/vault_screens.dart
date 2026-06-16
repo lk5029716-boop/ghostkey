@@ -806,7 +806,7 @@ class _ServiceCodeSectionState extends State<_ServiceCodeSection> {
   Color get _serviceColor {
     switch (widget.service) {
       case 'Google': return const Color(0xFF4285F4);
-      case 'GitHub': return const Color(0xFF333333);
+      case 'GitHub': return const Color(0xFF24292E);
       case 'Discord': return const Color(0xFF5865F2);
       default: return const Color(0xFF0D631B);
     }
@@ -816,7 +816,7 @@ class _ServiceCodeSectionState extends State<_ServiceCodeSection> {
     switch (widget.service) {
       case 'Google': return Icons.email;
       case 'GitHub': return Icons.code;
-      case 'Discord': return Icons.chat;
+      case 'Discord': return Icons.discord;
       default: return Icons.verified_user;
     }
   }
@@ -825,46 +825,245 @@ class _ServiceCodeSectionState extends State<_ServiceCodeSection> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFBFCABA).withOpacity(0.3))),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Container(width: 28, height: 28, decoration: BoxDecoration(color: _serviceColor.withOpacity(0.12), borderRadius: BorderRadius.circular(8)), child: Icon(_serviceIcon, size: 16, color: _serviceColor)),
-          const SizedBox(width: 10),
-          Text(widget.service, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF191C1D))),
-          const Spacer(), Text('${widget.codes.length} codes', style: const TextStyle(fontSize: 12, color: Color(0xFF40493D))),
-        ]),
-        const SizedBox(height: 12),
-        ...widget.codes.asMap().entries.map((entry) {
-          final idx = entry.key;
-          final code = entry.value;
-          final isRevealed = _revealed.contains(idx);
-          return Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(color: const Color(0xFFF3F4F5), borderRadius: BorderRadius.circular(8)),
-            child: Row(children: [
-              Container(width: 6, height: 6, decoration: BoxDecoration(color: _serviceColor, shape: BoxShape.circle)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFBFCABA).withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: _serviceColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(_serviceIcon, size: 16, color: _serviceColor),
+              ),
               const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  isRevealed ? code : '••••-••••',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, fontFamily: 'monospace', color: isRevealed ? const Color(0xFF191C1D) : const Color(0xFF40493D), letterSpacing: 1),
-                ),
+              Text(
+                widget.service,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF191C1D)),
               ),
+              const Spacer(),
+              Text(
+                '${widget.codes.length} codes',
+                style: const TextStyle(fontSize: 12, color: Color(0xFF40493D)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...widget.codes.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final code = entry.value;
+            final isRevealed = _revealed.contains(idx);
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: _serviceColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      isRevealed ? code : '••••-••••',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'monospace',
+                        color: isRevealed ? const Color(0xFF191C1D) : const Color(0xFF40493D),
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => setState(() {
+                      if (isRevealed) _revealed.remove(idx);
+                      else _revealed.add(idx);
+                    }),
+                    child: Icon(
+                      isRevealed ? Icons.visibility_off : Icons.visibility,
+                      size: 16,
+                      color: const Color(0xFF0D631B),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  if (isRevealed)
+                    GestureDetector(
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: code));
+                        HapticFeedback.lightImpact();
+                      },
+                      child: const Icon(Icons.copy, size: 16, color: Color(0xFF40493D)),
+                    ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// 5. TWO FACTOR DETAIL SCREEN (TOTP Live Codes)
+// ═══════════════════════════════════════════════════════════════
+class TwoFactorDetailScreen extends StatefulWidget {
+  final VaultItem item;
+  const TwoFactorDetailScreen({super.key, required this.item});
+
+  @override
+  State<TwoFactorDetailScreen> createState() => _TwoFactorDetailScreenState();
+}
+
+class _TwoFactorDetailScreenState extends State<TwoFactorDetailScreen> {
+  Timer? _timer;
+  String _currentCode = '';
+  int _timerSeconds = 30;
+
+  @override
+  void initState() {
+    super.initState();
+    _generateCode();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _generateCode() {
+    final secret = widget.item.fields['TOTP Secret'] ?? '';
+    if (secret.isNotEmpty) {
+      _currentCode = _generateTOTP(secret);
+    }
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    _timerSeconds = 30 - (now % 30);
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
+      setState(() => _timerSeconds--);
+      if (_timerSeconds <= 0) {
+        _generateCode();
+        setState(() => _timerSeconds = 30);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final f = widget.item.fields;
+    final codeStr = _currentCode;
+    final timerPercent = _timerSeconds / 30.0;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF8F9FA),
+        elevation: 0,
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFF191C1D)), onPressed: () => Navigator.pop(context)),
+        title: Text(widget.item.title, style: const TextStyle(color: Color(0xFF191C1D))),
+        actions: [
+          IconButton(icon: const Icon(Icons.more_vert, color: Color(0xFF40493D)), onPressed: () {}),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const SizedBox(height: 16),
+          Center(child: Column(children: [
+            Container(width: 72, height: 72, decoration: BoxDecoration(color: widget.item.iconBgColor, shape: BoxShape.circle), child: Icon(widget.item.icon, size: 36, color: widget.item.iconColor)),
+            const SizedBox(height: 12),
+            Text(widget.item.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: Color(0xFF191C1D))),
+            const SizedBox(height: 4), Text(widget.item.subtitle, style: const TextStyle(fontSize: 14, color: Color(0xFF40493D))),
+          ])),
+          const SizedBox(height: 32),
+
+          // Live code card
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFBFCABA).withOpacity(0.3))),
+            child: Column(children: [
+              const Text('Current Code', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF40493D))),
+              const SizedBox(height: 12),
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text(
+                  codeStr,
+                  style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w700, fontFamily: 'monospace', color: Color(0xFF0D631B), letterSpacing: 6),
+                ),
+                const SizedBox(width: 16),
+                SizedBox(width: 48, height: 48, child: Stack(alignment: Alignment.center, children: [
+                  SizedBox(width: 48, height: 48, child: CircularProgressIndicator(value: timerPercent, strokeWidth: 3, backgroundColor: const Color(0xFFE1E3E4), valueColor: const AlwaysStoppedAnimation(Color(0xFF0D631B)))),
+                  Text('${_timerSeconds}s', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0D631B))),
+                ])),
+              ]),
+              const SizedBox(height: 12),
               GestureDetector(
-                onTap: () => setState(() { if (isRevealed) _revealed.remove(idx); else _revealed.add(idx); }),
-                child: Icon(isRevealed ? Icons.visibility_off : Icons.visibility, size: 16, color: const Color(0xFF0D631B)),
+                onTap: () {
+                  Clipboard.setData(ClipboardData(text: codeStr));
+                  HapticFeedback.lightImpact();
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Code copied'), duration: Duration(seconds: 1)));
+                },
+                child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.copy, size: 16, color: Color(0xFF40493D)),
+                  SizedBox(width: 4),
+                  Text('Copy code', style: TextStyle(fontSize: 13, color: Color(0xFF40493D))),
+                ]),
               ),
-              const SizedBox(width: 12),
-              if (isRevealed)
-                GestureDetector(
-                  onTap: () { Clipboard.setData(ClipboardData(text: code)); HapticFeedback.lightImpact(); },
-                  child: const Icon(Icons.copy, size: 16, color: Color(0xFF40493D)),
-                ),
             ]),
-          );
-        }),
-      ]),
+          ),
+          const SizedBox(height: 16),
+
+          // Secret key
+          _RevealField(
+            icon: Icons.key,
+            label: 'Secret Key',
+            value: f['TOTP Secret'] ?? '',
+            isWarning: true,
+            isMono: true,
+          ),
+          const SizedBox(height: 12),
+
+          // Info card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFBFCABA).withOpacity(0.3))),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              for (final entry in f.entries)
+                if (entry.key != 'TOTP Secret') ...[
+                  _InfoRow(entry.key, entry.value),
+                  if (entry.key != f.keys.lastWhere((k) => k != 'TOTP Secret'))
+                    const Divider(height: 20, color: Color(0xFFE1E3E4)),
+                ],
+            ]),
+          ),
+
+          const SizedBox(height: 32),
+        ]),
+      ),
     );
   }
 }
