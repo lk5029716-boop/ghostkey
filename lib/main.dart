@@ -111,71 +111,154 @@ class _GhostKeyAppState extends State<GhostKeyApp> {
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});
 
+  // M3 design tokens (matching HTML)
+  static const Color _accentGreen = Color(0xFF88D982); // primary-fixed-dim
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kSurface,
-      body: SafeArea(
-        child: Column(children: [
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Container(width: 128, height: 128, decoration: BoxDecoration(shape: BoxShape.circle, color: kPrimary.withOpacity(0.1), boxShadow: [BoxShadow(color: kPrimary.withOpacity(0.15), blurRadius: 40, spreadRadius: 20)]), child: const Icon(Icons.shield, size: 72, color: kPrimary)),
-                const SizedBox(height: 32),
-                const Text('GhostKey', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: kOnSurface, letterSpacing: -0.25)),
-                const SizedBox(height: 8),
-                const Text('Your digital legacy secured.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: kOnSurfaceVariant, letterSpacing: 0.5)),
-                const SizedBox(height: 48),
-                SizedBox(width: 320, child: Column(children: [
-                  _feat(Icons.vpn_key, 'Bank-grade encryption'),
-                  const SizedBox(height: 24),
-                  _feat(Icons.alarm_on, 'Dead man switch'),
-                  const SizedBox(height: 24),
-                  _feat(Icons.shield, 'Secure inheritance'),
-                ])),
-              ]),
-            ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [kSurface, kSurfaceContainerLow],
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(children: [
-              SizedBox(width: double.infinity, child: FilledButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const AuthScreen(mode: AuthMode.signup)),
-                  );
-                },
-                style: FilledButton.styleFrom(backgroundColor: kPrimary, foregroundColor: kOnPrimary, minimumSize: const Size.fromHeight(52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)), elevation: 4),
-                child: const Text('Get started', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-              )),
-              const SizedBox(height: 16),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                const Text('Already have an account? ', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
-                GestureDetector(
-                  onTap: () {
+        ),
+        child: SafeArea(
+          child: Column(children: [
+            // Status bar (M3 standard)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('9:30', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: kOnSurface.withOpacity(0.8))),
+                  Row(children: [
+                    Icon(Icons.signal_cellular_4_bar, size: 16, color: kOnSurface.withOpacity(0.8)),
+                    const SizedBox(width: 4),
+                    Icon(Icons.wifi, size: 16, color: kOnSurface.withOpacity(0.8)),
+                    const SizedBox(width: 4),
+                    Icon(Icons.battery_full, size: 16, color: kOnSurface.withOpacity(0.8)),
+                  ]),
+                ],
+              ),
+            ),
+
+            // Main content
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  // Multi-layer glow hero (M3 spec)
+                  SizedBox(
+                    width: 144,
+                    height: 144,
+                    child: Stack(alignment: Alignment.center, children: [
+                      // Outer soft radial glow
+                      Container(
+                        width: 144, height: 144,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(colors: [kPrimary.withOpacity(0.18), kPrimary.withOpacity(0.0)]),
+                        ),
+                      ),
+                      // Mid ring
+                      Container(
+                        width: 112, height: 112,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: kPrimary.withOpacity(0.06),
+                          border: Border.all(color: kPrimary.withOpacity(0.12), width: 1),
+                        ),
+                      ),
+                      // Inner badge
+                      Container(
+                        width: 88, height: 88,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: kSurface,
+                          boxShadow: [BoxShadow(color: kPrimary.withOpacity(0.20), blurRadius: 20, spreadRadius: 2, offset: const Offset(0, 4))],
+                        ),
+                        child: const Icon(Icons.shield, size: 44, color: kPrimary),
+                      ),
+                    ]),
+                  ),
+                  const SizedBox(height: 32),
+                  // Title (M3 headline)
+                  const Text('GhostKey', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: kOnSurface, height: 36/28, letterSpacing: -0.25)),
+                  const SizedBox(height: 8),
+                  // Subtitle (M3 body-large)
+                  const Text('Your digital legacy secured.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: kOnSurfaceVariant, height: 24/16, letterSpacing: 0.5)),
+                  const SizedBox(height: 48),
+                  // Features
+                  SizedBox(width: 320, child: Column(children: [
+                    _feat(Icons.vpn_key, 'Bank-grade encryption'),
+                    const SizedBox(height: 24),
+                    _feat(Icons.alarm_on, 'Dead man switch'),
+                    const SizedBox(height: 24),
+                    _feat(Icons.shield, 'Secure inheritance'),
+                  ])),
+                ]),
+              ),
+            ),
+
+            // Bottom actions
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(children: [
+                // Primary CTA (M3 filled, rounded-full)
+                SizedBox(width: double.infinity, child: FilledButton(
+                  onPressed: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const AuthScreen(mode: AuthMode.signin)),
+                      MaterialPageRoute(builder: (_) => const AuthScreen(mode: AuthMode.signup)),
                     );
                   },
-                  child: const Text('Sign in', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: kPrimary)),
-                ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: kPrimary,
+                    foregroundColor: kOnPrimary,
+                    minimumSize: const Size.fromHeight(56),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                    elevation: 4,
+                  ),
+                  child: const Text('Get started', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.1)),
+                )),
+                const SizedBox(height: 16),
+                // Sign in link (M3 accent = primary-fixed-dim, not dark primary)
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  const Text('Already have an account? ', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: kOnSurfaceVariant, letterSpacing: 0.25)),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const AuthScreen(mode: AuthMode.signin)),
+                      );
+                    },
+                    child: const Text('Sign in', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: _accentGreen, letterSpacing: 0.5)),
+                  ),
+                ]),
+                const SizedBox(height: 32),
+                // Bottom indicator pill
+                FractionallySizedBox(widthFactor: 1 / 3, child: Container(height: 4, decoration: BoxDecoration(color: kOutlineVariant, borderRadius: BorderRadius.circular(2)))),
+                const SizedBox(height: 8),
               ]),
-              const SizedBox(height: 32),
-              FractionallySizedBox(widthFactor: 1 / 3, child: Container(height: 4, decoration: BoxDecoration(color: kOutlineVariant, borderRadius: BorderRadius.circular(2)))),
-              const SizedBox(height: 8),
-            ]),
-          ),
-        ]),
+            ),
+          ]),
+        ),
       ),
     );
   }
 
+  // M3 spec: 32x32 circle, primary-fixed-dim icon, primary-fixed at 10-15% bg
   static Widget _feat(IconData icon, String label) {
     return Row(children: [
-      Container(width: 32, height: 32, decoration: BoxDecoration(color: kPrimary.withOpacity(0.1), shape: BoxShape.circle), child: Icon(icon, size: 18, color: kPrimary)),
+      Container(
+        width: 32, height: 32,
+        decoration: BoxDecoration(color: _accentGreen.withOpacity(0.15), shape: BoxShape.circle),
+        child: Icon(icon, size: 18, color: _accentGreen),
+      ),
       const SizedBox(width: 16),
-      Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: kOnSurfaceVariant)),
+      Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: kOnSurfaceVariant, height: 20/14, letterSpacing: 0.1)),
     ]);
   }
 }
