@@ -920,104 +920,75 @@ class _CodesListWidgetState extends State<_CodesListWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
+    return Column(
       children: [
-        Column(
-          children: [
-            // Toolbar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  if (_isMultiSelect) ...[
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: _toggleMultiSelect,
-                    ),
-                    Text(
-                      '${_selectedCodeHashes.length} selected',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: kOnSurface),
-                    ),
-                    const Spacer(),
-                  ] else ...[
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.swap_vert, color: kOnSurfaceVariant),
-                      tooltip: 'Reorder',
-                      onPressed: _openReorder,
-                    ),
-                    if (_codes.isNotEmpty)
-                      IconButton(
-                        icon: const Icon(Icons.checklist, color: kOnSurfaceVariant),
-                        tooltip: 'Select multiple',
-                        onPressed: _toggleMultiSelect,
-                      ),
-                  ],
-                ],
-              ),
-            ),
-            // Codes list
-            Expanded(
-              child: _codes.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.security, size: 56, color: kOnSurfaceVariant),
-                            const SizedBox(height: 16),
-                            const Text('No 2FA codes yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface)),
-                            const SizedBox(height: 8),
-                            const Text('Tap the + button to add your first code', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant), textAlign: TextAlign.center),
-                          ],
-                        ),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.only(top: 4, bottom: 80),
-                      itemCount: _codes.length,
-                      itemBuilder: (context, index) {
-                        final code = _codes[index];
-                        final selected = _selectedCodeHashes.contains(code.hashCode);
-                        return CodeWidget(
-                          code,
-                          key: ValueKey(code.generatedID ?? code.hashCode),
-                          isSelectable: _isMultiSelect,
-                          isSelected: selected,
-                          onSelectionChanged: () => _toggleCodeSelection(code),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-        // Multi-select bottom bar
-        if (_isMultiSelect && _selectedCodeHashes.isNotEmpty)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: SafeArea(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: kSurface,
-                  border: Border(top: BorderSide(color: kOutlineVariant.withOpacity(0.5), width: 0.5)),
+        // Toolbar
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              if (_isMultiSelect) ...[
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: _toggleMultiSelect,
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _MultiSelectAction(icon: Icons.push_pin_outlined, label: 'Pin', onTap: () => _bulkPin(true)),
-                    _MultiSelectAction(icon: Icons.push_pin, label: 'Unpin', onTap: () => _bulkPin(false)),
-                    _MultiSelectAction(icon: Icons.delete_outline, label: 'Delete', destructive: true, onTap: _bulkDelete),
-                  ],
+                Text(
+                  '${_selectedCodeHashes.length} selected',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: kOnSurface),
                 ),
-              ),
-            ),
+                const Spacer(),
+              ] else ...[
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.swap_vert, color: kOnSurfaceVariant),
+                  tooltip: 'Reorder',
+                  onPressed: _openReorder,
+                ),
+                if (_codes.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.checklist, color: kOnSurfaceVariant),
+                    tooltip: 'Select multiple',
+                    onPressed: _toggleMultiSelect,
+                  ),
+              ],
+            ],
           ),
-        // Coach mark overlay
-        if (!_isMultiSelect) const CoachMarkOverlay(),
+        ),
+        // Codes list
+        Expanded(
+          child: _codes.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.security, size: 56, color: kOnSurfaceVariant),
+                        const SizedBox(height: 16),
+                        const Text('No 2FA codes yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface)),
+                        const SizedBox(height: 8),
+                        const Text('Tap the + button to add your first code', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant), textAlign: TextAlign.center),
+                      ],
+                    ),
+                  ),
+                )
+              : ListView.builder(
+                  key: const PageStorageKey<String>('codes_list'),
+                  padding: const EdgeInsets.only(top: 4, bottom: 80),
+                  itemCount: _codes.length,
+                  itemBuilder: (context, index) {
+                    final code = _codes[index];
+                    final selected = _selectedCodeHashes.contains(code.hashCode);
+                    return CodeWidget(
+                      code,
+                      key: ValueKey('code_${index}_${code.hashCode}'),
+                      isSelectable: _isMultiSelect,
+                      isSelected: selected,
+                      onSelectionChanged: () => _toggleCodeSelection(code),
+                    );
+                  },
+                ),
+        ),
       ],
     );
   }
