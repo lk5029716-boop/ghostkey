@@ -908,7 +908,7 @@ class _CodesListWidgetState extends State<_CodesListWidget> {
       final updated = c.copyWith(
         display: c.display.copyWith(pinned: pinned),
       );
-      await CodeStore.instance.addCode(updated);
+      await CodeStore.instance.addOrUpdateCode(updated);
     }
     if (mounted) _toggleMultiSelect();
   }

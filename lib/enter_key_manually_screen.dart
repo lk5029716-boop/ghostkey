@@ -2,11 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/code.dart';
-import '../models/code_display.dart';
 import '../store/code_store.dart';
 
 class EnterKeyManuallyScreen extends StatefulWidget {
-  const EnterKeyManuallyScreen({super.key});
+  /// When non-null, the screen opens in edit mode with the form
+  /// pre-filled with this code's data. Saving returns the updated Code
+  /// via Navigator.pop, instead of persisting directly.
+  final Code? editing;
+
+  const EnterKeyManuallyScreen({super.key, this.editing});
+
   @override
   State<EnterKeyManuallyScreen> createState() => _EnterKeyManuallyScreenState();
 }
@@ -23,16 +28,31 @@ class _EnterKeyManuallyScreenState extends State<EnterKeyManuallyScreen> {
   static const secondaryContainer = Color(0xFFACF4A4);
   static const onSecondaryContainer = Color(0xFF002203);
 
-  final _serviceCtrl = TextEditingController();
-  final _accountCtrl = TextEditingController();
-  final _keyCtrl = TextEditingController();
-  final _refreshCtrl = TextEditingController(text: '30');
-  final _digitsCtrl = TextEditingController(text: '6');
-  final _usageCtrl = TextEditingController(text: '0');
+  late final TextEditingController _serviceCtrl;
+  late final TextEditingController _accountCtrl;
+  late final TextEditingController _keyCtrl;
+  late final TextEditingController _refreshCtrl;
+  late final TextEditingController _digitsCtrl;
+  late final TextEditingController _usageCtrl;
 
-  String _authType = 'TOTP';
-  String _algorithm = 'SHA1';
-  bool _showAdvanced = false;
+  late String _authType;
+  late String _algorithm;
+  late bool _showAdvanced;
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.editing;
+    _serviceCtrl = TextEditingController(text: e?.issuer ?? '');
+    _accountCtrl = TextEditingController(text: e?.account ?? '');
+    _keyCtrl = TextEditingController(text: e?.secret ?? '');
+    _refreshCtrl = TextEditingController(text: '${e?.period ?? 30}');
+    _digitsCtrl = TextEditingController(text: '${e?.digits ?? 6}');
+    _usageCtrl = TextEditingController(text: '${e?.counter ?? 0}');
+    _authType = (e?.type ?? Type.totp).name.toUpperCase();
+    _algorithm = (e?.algorithm ?? Algorithm.sha1).name.toUpperCase();
+    _showAdvanced = e != null;
+  }
 
   void _pasteClipboard() async {
     final data = await Clipboard.getData('text/plain');
@@ -239,6 +259,7 @@ class _EnterKeyManuallyScreenState extends State<EnterKeyManuallyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.editing != null;
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
@@ -248,7 +269,10 @@ class _EnterKeyManuallyScreenState extends State<EnterKeyManuallyScreen> {
           icon: Icon(Icons.arrow_back, color: onSurface),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Enter Key Manually', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: onSurface)),
+        title: Text(
+          isEditing ? 'Edit Code' : 'Enter Key Manually',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: onSurface),
+        ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
@@ -344,6 +368,7 @@ class _EnterKeyManuallyScreenState extends State<EnterKeyManuallyScreen> {
                         }
                         final digits = int.tryParse(_digitsCtrl.text.trim()) ?? 6;
                         final period = int.tryParse(_refreshCtrl.text.trim()) ?? 30;
+                        final counter = int.tryParse(_usageCtrl.text.trim()) ?? 0;
                         final algo = _parseAlgorithm(_algorithm);
                         final type = _parseType(_authType);
                         final code = Code.fromAccountAndSecret(
@@ -355,7 +380,20 @@ class _EnterKeyManuallyScreenState extends State<EnterKeyManuallyScreen> {
                           digits,
                           algorithm: algo,
                           period: period,
-                        );
+                        ).copyWith(counter: counter);
+
+                        if (isEditing) {
+                          // Return the updated code to the caller (CodeWidget);
+                          // caller handles the save so it can preserve generatedID.
+                          if (!mounted) return;
+                          Navigator.pop(context, code);
+                          return;
+                        }
+
+                        // Add mode: persist to the store. The DB uses
+                        // code.hashCode.toString() as the unique id; when
+                        // the user adds a NEW code (different data) the
+                        // hashCode differs and a new row is inserted.
                         await CodeStore.instance.addCode(code);
                         if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -370,8 +408,11 @@ class _EnterKeyManuallyScreenState extends State<EnterKeyManuallyScreen> {
                         );
                       }
                     },
-                    icon: const Icon(Icons.add_task),
-                    label: const Text('Add Account', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                    icon: Icon(isEditing ? Icons.save : Icons.add_task),
+                    label: Text(
+                      isEditing ? 'Save changes' : 'Add Account',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primary,
                       foregroundColor: Colors.white,
@@ -390,7 +431,9 @@ class _EnterKeyManuallyScreenState extends State<EnterKeyManuallyScreen> {
 
   Algorithm _parseAlgorithm(String s) {
     switch (s.toUpperCase()) {
+      case 'SHA224': return Algorithm.sha1; // sha224 unsupported; fall back
       case 'SHA256': return Algorithm.sha256;
+      case 'SHA384': return Algorithm.sha512; // sha384 unsupported; fall back
       case 'SHA512': return Algorithm.sha512;
       default: return Algorithm.sha1;
     }
@@ -400,6 +443,8 @@ class _EnterKeyManuallyScreenState extends State<EnterKeyManuallyScreen> {
     switch (s.toUpperCase()) {
       case 'HOTP': return Type.hotp;
       case 'STEAM': return Type.steam;
+      case 'YANDEX': return Type.totp; // yandex maps to TOTP
+      case 'MOTP': return Type.totp;   // MOTP uses time + pin; show as TOTP
       default: return Type.totp;
     }
   }

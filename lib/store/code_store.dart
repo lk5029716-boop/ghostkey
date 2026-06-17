@@ -48,13 +48,23 @@ class CodeStore {
 
   /// Persist [code] to the local SQLite store and broadcast a
   /// [CodesUpdatedEvent] so the UI can refresh.
+  ///
+  /// Each add creates a NEW row, even if the same code data is added
+  /// twice. Re-adding an existing code (e.g. during a pin toggle) is
+  /// handled by the caller preserving the original `generatedID` and
+  /// updating the row in place via [addOrUpdateCode].
   Future<void> addCode(Code code) async {
     try {
       final db = await OfflineAuthenticatorDB.instance.database;
       final now = DateTime.now().millisecondsSinceEpoch;
+      // Use a per-add unique id (timestamp + random) so multiple adds of
+      // the same code never collide on the UNIQUE(id) constraint. The
+      // primary key is still the autoincrement _generatedID.
+      final uniqueId =
+          '${now}_${code.hashCode}_${DateTime.now().microsecondsSinceEpoch}';
       final local = LocalAuthEntity(
         0, // generatedID: auto-increment handled by SQLite
-        code.hashCode.toString(), // id: stable string key
+        uniqueId,
         jsonEncode(code.toMap()), // encryptedData: JSON payload
         '', // header: empty for now
         now, // createdAt
@@ -72,6 +82,42 @@ class CodeStore {
       _logger.severe('Failed to add code', e, st);
       rethrow;
     }
+  }
+
+  /// Persist [code] to the local SQLite store, updating the existing row
+  /// in place (matched by [Code.generatedID]) or inserting a new one.
+  /// Use this for edits, pin toggles, and tag changes so the row's
+  /// `_generatedID` is preserved.
+  Future<void> addOrUpdateCode(Code code) async {
+    if (code.generatedID == null) {
+      await addCode(code);
+      return;
+    }
+    final db = await OfflineAuthenticatorDB.instance.database;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final rows = await db.query(
+      OfflineAuthenticatorDB.entityTable,
+      where: '_generatedID = ?',
+      whereArgs: [code.generatedID],
+      limit: 1,
+    );
+    if (rows.isEmpty) {
+      // Row was deleted out from under us; fall back to a fresh add.
+      await addCode(code);
+      return;
+    }
+    final existing = LocalAuthEntity.fromMap(rows.first);
+    final updated = existing.copyWith(
+      encryptedData: jsonEncode(code.toMap()),
+      updatedAt: now,
+    );
+    await db.update(
+      OfflineAuthenticatorDB.entityTable,
+      updated.toMap(),
+      where: '_generatedID = ?',
+      whereArgs: [code.generatedID],
+    );
+    _eventBus.fire(CodesUpdatedEvent());
   }
 
   /// Read all codes from the store. Decodes the JSON payload stored in
@@ -108,11 +154,20 @@ class CodeStore {
   /// Remove [code] from the store.
   Future<void> removeCode(Code code) async {
     final db = await OfflineAuthenticatorDB.instance.database;
-    await db.delete(
-      OfflineAuthenticatorDB.entityTable,
-      where: 'id = ?',
-      whereArgs: [code.hashCode.toString()],
-    );
+    if (code.generatedID != null) {
+      await db.delete(
+        OfflineAuthenticatorDB.entityTable,
+        where: '_generatedID = ?',
+        whereArgs: [code.generatedID],
+      );
+    } else {
+      // Fallback for codes that have not been persisted yet.
+      await db.delete(
+        OfflineAuthenticatorDB.entityTable,
+        where: 'id = ?',
+        whereArgs: [code.hashCode.toString()],
+      );
+    }
     _cacheCodes.remove(code.hashCode);
     _eventBus.fire(CodesUpdatedEvent());
   }

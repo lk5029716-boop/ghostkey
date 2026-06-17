@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:logging/logging.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
+import '../enter_key_manually_screen.dart';
 import '../models/code.dart';
 import '../services/preference_service.dart';
 import '../store/code_store.dart';
@@ -129,9 +131,9 @@ class _CodeWidgetState extends State<CodeWidget> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.copy),
-              title: const Text('Copy code'),
-              onTap: () => Navigator.of(ctx).pop('copy'),
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Edit'),
+              onTap: () => Navigator.of(ctx).pop('edit'),
             ),
             ListTile(
               leading: Icon(
@@ -139,6 +141,16 @@ class _CodeWidgetState extends State<CodeWidget> {
               ),
               title: Text(widget.code.isPinned ? 'Unpin' : 'Pin'),
               onTap: () => Navigator.of(ctx).pop('pin'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.qr_code_2),
+              title: const Text('Show QR code'),
+              onTap: () => Navigator.of(ctx).pop('qr'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.label_outline),
+              title: const Text('Add tag'),
+              onTap: () => Navigator.of(ctx).pop('tag'),
             ),
             ListTile(
               leading: const Icon(Icons.delete_outline),
@@ -151,17 +163,150 @@ class _CodeWidgetState extends State<CodeWidget> {
     );
     if (!mounted || result == null) return;
     switch (result) {
-      case 'copy':
-        await _copyToClipboard();
+      case 'edit':
+        await _editCode();
         break;
       case 'pin':
         final updated = _togglePin(widget.code);
-        await CodeStore.instance.addCode(updated);
+        // Update in place: preserve generatedID so the same row is updated.
+        await CodeStore.instance.addOrUpdateCode(updated);
+        break;
+      case 'qr':
+        await _showQrCode();
+        break;
+      case 'tag':
+        await _editTag();
         break;
       case 'delete':
         await CodeStore.instance.removeCode(widget.code);
         break;
     }
+  }
+
+  /// Re-opens the manual entry screen pre-filled with this code's data,
+  /// then saves the edited version back to the store.
+  Future<void> _editCode() async {
+    final updated = await Navigator.of(context).push<Code>(
+      MaterialPageRoute(
+        builder: (_) => EnterKeyManuallyScreen(editing: widget.code),
+      ),
+    );
+    if (updated == null) return;
+    // Preserve the original generatedID so the row gets updated, not duplicated.
+    final merged = updated.copyWith(generatedID: widget.code.generatedID);
+    await CodeStore.instance.addOrUpdateCode(merged);
+  }
+
+  /// Show this code's raw otpauth:// URL as a QR code so another device
+  /// can scan it.
+  Future<void> _showQrCode() async {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                widget.code.issuer.isEmpty ? widget.code.account : widget.code.issuer,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (widget.code.account.isNotEmpty &&
+                  widget.code.issuer.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  widget.code.account,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE1E3E4)),
+                ),
+                child: QrImageView(
+                  data: widget.code.rawData,
+                  version: QrVersions.auto,
+                  size: 220,
+                  backgroundColor: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Scan with any authenticator app to transfer this code',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Add or edit tags on this code. Tags are stored on the CodeDisplay
+  /// and persist with the code on next save.
+  Future<void> _editTag() async {
+    final controller = TextEditingController(
+      text: widget.code.display.tags.join(', '),
+    );
+    final newTag = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Tags'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'work, personal, important',
+            helperText: 'Separate tags with commas',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (newTag == null) return;
+    final tags = newTag
+        .split(',')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+    final updated = widget.code.copyWith(
+      display: widget.code.display.copyWith(tags: tags),
+    );
+    // Update in place: preserve generatedID so the same row is updated.
+    await CodeStore.instance.addOrUpdateCode(updated);
   }
 
   Code _togglePin(Code c) {
@@ -305,6 +450,33 @@ class _CodeWidgetState extends State<CodeWidget> {
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                if (widget.code.display.tags.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      for (final tag in widget.code.display.tags)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: scheme.secondaryContainer.withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(9999),
+                          ),
+                          child: Text(
+                            tag,
+                            style: textTheme.labelSmall?.copyWith(
+                              color: scheme.onSecondaryContainer,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ],
                 const SizedBox(height: 12),

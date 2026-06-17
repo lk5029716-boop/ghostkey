@@ -233,7 +233,7 @@ class _HomePageState extends State<HomePage> {
       final updated = c.copyWith(
         display: c.display.copyWith(pinned: pinned),
       );
-      await CodeStore.instance.addCode(updated);
+      await CodeStore.instance.addOrUpdateCode(updated);
     }
     if (mounted) _toggleMultiSelect();
   }
