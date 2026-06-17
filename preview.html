@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GhostKey — Splash + Auth + Biometric Preview</title>
+<style>
+  :root {
+    --primary: #0D631B;
+    --primary-dim: #88FF5F;
+    --primary-fixed-dim: #88D982;
+    --surface: #F8F9FA;
+    --surface-low: #F3F4F5;
+    --surface-high: #E1E3E4;
+    --on-surface: #191C1D;
+    --on-surface-var: #40493D;
+    --outline: #707A6C;
+    --outline-var: #BFCABA;
+    --error: #BA1A1A;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: linear-gradient(180deg, #ECEEF0 0%, #DDE1E4 100%);
+    color: var(--on-surface);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  .page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+  .page-header {
+    text-align: center;
+    margin-bottom: 56px;
+  }
+  .page-header .badge {
+    display: inline-block;
+    padding: 6px 14px;
+    background: var(--primary);
+    color: white;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .page-header h1 {
+    font-size: 42px;
+    font-weight: 700;
+    color: var(--on-surface);
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+  }
+  .page-header p {
+    color: var(--on-surface-var);
+    font-size: 18px;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  /* 3-up hero */
+  .hero {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+    margin-bottom: 64px;
+  }
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; gap: 48px; }
+  }
+
+  /* Phone frame */
+  .phone {
+    background: #1A1A1A;
+    border-radius: 44px;
+    padding: 12px;
+    box-shadow:
+      0 30px 60px -20px rgba(0,0,0,0.35),
+      0 0 0 1px rgba(0,0,0,0.4),
+      inset 0 0 0 1px rgba(255,255,255,0.05);
+    aspect-ratio: 9 / 19;
+    max-width: 360px;
+    margin: 0 auto;
+    position: relative;
+  }
+  .phone-screen {
+    width: 100%;
+    height: 100%;
+    border-radius: 32px;
+    overflow: hidden;
+    background: var(--surface);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .phone-label {
+    text-align: center;
+    margin-top: 20px;
+    color: var(--on-surface);
+    font-weight: 600;
+    font-size: 15px;
+  }
+  .phone-sub {
+    text-align: center;
+    color: var(--on-surface-var);
+    font-size: 13px;
+    margin-top: 2px;
+  }
+
+  /* Status bar (mock) */
+  .status-bar {
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--on-surface);
+  }
+  .status-bar.light { color: white; }
+
+  /* ═══ SPLASH SCREEN ═══ */
+  .splash-bg {
+    flex: 1;
+    background: linear-gradient(180deg, var(--surface) 0%, var(--surface-low) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .splash-glow {
+    position: absolute;
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(13,99,27,0.20) 0%, rgba(13,99,27,0) 70%);
+    animation: pulse 2.4s ease-in-out infinite alternate;
+  }
+  @keyframes pulse {
+    from { transform: scale(0.95); opacity: 0.85; }
+    to { transform: scale(1.08); opacity: 1; }
+  }
+  .splash-stack {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: enter 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  @keyframes enter {
+    from { opacity: 0; transform: scale(0.85); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .splash-logo {
+    width: 120px;
+    height: 120px;
+    margin-bottom: 24px;
+    filter: drop-shadow(0 4px 20px rgba(13,99,27,0.25));
+  }
+  .splash-word {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--on-surface);
+    letter-spacing: -0.25px;
+    line-height: 1.28;
+  }
+  .splash-tag {
+    font-size: 14px;
+    color: var(--on-surface-var);
+    margin-top: 6px;
+    letter-spacing: 0.25px;
+  }
+
+  /* ═══ ONBOARDING ═══ */
+  .onb-bg {
+    flex: 1;
+    background: linear-gradient(180deg, var(--surface) 0%, var(--surface-low) 100%);
+    display: flex;
+    flex-direction: column;
+    padding: 0 32px 0;
+  }
+  .onb-hero {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .onb-badge-stack {
+    position: relative;
+    width: 144px;
+    height: 144px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 32px;
+  }
+  .onb-glow-outer {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(13,99,27,0.18) 0%, rgba(13,99,27,0) 70%);
+  }
+  .onb-glow-mid {
+    position: absolute;
+    width: 112px;
+    height: 112px;
+    border-radius: 50%;
+    background: rgba(13,99,27,0.06);
+    border: 1px solid rgba(13,99,27,0.12);
+  }
+  .onb-glow-inner {
+    position: relative;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: var(--surface);
+    box-shadow: 0 4px 20px rgba(13,99,27,0.20);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+  }
+  .onb-glow-inner svg { width: 100%; height: 100%; }
+  .onb-title {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--on-surface);
+    letter-spacing: -0.25px;
+  }
+  .onb-sub {
+    font-size: 16px;
+    color: var(--on-surface-var);
+    margin-top: 8px;
+    letter-spacing: 0.5px;
+  }
+  .onb-features {
+    margin-top: 48px;
+    width: 320px;
+    max-width: 100%;
+  }
+  .onb-feat {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .onb-feat-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(136,217,130,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-fixed-dim);
+  }
+  .onb-feat-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--on-surface-var);
+  }
+  .onb-cta {
+    padding: 0 24px 32px;
+  }
+  .btn-primary {
+    width: 100%;
+    height: 56px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 28px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.1px;
+    box-shadow: 0 4px 12px rgba(13,99,27,0.25);
+    cursor: pointer;
+  }
+  .btn-link-row {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 14px;
+    color: var(--on-surface-var);
+  }
+  .btn-link-row a {
+    color: var(--primary-fixed-dim);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-decoration: none;
+    margin-left: 4px;
+  }
+  .onb-pill {
+    width: 33%;
+    height: 4px;
+    background: var(--outline-var);
+    border-radius: 2px;
+    margin: 32px auto 0;
+  }
+
+  /* ═══ PIN UNLOCK (with biometric) ═══ */
+  .pin-bg {
+    flex: 1;
+    background: linear-gradient(180deg, var(--surface) 0%, var(--surface-low) 100%);
+    display: flex;
+    flex-direction: column;
+    padding: 0 16px;
+  }
+  .pin-skip {
+    align-self: flex-end;
+    margin-top: 8px;
+  }
+  .pin-skip button {
+    background: none;
+    border: none;
+    color: var(--outline);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+  .pin-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 16px;
+  }
+  .pin-title {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--on-surface);
+    text-align: center;
+    letter-spacing: -0.25px;
+  }
+  .pin-sub {
+    font-size: 14px;
+    color: var(--on-surface-var);
+    margin-top: 4px;
+    text-align: center;
+  }
+  .pin-bio-wrap {
+    height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 24px 0 16px;
+    position: relative;
+  }
+  .bio-outer {
+    width: 128px;
+    height: 128px;
+    border-radius: 50%;
+    border: 2px solid rgba(13,99,27,0.20);
+    position: relative;
+    animation: ringScale 2.2s ease-in-out infinite alternate;
+  }
+  @keyframes ringScale {
+    from { transform: scale(0.95); }
+    to { transform: scale(1.08); }
+  }
+  .bio-mid {
+    position: absolute;
+    inset: 8px;
+    border-radius: 50%;
+    border: 1px solid rgba(13,99,27,0.40);
+  }
+  .bio-inner {
+    position: absolute;
+    inset: 16px;
+    border-radius: 50%;
+    background: var(--surface-low);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .bio-icon {
+    width: 56px;
+    height: 56px;
+    color: rgba(13,99,27,0.6);
+  }
+  .bio-scan {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 30px;
+    background: linear-gradient(180deg, transparent 0%, rgba(13,99,27,0.18) 50%, transparent 100%);
+    animation: scan 2s linear infinite;
+  }
+  @keyframes scan {
+    0% { top: 0; }
+    50% { top: calc(100% - 30px); }
+    100% { top: 0; }
+  }
+  .pin-or {
+    font-size: 12px;
+    letter-spacing: 1.0px;
+    color: var(--on-surface-var);
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+  .pin-use-link {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 16px;
+    cursor: pointer;
+    margin-bottom: 16px;
+  }
+  .pin-dots {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .pin-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid var(--outline);
+    background: transparent;
+    transition: all 0.2s;
+  }
+  .pin-dot.filled {
+    background: var(--primary);
+    border-color: var(--primary);
+    transform: scale(1.2);
+  }
+  .pin-pad {
+    width: 280px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px 12px;
+    margin: 0 auto;
+    padding: 0 0 8px;
+  }
+  .pin-key {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--on-surface);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+  }
+  .pin-key.bio svg { color: var(--primary); width: 28px; height: 28px; }
+  .pin-key.back svg { color: var(--on-surface-var); width: 24px; height: 24px; }
+
+  /* ═══ Section labels ═══ */
+  .section { margin-bottom: 64px; }
+  .section h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--on-surface);
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+  .section .desc {
+    color: var(--on-surface-var);
+    font-size: 15px;
+    margin-bottom: 32px;
+    max-width: 720px;
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px;
+    justify-items: center;
+  }
+  @media (max-width: 900px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+  .annotation {
+    max-width: 360px;
+    margin: 24px auto 0;
+    padding: 16px 20px;
+    background: white;
+    border-radius: 12px;
+    border: 1px solid var(--outline-var);
+    font-size: 13px;
+    color: var(--on-surface-var);
+  }
+  .annotation strong {
+    color: var(--primary);
+    display: block;
+    margin-bottom: 6px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .annotation ul { padding-left: 18px; }
+  .annotation li { margin-bottom: 4px; }
+
+  /* Bug-fix banner */
+  .banner {
+    background: linear-gradient(90deg, #FFF8E1 0%, #FFFCF0 100%);
+    border: 1px solid #F59E0B;
+    border-left: 4px solid #F59E0B;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    color: #663C00;
+    font-size: 14px;
+  }
+  .banner strong { color: #B45309; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="page-header">
+    <div class="badge">Design Preview</div>
+    <h1>GhostKey — Splash, Auth, Biometric</h1>
+    <p>The work I did this turn: real brand splash, smooth onboarding transition, real OS biometric authentication, and fixes for the "second-time hang".</p>
+  </div>
+
+  <div class="banner">
+    <strong>Heads-up:</strong> the screenshots below are <em>rendered mocks</em> in HTML/CSS so you can preview the design in a browser. The actual Flutter screens use the same tokens (colors, sizes, spacing) and ship the real <code>local_auth</code> integration — so the system biometric dialog you'll see on your phone is a real OS prompt, not a mockup.
+  </div>
+
+  <!-- 3-up hero: the three screens the user sees on every launch -->
+  <div class="hero">
+
+    <!-- SPLASH -->
+    <div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar"><span>9:30</span><span>📶 🔋</span></div>
+          <div class="splash-bg">
+            <div class="splash-glow"></div>
+            <div class="splash-stack">
+              <div class="splash-logo">
+                <svg viewBox="0 0 200 200" width="100%" height="100%">
+                  <defs>
+                    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stop-color="#88FF5F"/>
+                      <stop offset="100%" stop-color="#0D631B"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M 30 10 L 170 10 C 178 10, 184 16, 184 24 L 184 95 C 184 130, 155 158, 122 175 L 105 184 L 88 175 C 55 158, 26 130, 26 95 L 26 24 C 26 16, 32 10, 40 10 Z" fill="url(#g1)"/>
+                  <path d="M 60 60 L 95 60 L 95 95 L 130 60 L 175 60 L 130 105 L 180 150 L 130 150 L 95 115 L 95 150 L 60 150 Z" fill="#F8F9FA"/>
+                </svg>
+              </div>
+              <div class="splash-word">GhostKey</div>
+              <div class="splash-tag">Your digital legacy secured.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">1. Splash (1.5s)</div>
+      <div class="phone-sub">Real brand logo, scale-in animation, soft pulsing glow ring</div>
+    </div>
+
+    <!-- ONBOARDING -->
+    <div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar"><span>9:30</span><span>📶 🔋</span></div>
+          <div class="onb-bg">
+            <div class="onb-hero">
+              <div class="onb-badge-stack">
+                <div class="onb-glow-outer"></div>
+                <div class="onb-glow-mid"></div>
+                <div class="onb-glow-inner">
+                  <svg viewBox="0 0 200 200" width="100%" height="100%">
+                    <defs>
+                      <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stop-color="#88FF5F"/>
+                        <stop offset="100%" stop-color="#0D631B"/>
+                      </linearGradient>
+                    </defs>
+                    <path d="M 30 10 L 170 10 C 178 10, 184 16, 184 24 L 184 95 C 184 130, 155 158, 122 175 L 105 184 L 88 175 C 55 158, 26 130, 26 95 L 26 24 C 26 16, 32 10, 40 10 Z" fill="url(#g2)"/>
+                    <path d="M 60 60 L 95 60 L 95 95 L 130 60 L 175 60 L 130 105 L 180 150 L 130 150 L 95 115 L 95 150 L 60 150 Z" fill="#F8F9FA"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="onb-title">GhostKey</div>
+              <div class="onb-sub">Your digital legacy secured.</div>
+              <div class="onb-features">
+                <div class="onb-feat">
+                  <div class="onb-feat-icon">🔑</div>
+                  <div class="onb-feat-text">Bank-grade encryption</div>
+                </div>
+                <div class="onb-feat">
+                  <div class="onb-feat-icon">⏰</div>
+                  <div class="onb-feat-text">Dead man switch</div>
+                </div>
+                <div class="onb-feat">
+                  <div class="onb-feat-icon">🛡</div>
+                  <div class="onb-feat-text">Secure inheritance</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="onb-cta">
+            <button class="btn-primary">Get started</button>
+            <div class="btn-link-row">Already have an account?<a href="#">Sign in</a></div>
+            <div class="onb-pill"></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">2. Onboarding</div>
+      <div class="phone-sub">Hero logo animates in from the splash via Flutter Hero</div>
+    </div>
+
+    <!-- PIN UNLOCK (biometric) -->
+    <div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar"><span>9:30</span><span>📶 🔋</span></div>
+          <div class="pin-bg">
+            <div class="pin-center">
+              <div class="pin-title">Unlock GhostKey</div>
+              <div class="pin-sub">Use your biometric or PIN to continue</div>
+              <div class="pin-bio-wrap">
+                <div class="bio-outer">
+                  <div class="bio-mid">
+                    <div class="bio-inner">
+                      <svg class="bio-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/>
+                        <path d="M5 21v-1a7 7 0 0 1 14 0v1"/>
+                        <path d="M3 11a9 9 0 0 1 18 0"/>
+                        <path d="M7 11a5 5 0 0 1 10 0"/>
+                      </svg>
+                      <div class="bio-scan"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="pin-or">OR ENTER PIN</div>
+              <button class="pin-use-link">Use PIN instead</button>
+              <div class="pin-dots">
+                <div class="pin-dot filled"></div>
+                <div class="pin-dot filled"></div>
+                <div class="pin-dot filled"></div>
+                <div class="pin-dot"></div>
+                <div class="pin-dot"></div>
+                <div class="pin-dot"></div>
+              </div>
+            </div>
+            <div class="pin-pad">
+              <button class="pin-key">1</button>
+              <button class="pin-key">2</button>
+              <button class="pin-key">3</button>
+              <button class="pin-key">4</button>
+              <button class="pin-key">5</button>
+              <button class="pin-key">6</button>
+              <button class="pin-key">7</button>
+              <button class="pin-key">8</button>
+              <button class="pin-key">9</button>
+              <button class="pin-key bio">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg>
+              </button>
+              <button class="pin-key">0</button>
+              <button class="pin-key back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H7c-.69 0-1.23.35-1.59.88L0 12l5.41 8.11c.36.53.9.89 1.59.89h15a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">3. Unlock + Biometric</div>
+      <div class="phone-sub">Real OS biometric prompt (BiometricPrompt on Android) — not a mockup</div>
+    </div>
+
+  </div>
+
+  <!-- Detailed sections -->
+  <div class="section">
+    <h2>What changed (and why)</h2>
+    <p class="desc">Three problems, three fixes. The phone mockups above are the user-facing result; the bullets below are the engineering reality that powers them.</p>
+  </div>
+
+  <div class="grid-2">
+
+    <!-- Splash detail -->
+    <div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar"><span>9:30</span><span>📶 🔋</span></div>
+          <div class="splash-bg">
+            <div class="splash-glow"></div>
+            <div class="splash-stack">
+              <div class="splash-logo">
+                <svg viewBox="0 0 200 200" width="100%" height="100%">
+                  <defs>
+                    <linearGradient id="g3" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stop-color="#88FF5F"/>
+                      <stop offset="100%" stop-color="#0D631B"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M 30 10 L 170 10 C 178 10, 184 16, 184 24 L 184 95 C 184 130, 155 158, 122 175 L 105 184 L 88 175 C 55 158, 26 130, 26 95 L 26 24 C 26 16, 32 10, 40 10 Z" fill="url(#g3)"/>
+                  <path d="M 60 60 L 95 60 L 95 95 L 130 60 L 175 60 L 130 105 L 180 150 L 130 150 L 95 115 L 95 150 L 60 150 Z" fill="#F8F9FA"/>
+                </svg>
+              </div>
+              <div class="splash-word">GhostKey</div>
+              <div class="splash-tag">Your digital legacy secured.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <strong>Fix #1 — splash</strong>
+        <ul>
+          <li><b>Before:</b> home was OnboardingScreen / PinScreen directly. On cold launch the user saw a brief blank; on warm launch the brand never appeared.</li>
+          <li><b>After:</b> <code>home: SplashScreen(...)</code> always shows for 1.5s with the real brand logo (Canvas1.png) + scale-in + pulsing glow ring.</li>
+          <li><b>Bonus:</b> Hero tag <code>ghostkey-logo</code> on both the splash and the onboarding badge, so the brand mark <em>animates</em> across the route change instead of cutting.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Pin setup detail -->
+    <div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar"><span>9:30</span><span>📶 🔋</span></div>
+          <div class="pin-bg">
+            <div class="pin-center">
+              <div class="pin-title">Create your PIN</div>
+              <div class="pin-sub">A 6-digit code to unlock your vault</div>
+              <div class="pin-bio-wrap" style="height:48px; margin-top:32px;">
+                <div style="font-size:32px;">🔒</div>
+              </div>
+              <div class="pin-dots" style="margin-top:24px;">
+                <div class="pin-dot filled"></div>
+                <div class="pin-dot filled"></div>
+                <div class="pin-dot filled"></div>
+                <div class="pin-dot"></div>
+                <div class="pin-dot"></div>
+                <div class="pin-dot"></div>
+              </div>
+            </div>
+            <div class="pin-pad">
+              <button class="pin-key">1</button>
+              <button class="pin-key">2</button>
+              <button class="pin-key">3</button>
+              <button class="pin-key">4</button>
+              <button class="pin-key">5</button>
+              <button class="pin-key">6</button>
+              <button class="pin-key">7</button>
+              <button class="pin-key">8</button>
+              <button class="pin-key">9</button>
+              <button class="pin-key bio">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg>
+              </button>
+              <button class="pin-key">0</button>
+              <button class="pin-key back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H7c-.69 0-1.23.35-1.59.88L0 12l5.41 8.11c.36.53.9.89 1.59.89h15a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <strong>Fix #3 — second-time hang</strong>
+        <ul>
+          <li><b>Before:</b> <code>await BrandIconRegistry.init(); await CodeStore.init();</code> ran serially in <code>main()</code>. On warm start, SQLite reopen + 1500+ SVG icons froze the first frame.</li>
+          <li><b>After:</b> <code>await Future.wait([...])</code> — both run in parallel. Splash covers the wait so the user never sees a blank.</li>
+          <li>Settings biometric toggle now actually persists via <code>BiometricService.setEnabled</code>, with a snackbar if the device has no fingerprint enrolled.</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="grid-2" style="margin-top: 32px;">
+
+    <!-- Auth flow -->
+    <div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar"><span>9:30</span><span>📶 🔋</span></div>
+          <div class="onb-bg" style="background: linear-gradient(180deg, var(--surface) 0%, var(--surface-low) 100%);">
+            <div style="padding: 16px 16px 0; display: flex; align-items: center; gap: 12px;">
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: rgba(13,99,27,0.06); display:flex; align-items:center; justify-content:center; color: var(--primary);">←</div>
+            </div>
+            <div class="onb-hero" style="padding-top: 8px;">
+              <div style="text-align: center; margin-bottom: 32px;">
+                <div style="font-size: 28px; font-weight: 600;">Sign in to GhostKey</div>
+                <div style="font-size: 16px; color: var(--on-surface-var); margin-top: 4px; padding: 0 16px;">Access your digital legacy across all devices with high-trust security.</div>
+              </div>
+              <div style="width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 12px;">
+                <div style="background: white; border: 1px solid var(--outline-var); border-radius: 16px; padding: 18px; display: flex; align-items: center; gap: 14px;">
+                  <div style="width: 40px; height: 40px; border-radius: 12px; background: #FFF; border: 1px solid var(--outline-var); display:flex; align-items:center; justify-content:center;">G</div>
+                  <div style="font-size: 14px; font-weight: 500;">Continue with Google</div>
+                </div>
+                <div style="background: white; border: 1px solid var(--outline-var); border-radius: 16px; padding: 18px; display: flex; align-items: center; gap: 14px;">
+                  <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(13,99,27,0.10); display:flex; align-items:center; justify-content:center; color: var(--primary);">✉</div>
+                  <div style="font-size: 14px; font-weight: 500;">Continue with Email</div>
+                </div>
+                <div style="background: white; border: 1px solid var(--outline-var); border-radius: 16px; padding: 18px; display: flex; align-items: center; gap: 14px;">
+                  <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(13,99,27,0.10); display:flex; align-items:center; justify-content:center; color: var(--primary);">📞</div>
+                  <div style="font-size: 14px; font-weight: 500;">Continue with Phone</div>
+                </div>
+                <div style="background: linear-gradient(135deg, rgba(13,99,27,0.06), rgba(136,217,130,0.10)); border: 1.5px solid var(--primary); border-radius: 16px; padding: 18px; display: flex; align-items: center; gap: 14px; box-shadow: 0 4px 12px rgba(13,99,27,0.12);">
+                  <div style="width: 40px; height: 40px; border-radius: 12px; background: white; display:flex; align-items:center; justify-content:center;">📡</div>
+                  <div>
+                    <div style="font-size: 14px; font-weight: 600; color: var(--on-surface);">Continue offline</div>
+                    <div style="font-size: 12px; color: var(--on-surface-var);">No account needed, fully local</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <strong>Auth screen (existing)</strong>
+        <ul>
+          <li>M3 mesh background, four sign-in cards, "Continue offline" highlighted as the offline-first differentiator.</li>
+          <li>After picking a method → PIN setup. After PIN setup, if the device has a fingerprint/face enrolled, biometric auto-enables and unlocks go straight to the OS prompt.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Biometric settings -->
+    <div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar"><span>9:30</span><span>📶 🔋</span></div>
+          <div style="flex: 1; background: var(--surface); padding: 16px; overflow-y: auto;">
+            <div style="font-size: 18px; font-weight: 700; color: var(--primary); padding: 12px 4px 16px;">Settings</div>
+            <div style="background: var(--surface-low); border: 1px solid var(--outline-var); border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+              <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--primary); display:flex; align-items:center; justify-content:center; color: white; font-size: 20px;">★</div>
+              <div style="flex: 1;">
+                <div style="font-size: 16px; font-weight: 600;">GhostKey Pro</div>
+                <div style="font-size: 13px; color: var(--on-surface-var);">Active until Oct 2025</div>
+              </div>
+              <div style="color: var(--primary);">›</div>
+            </div>
+            <div style="font-size: 12px; font-weight: 600; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; padding: 0 4px 8px;">Security</div>
+            <div style="background: white; border: 1px solid var(--outline-var); border-radius: 12px; overflow: hidden; margin-bottom: 24px;">
+              <div style="padding: 14px 16px; display: flex; align-items: center; gap: 14px;">
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(13,99,27,0.10); display:flex; align-items:center; justify-content:center; color: var(--primary);">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg>
+                </div>
+                <div style="flex: 1; font-size: 14px; font-weight: 500;">Biometric Lock</div>
+                <div style="width: 44px; height: 24px; border-radius: 12px; background: var(--primary); position: relative;">
+                  <div style="position: absolute; right: 2px; top: 2px; width: 20px; height: 20px; border-radius: 50%; background: white; box-shadow: 0 1px 2px rgba(0,0,0,0.2);"></div>
+                </div>
+              </div>
+              <div style="height: 1px; background: var(--outline-var); margin: 0 16px;"></div>
+              <div style="padding: 14px 16px; display: flex; align-items: center; gap: 14px;">
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(13,99,27,0.10); display:flex; align-items:center; justify-content:center; color: var(--primary);">🔑</div>
+                <div style="flex: 1; font-size: 14px; font-weight: 500;">Change Master Password</div>
+                <div style="color: var(--outline-var);">›</div>
+              </div>
+            </div>
+            <div style="font-size: 12px; font-weight: 600; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; padding: 0 4px 8px;">Vault & Timer</div>
+            <div style="background: white; border: 1px solid var(--outline-var); border-radius: 12px; overflow: hidden;">
+              <div style="padding: 14px 16px; display: flex; align-items: center; gap: 14px;">
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(245,158,11,0.10); display:flex; align-items:center; justify-content:center; color: #F59E0B;">⏰</div>
+                <div style="flex: 1; font-size: 14px; font-weight: 500;">Dead Man's Switch Duration</div>
+                <div style="font-size: 13px; color: var(--on-surface-var);">6 Months ›</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <strong>Fix #2 — real biometric</strong>
+        <ul>
+          <li><b>Before:</b> the "Biometric Lock" toggle in Settings was a <code>bool</code> field that did nothing. The fingerprint icon in the unlock screen was a Material icon, not a real prompt.</li>
+          <li><b>After:</b> toggle persists via <code>BiometricService</code>. Unlock screen calls <code>LocalAuthentication.authenticate()</code> for real. The OS dialog (BiometricPrompt on Android) appears automatically when the user reaches the unlock screen.</li>
+          <li><b>Hidden fix:</b> <code>MainActivity</code> was extending <code>FlutterActivity</code>, which <b>cannot host</b> <code>BiometricPrompt</code>. Switched to <code>FlutterFragmentActivity</code> — without this, the real prompt would never have shown.</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="text-align: center; margin-top: 64px; padding: 32px; background: white; border-radius: 16px; border: 1px solid var(--outline-var);">
+    <div style="font-size: 14px; color: var(--on-surface-var); margin-bottom: 8px;">Files touched this turn</div>
+    <div style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; line-height: 1.8; color: var(--on-surface);">
+      <div>lib/splash_screen.dart <span style="color: var(--primary);">(new)</span></div>
+      <div>lib/services/biometric_service.dart <span style="color: var(--primary);">(new)</span></div>
+      <div>lib/main.dart <span style="color: var(--on-surface-var);">(splash wiring, parallel init, settings biometric)</span></div>
+      <div>lib/pin_unlock_screen.dart <span style="color: var(--on-surface-var);">(real local_auth, use-PIN link)</span></div>
+      <div>lib/screens/auth_screen.dart <span style="color: var(--on-surface-var);">(auto-enable biometric after PIN)</span></div>
+      <div>android/.../MainActivity.kt <span style="color: var(--on-surface-var);">(FlutterFragmentActivity)</span></div>
+    </div>
+    <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--outline-var); font-size: 12px; color: var(--on-surface-var);">
+      Bundled into commit <code>41a4cb3</code> along with the SQLite PRIMARY KEY fix from the other AI process. Pushed to <code>origin/main</code>.
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
