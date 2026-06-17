@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/app_widgets.dart';
-import '../main.dart' show kPrimary, kOnPrimary, kOnSurface, kOnSurfaceVariant, kSurface, kSurfaceContainer, kSurfaceContainerHigh, kOutline, kOutlineVariant;
-import 'pin_screens.dart';
+import '../main.dart' show kPrimary, kOnPrimary, kOnSurface, kOnSurfaceVariant, kSurface, kSurfaceContainer, kSurfaceContainerHigh, kOutline, kOutlineVariant, PinSetupScreen;
 
 enum AuthMode { signup, signin }
 
@@ -23,7 +22,7 @@ class _AuthScreenState extends State<AuthScreen> {
     await prefs.setBool('onboarded', true);
     if (!mounted) return;
     // Always go to PIN setup (which itself offers Skip)
-    rootNavigatorKey.currentState?.pushReplacement(
+    Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const PinSetupScreen()),
     );
   }
@@ -58,7 +57,7 @@ class _AuthScreenState extends State<AuthScreen> {
     final prefs = context.read<SharedPreferences>();
     await prefs.setBool('onboarded', true);
     if (!mounted) return;
-    rootNavigatorKey.currentState?.pushReplacement(
+    Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const PinSetupScreen()),
     );
   }
