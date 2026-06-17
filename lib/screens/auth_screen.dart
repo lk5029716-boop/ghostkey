@@ -1843,8 +1843,14 @@ class _EmailEntryScreenState extends State<_EmailEntryScreen> {
                                 ),
                                 recognizer: TapGestureRecognizer()
                                   ..onTap = () {
-                                    // Pop back to AuthScreen, user can switch mode there
-                                    Navigator.of(context).pop();
+                                    // Jump straight to the Create Account email form
+                                    // (skip the auth methods page)
+                                    Navigator.of(context).pushAndRemoveUntil(
+                                      MaterialPageRoute(
+                                        builder: (_) => const _EmailFormScreen(mode: AuthMode.signup),
+                                      ),
+                                      (r) => false,
+                                    );
                                   },
                               ),
                             ],
