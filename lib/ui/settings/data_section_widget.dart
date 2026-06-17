@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../../main.dart';
-import '../common/report_bug.dart';
-import 'data/local_backup/local_backup_widget.dart';
 import 'import_from_another_app_screen.dart';
 
 /// Settings → Data section.
 ///
-/// "Import from another app" is now a single row that opens a dedicated
-/// full-screen picker (see [ImportFromAnotherAppScreen]). The rest of
-/// the data section is kept inline: encrypted backup, export, and bug
-/// reporting.
+/// Uses the same row/divider style as the rest of the Settings screen
+/// (rounded green-tinted icon badge, 56 px divider indent) so the Data
+/// section doesn't look like a different design system.
 class DataSectionWidget extends StatelessWidget {
   const DataSectionWidget({super.key});
 
@@ -20,79 +17,35 @@ class DataSectionWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Single import entry — opens the dedicated picker screen.
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const ImportFromAnotherAppScreen(),
-                ),
-              );
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: kSecondaryContainer.withOpacity(0.4),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.file_download_outlined,
-                      color: kPrimary,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Import from another app',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                            color: kOnSurface,
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Aegis, andOTP, Bitwarden, 2FAS, Google Authenticator, and more',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: kOnSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(
-                    Icons.chevron_right,
-                    color: kOnSurfaceVariant,
-                    size: 20,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        Container(
-          margin: const EdgeInsets.only(left: 56),
-          height: 1,
-          color: outlineVar.withOpacity(0.3),
-        ),
-        const SizedBox(height: 8),
-        const _SectionHeader(title: 'Export & backup'),
-        const LocalBackupWidget(),
-        const SizedBox(height: 4),
         _ImportRow(
           icon: Icons.file_download_outlined,
+          title: 'Import from another app',
+          subtitle: 'Aegis, andOTP, Bitwarden, 2FAS, Google Authenticator, and more',
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const ImportFromAnotherAppScreen(),
+              ),
+            );
+          },
+        ),
+        _divider(outlineVar),
+        _ImportRow(
+          icon: Icons.cloud_upload_outlined,
+          title: 'Local encrypted backup',
+          subtitle: 'Save an encrypted backup to your device',
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Local backup coming soon — needs libsodium FFI'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          },
+        ),
+        _divider(outlineVar),
+        _ImportRow(
+          icon: Icons.ios_share,
           title: 'Export to file',
           subtitle: 'Save all codes as otpauth:// URIs',
           onTap: () {
@@ -104,41 +57,12 @@ class DataSectionWidget extends StatelessWidget {
             );
           },
         ),
-        const SizedBox(height: 24),
-        const _SectionHeader(title: 'Support'),
-        const SizedBox(height: 4),
-        _ImportRow(
-          icon: Icons.bug_report_outlined,
-          title: 'Report a bug',
-          subtitle: 'Send device info + description to support',
-          onTap: () => showDialog(
-            context: context,
-            builder: (_) => const ReportBugDialog(),
-          ),
-        ),
-        const SizedBox(height: 32),
       ],
     );
   }
-}
 
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  const _SectionHeader({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: kPrimary,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
-            ),
-      ),
-    );
+  Widget _divider(Color color) {
+    return Divider(height: 1, thickness: 1, color: color.withOpacity(0.1), indent: 56);
   }
 }
 
@@ -162,14 +86,14 @@ class _ImportRow extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
               Container(
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: kSecondaryContainer.withOpacity(0.3),
+                  color: kSecondaryContainer.withOpacity(0.35),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: kPrimary, size: 22),
@@ -181,25 +105,26 @@ class _ImportRow extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w500,
-                          ),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF191C1D),
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
-                          ),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF40493D),
+                      ),
                     ),
                   ],
                 ),
               ),
               const Icon(
                 Icons.chevron_right,
-                color: kOnSurfaceVariant,
+                color: Color(0xFF40493D),
                 size: 20,
               ),
             ],

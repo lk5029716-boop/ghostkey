@@ -2465,6 +2465,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 24),
 
+          // Support section
+          _sectionHeader('Support', primary),
+          const SizedBox(height: 8),
+          _card([
+            _row(Icons.bug_report_outlined, 'Report a bug', chevron: true),
+          ]),
+          const SizedBox(height: 24),
+
           // Notifications section
           _sectionHeader('Notifications', primary),
           const SizedBox(height: 8),
@@ -2554,6 +2562,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget _iconBadge(IconData icon) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: kSecondaryContainer.withOpacity(0.35),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(icon, color: kPrimary, size: 22),
+    );
+  }
+
   Widget _divider(Color color) {
     return Divider(height: 1, thickness: 1, color: color.withOpacity(0.1), indent: 56);
   }
@@ -2564,7 +2584,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(children: [
-          Icon(icon, size: 22, color: const Color(0xFF40493D)),
+          _iconBadge(icon),
           const SizedBox(width: 16),
           Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: Color(0xFF191C1D)))),
           trailing ?? (chevron ? const Icon(Icons.chevron_right, color: Color(0xFF40493D)) : const SizedBox.shrink()),
@@ -2574,19 +2594,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _switchRow(IconData icon, String title, bool value, ValueChanged<bool> onChanged) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(children: [
-        Icon(icon, size: 22, color: const Color(0xFF40493D)),
-        const SizedBox(width: 16),
-        Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: Color(0xFF191C1D)))),
-        Switch(
-          value: value,
-          onChanged: onChanged,
-          activeColor: const Color(0xFF2e7d32),
-          activeTrackColor: const Color(0xFF2e7d32).withOpacity(0.3),
-        ),
-      ]),
+    return InkWell(
+      onTap: () => onChanged(!value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(children: [
+          _iconBadge(icon),
+          const SizedBox(width: 16),
+          Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: Color(0xFF191C1D)))),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: kPrimary,
+            activeTrackColor: kPrimary.withOpacity(0.3),
+          ),
+        ]),
+      ),
     );
   }
 }
