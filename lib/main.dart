@@ -14,6 +14,7 @@ import 'pin_unlock_screen.dart' show PinScreen, PinScreenMode;
 import 'seed_phrase_restore_screen.dart';
 import 'screens/auth_screen.dart';
 import 'ui/settings/data_section_widget.dart';
+import 'ui/utils/icon_utils.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -39,6 +40,8 @@ const Color kWarning = Color(0xFFF59E0B);
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
+  // Pre-load brand icon registry so it's ready when the UI needs it
+  unawaited(BrandIconRegistry.instance.init());
   runApp(GhostKeyApp(prefs: prefs));
 }
 

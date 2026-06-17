@@ -140,28 +140,35 @@ class CodeStore {
   }
 
   /// Save the new manual order of codes (from drag-to-reorder).
-  /// Updates [LocalAuthEntity.manualOrder] in the DB; the rest of the
-  /// data is left untouched. Returns true if any row changed.
+  /// Updates [LocalAuthEntity.manualOrder] in the DB using a single batch.
   Future<bool> saveUpdatedIndexes(List<Code> codes) async {
     final db = await OfflineAuthenticatorDB.instance.database;
+    // Load all existing rows once
+    final rows = await db.query(OfflineAuthenticatorDB.entityTable);
+    final idToGenId = <String, int>{};
+    final idToOrder = <String, int>{};
+    for (final row in rows) {
+      final id = row['id'] as String?;
+      final genId = row['_generatedID'] as int?;
+      final order = (row['manual_order'] as int?) ?? 0;
+      if (id != null && genId != null) {
+        idToGenId[id] = genId;
+        idToOrder[id] = order;
+      }
+    }
     final batch = db.batch();
     var changed = false;
     for (var i = 0; i < codes.length; i++) {
-      final rows = await db.query(
-        OfflineAuthenticatorDB.entityTable,
-        where: 'id = ?',
-        whereArgs: [codes[i].hashCode.toString()],
-        limit: 1,
-      );
-      if (rows.isEmpty) continue;
-      final generatedId = rows.first['_generatedID'] as int;
-      final currentOrder = (rows.first['manual_order'] as int?) ?? 0;
+      final id = codes[i].hashCode.toString();
+      final genId = idToGenId[id];
+      if (genId == null) continue;
+      final currentOrder = idToOrder[id] ?? 0;
       if (currentOrder != i) {
         batch.update(
           OfflineAuthenticatorDB.entityTable,
           {'manual_order': i},
           where: '_generatedID = ?',
-          whereArgs: [generatedId],
+          whereArgs: [genId],
         );
         changed = true;
       }

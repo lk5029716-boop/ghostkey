@@ -162,19 +162,7 @@ class _CodeWidgetState extends State<CodeWidget> {
   }
 
   Code _togglePin(Code c) {
-    // Pin state lives on CodeDisplay. We rebuild a Code with the
-    // opposite pinned flag and persist via addCode() (CodeStore does
-    // an upsert keyed on rawData).
-    return Code(
-      c.account,
-      c.issuer,
-      c.digits,
-      c.period,
-      c.secret,
-      c.algorithm,
-      c.type,
-      c.counter,
-      c.rawData,
+    return c.copyWith(
       display: c.display.copyWith(pinned: !c.display.pinned),
     );
   }
@@ -426,16 +414,33 @@ class _BrandIconAvatar extends StatelessWidget {
       width: 32,
       height: 32,
       decoration: BoxDecoration(
-        color: background ?? const Color(0xFFF3F4F5),
+        color: background ?? const Color(0xFFE8F5E9),
         borderRadius: BorderRadius.circular(8),
       ),
       clipBehavior: Clip.antiAlias,
       child: SvgPicture.asset(
         assetPath,
-        width: 22,
-        height: 22,
+        width: 20,
+        height: 20,
         fit: BoxFit.contain,
-        placeholderBuilder: (_) => const SizedBox.shrink(),
+        placeholderBuilder: (_) => _fallbackAvatar(context),
+      ),
+    );
+  }
+
+  Widget _fallbackAvatar(BuildContext context) {
+    final name = assetPath.split('/').last.split('.').first;
+    final letter = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    return Center(
+      child: Text(
+        letter,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: background != null
+              ? Colors.white
+              : const Color(0xFF40493D),
+        ),
       ),
     );
   }

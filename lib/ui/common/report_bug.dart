@@ -4,14 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// In-app bug reporter. Collects device info + a free-form description,
-/// writes a log file, and shares it via the platform share sheet so
-/// the user can email/send it to support.
-///
-/// Since GhostKey has no backend, the user attaches the log to their
-/// own email/message — ente's flow (upload to internal server) doesn't
-/// apply here.
+/// writes a log file, and shares it via email or the platform share sheet.
 class ReportBugDialog extends StatefulWidget {
   const ReportBugDialog({super.key});
 
@@ -37,46 +33,69 @@ class _ReportBugDialogState extends State<ReportBugDialog> {
     setState(() => _sending = true);
 
     try {
-      String? logPath;
-      if (_attachingLogs) {
-        logPath = await _writeLogFile(
-          description: _descriptionController.text.trim(),
-          email: _emailController.text.trim(),
-        );
+      final description = _descriptionController.text.trim();
+      final email = _emailController.text.trim();
+
+      // Build the email body
+      final body = StringBuffer()
+        ..writeln('GhostKey Bug Report')
+        ..writeln()
+        ..writeln('--- Description ---')
+        ..writeln(description.isEmpty ? '(no description provided)' : description)
+        ..writeln()
+        ..writeln('--- Device Info ---')
+        ..writeln('Platform: ${Platform.operatingSystem} ${Platform.operatingSystemVersion}')
+        ..writeln('Dart: ${Platform.version}');
+
+      if (email.isNotEmpty) {
+        body.writeln('User email: $email');
       }
 
-      if (logPath != null) {
+      final subject = Uri.encodeComponent('GhostKey bug report');
+      final bodyEncoded = Uri.encodeComponent(body.toString());
+
+      // Try to open mailto: link first
+      final mailtoUri = Uri.parse(
+        'mailto:support@ghostkey.app?subject=$subject&body=$bodyEncoded',
+      );
+
+      try {
+        final canLaunch = await canLaunchUrl(mailtoUri);
+        if (canLaunch) {
+          await launchUrl(mailtoUri);
+          if (mounted) Navigator.of(context).pop();
+          return;
+        }
+      } catch (_) {
+        // mailto: not available, fall through to share
+      }
+
+      // Fallback: write log file and use share sheet
+      if (_attachingLogs) {
+        final logPath = await _writeLogFile(
+          description: description,
+          email: email,
+        );
         await Share.shareXFiles(
           [XFile(logPath)],
           subject: 'GhostKey bug report',
-          text:
-              'Describe what happened:\n\n${_descriptionController.text.trim()}',
+          text: description.isEmpty
+              ? 'GhostKey bug report'
+              : 'Describe what happened:\n\n$description',
         );
       } else {
-        // No log attachment — just open the mailto:
-        final body = Uri.encodeComponent(
-          'Describe what happened:\n\n${_descriptionController.text.trim()}',
-        );
-        final subject = Uri.encodeComponent('GhostKey bug report');
-        final email = _emailController.text.trim().isEmpty
-            ? 'support@ghostkey.app'
-            : _emailController.text.trim();
-        // ignore: deprecated_member_use
-        // Use Clipboard + snackbar as a portable fallback (mailto: needs
-        // platform plugin; we keep it simple for the demo).
-        await Clipboard.setData(
-          ClipboardData(
-            text: 'To: $email\nSubject: $subject\n\n$body',
-          ),
-        );
+        // Last resort: copy to clipboard
+        await Clipboard.setData(ClipboardData(text: body.toString()));
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Bug report copied to clipboard'),
+              content: Text('Bug report copied to clipboard — paste it in an email to support@ghostkey.app'),
+              duration: Duration(seconds: 4),
             ),
           );
         }
       }
+
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {

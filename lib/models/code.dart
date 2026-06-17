@@ -116,7 +116,7 @@ class Code {
       "otpauth://${updatedType.name}/$updateIssuer:$updateAccount?algorithm=${updatedAlgo.name.toUpperCase()}"
       "&digits=$updatedDigits&issuer=$encodedIssuer"
       "&period=$updatePeriod&secret=$updatedSecret${updatedType == Type.hotp ? "&counter=$updatedCounter" : ""}",
-      generatedID: generatedID,
+      generatedID: generatedID ?? this.generatedID,
       display: updatedDisplay,
     );
   }

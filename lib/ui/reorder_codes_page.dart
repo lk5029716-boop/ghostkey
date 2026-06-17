@@ -21,7 +21,13 @@ class _ReorderCodesPageState extends State<ReorderCodesPage> {
   bool _hasChanged = false;
   bool _saving = false;
 
-  late List<Code> _codes = List<Code>.from(widget.codes);
+  late List<Code> _codes;
+
+  @override
+  void initState() {
+    super.initState();
+    _codes = List<Code>.from(widget.codes);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +60,7 @@ class _ReorderCodesPageState extends State<ReorderCodesPage> {
         ],
       ),
       body: SafeArea(
-        child: ReorderableListView(
+        child: ReorderableListView.builder(
           buildDefaultDragHandles: false,
           proxyDecorator: (child, index, animation) {
             return AnimatedBuilder(
@@ -74,6 +80,7 @@ class _ReorderCodesPageState extends State<ReorderCodesPage> {
               },
             );
           },
+          itemCount: _codes.length,
           onReorder: (oldIndex, newIndex) {
             setState(() {
               if (oldIndex < newIndex) newIndex -= 1;
@@ -82,21 +89,21 @@ class _ReorderCodesPageState extends State<ReorderCodesPage> {
               _hasChanged = true;
             });
           },
-          children: [
-            for (final code in _codes)
-              Padding(
-                key: ValueKey('${code.hashCode}_${code.generatedID}'),
-                padding: EdgeInsets.zero,
-                child: ReorderableDragStartListener(
-                  index: _codes.indexOf(code),
-                  child: CodeWidget(
-                    key: ValueKey(code.generatedID),
-                    code,
-                    isReordering: true,
-                  ),
+          itemBuilder: (context, index) {
+            final code = _codes[index];
+            return Padding(
+              key: ValueKey('reorder_${code.hashCode}_$index'),
+              padding: EdgeInsets.zero,
+              child: ReorderableDragStartListener(
+                index: index,
+                child: CodeWidget(
+                  code,
+                  key: ValueKey('code_${code.hashCode}'),
+                  isReordering: true,
                 ),
               ),
-          ],
+            );
+          },
         ),
       ),
     );

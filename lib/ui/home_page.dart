@@ -9,8 +9,8 @@ import '../services/preference_service.dart';
 import '../store/code_store.dart';
 import 'code_error_widget.dart';
 import 'code_widget.dart';
+import 'home/coach_mark_widget.dart';
 import 'reorder_codes_page.dart';
-import 'utils/icon_utils.dart';
 
 /// Vault home screen. Loads TOTP codes from [CodeStore], filters /
 /// sorts them per [PreferenceService] settings, and renders the list
@@ -56,8 +56,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Lazily initialize the brand icon registry on first build.
-    BrandIconRegistry.instance.init();
   }
 
   Future<void> _loadCodes() async {
@@ -232,16 +230,7 @@ class _HomePageState extends State<HomePage> {
         .where((c) => _selectedCodeHashes.contains(c.hashCode))
         .toList();
     for (final c in selected) {
-      final updated = Code(
-        c.account,
-        c.issuer,
-        c.digits,
-        c.period,
-        c.secret,
-        c.algorithm,
-        c.type,
-        c.counter,
-        c.rawData,
+      final updated = c.copyWith(
         display: c.display.copyWith(pinned: pinned),
       );
       await CodeStore.instance.addCode(updated);
@@ -271,7 +260,12 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: scheme.surface,
       appBar: _buildAppBar(scheme, textTheme),
-      body: _buildBody(),
+      body: Stack(
+        children: [
+          _buildBody(),
+          const CoachMarkOverlay(),
+        ],
+      ),
       bottomNavigationBar: _isMultiSelect && _selectedCodeHashes.isNotEmpty
           ? _buildMultiSelectBar(scheme)
           : null,

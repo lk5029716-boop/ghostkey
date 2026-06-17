@@ -6,73 +6,82 @@ import 'package:flutter/services.dart';
 /// Maps authenticator issuer names to brand SVG icons.
 ///
 /// Loads `assets/custom-icons/custom-icons.json` once at startup.
-/// Each entry has: title (canonical name), slug (SVG filename stem),
-/// altNames (other names that should resolve to this icon), hex (brand color).
+/// Each entry has: title (canonical name), slug (SVG filename stem).
 class BrandIcon {
   final String title;
   final String slug;
-  final int? hex;
-  const BrandIcon({required this.title, required this.slug, this.hex});
+  const BrandIcon({required this.title, required this.slug});
 }
 
 class BrandIconRegistry {
   BrandIconRegistry._();
   static final BrandIconRegistry instance = BrandIconRegistry._();
 
-  // canonical title -> icon
-  final Map<String, BrandIcon> _byTitle = {};
-  // normalized alt name -> icon (case-insensitive, lowercased, stripped)
-  final Map<String, BrandIcon> _byAlias = {};
+  // normalized name -> icon
+  final Map<String, BrandIcon> _byName = {};
   bool _loaded = false;
+  bool _loading = false;
 
   Future<void> init({AssetBundle? bundle}) async {
-    if (_loaded) return;
-    final b = bundle ?? rootBundle;
-    final raw = await b.loadString('assets/custom-icons/custom-icons.json');
-    final data = json.decode(raw) as Map<String, dynamic>;
-    for (final entry in (data['icons'] as List? ?? [])) {
-      final title = (entry['title'] as String?)?.trim();
-      if (title == null) continue;
-      // Slug: prefer entry.slug, else title lowercased with spaces → underscores
-      final slug = (entry['slug'] as String?) ??
-          _toSlug(title);
-      final hexStr = entry['hex'] as String?;
-      final hex = (hexStr != null) ? int.tryParse('FF$hexStr', radix: 16) : null;
-      final icon = BrandIcon(title: title, slug: slug, hex: hex);
-
-      _byTitle[title.toLowerCase()] = icon;
-      _byAlias[_normalize(title)] = icon;
-      for (final alt in (entry['altNames'] as List? ?? [])) {
-        if (alt is String) _byAlias[_normalize(alt)] = icon;
+    if (_loaded || _loading) return;
+    _loading = true;
+    try {
+      final b = bundle ?? rootBundle;
+      final raw = await b.loadString('assets/custom-icons/custom-icons.json');
+      final data = json.decode(raw) as Map<String, dynamic>;
+      for (final entry in (data['icons'] as List? ?? [])) {
+        final title = (entry['title'] as String?)?.trim();
+        if (title == null || title.isEmpty) continue;
+        final slug = (entry['slug'] as String?)?.trim() ?? _toSlug(title);
+        final icon = BrandIcon(title: title, slug: slug);
+        // Index by multiple normalized forms
+        _byName[_normalize(title)] = icon;
+        _byName[title.toLowerCase()] = icon;
+        _byName[slug] = icon;
+        // Also index without spaces/special chars
+        _byName[_normalizeSlug(title)] = icon;
       }
+      _loaded = true;
+    } catch (e) {
+      if (kDebugMode) debugPrint('BrandIconRegistry init failed: $e');
+    } finally {
+      _loading = false;
     }
-    _loaded = true;
+  }
+
+  /// Ensure init has been called. Safe to call multiple times.
+  Future<void> ensureInit() async {
+    if (!_loaded) await init();
   }
 
   /// Look up a brand icon for an issuer. Returns the SVG asset path
-  /// (relative to the project root, for use with `flutter_svg`'s
-  /// `SvgPicture.asset`) or null if no match.
+  /// or null if no match. Must call [init] first.
   String? assetPathForIssuer(String? issuer) {
     if (issuer == null || issuer.isEmpty) return null;
-    if (!_loaded) {
-      // Lazy: synchronously warn and return null rather than block UI.
-      if (kDebugMode) {
-        debugPrint('BrandIconRegistry: init() not awaited; lookup may fail');
-      }
-      return null;
-    }
+    if (!_loaded) return null;
+
     final norm = _normalize(issuer);
-    // Try full name, then progressively shorter prefixes
-    BrandIcon? icon = _byAlias[norm];
-    icon ??= _byTitle[issuer.toLowerCase()];
-    // Strip common suffixes and try again (e.g. "GitHub: Work" → "github")
+    // Direct match
+    BrandIcon? icon = _byName[norm];
+    // Try lowercase
+    icon ??= _byName[issuer.toLowerCase()];
+    // Try without special chars
+    icon ??= _byName[_normalizeSlug(issuer)];
+    // Strip common suffixes and try again
     if (icon == null) {
-      for (final sep in [':', '-', '(', '/']) {
+      for (final sep in [':', '-', '(', '/', '.']) {
         final idx = norm.indexOf(sep);
         if (idx > 0) {
-          icon = _byAlias[norm.substring(0, idx).trim()];
+          icon = _byName[norm.substring(0, idx).trim()];
           if (icon != null) break;
         }
+      }
+    }
+    // Try first word only
+    if (icon == null) {
+      final firstWord = norm.split(' ').first;
+      if (firstWord.length > 2) {
+        icon = _byName[firstWord];
       }
     }
     if (icon == null) return null;
@@ -80,22 +89,21 @@ class BrandIconRegistry {
   }
 
   /// Normalize an issuer string for lookup.
-  /// Lowercase, strip whitespace, drop "inc"/"corp"/"ltd"/etc.
   String _normalize(String s) {
     var out = s.toLowerCase().trim();
-    // Remove common corporate suffixes
     for (final suffix in [
-      ' inc',
-      ' corp',
-      ' ltd',
-      ' llc',
-      ' co',
-      ' gmbh',
-      ' ag',
+      ' inc', ' corp', ' ltd', ' llc', ' co', ' gmbh', ' ag',
+      ' com', ' org', ' net',
     ]) {
-      if (out.endsWith(suffix)) out = out.substring(0, out.length - suffix.length);
+      if (out.endsWith(suffix)) {
+        out = out.substring(0, out.length - suffix.length).trim();
+      }
     }
     return out.replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
+  String _normalizeSlug(String s) {
+    return s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
   }
 
   String _toSlug(String title) {
