@@ -15,8 +15,12 @@ import 'seed_phrase_restore_screen.dart';
 import 'screens/auth_screen.dart';
 import 'ui/settings/data_section_widget.dart';
 import 'ui/utils/icon_utils.dart';
+import 'ui/code_widget.dart';
+import 'ui/reorder_codes_page.dart';
+import 'ui/home/coach_mark_widget.dart';
 import 'store/code_store.dart';
 import 'models/code.dart';
+import 'models/code_display.dart';
 import 'events/codes_updated_event.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -762,58 +766,286 @@ class _VaultPageState extends State<VaultPage> {
             )
           else
             Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: items.length,
-                separatorBuilder: (_, __) => Container(margin: const EdgeInsets.only(left: 56), height: 1, color: kSurfaceContainerHighest),
-                itemBuilder: (context, index) {
-                  final item = items[index];
-                  if (_selectedFilter == '2FA') {
-                    return _TotpListItem(item: item);
-                  }
-                  return InkWell(
-                    onTap: () {
-                      Widget? page;
-                      switch (item.category) {
-                        case VaultCategory.password:
-                          page = PasswordDetailScreen(item: item);
-                          break;
-                        case VaultCategory.seeds:
-                          page = item.id == 'ledger' ? const LedgerScreen() : SeedsDetailScreen(item: item);
-                          break;
-                        case VaultCategory.apiKeys:
-                          page = ApiKeysDetailScreen(item: item);
-                          break;
-                        case VaultCategory.codes:
-                          break;
-                      }
-                      if (page != null) {
-                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => page!));
-                      }
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
-                      child: Row(
-                        children: [
-                          Container(width: 40, height: 40, decoration: BoxDecoration(color: item.iconBgColor, shape: BoxShape.circle), child: Icon(item.icon, size: 20, color: item.iconColor)),
-                          const SizedBox(width: 16),
-                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text(item.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: kOnSurface)),
-                            const SizedBox(height: 2),
-                            Text(item.subtitle, style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
-                          ])),
-                          const SizedBox(width: 8),
-                          Text(item.date, style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant)),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.chevron_right, size: 16, color: kOutlineVariant),
-                        ],
-                      ),
+              child: _selectedFilter == '2FA'
+                  ? _CodesListWidget(codes: _realCodes)
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: items.length,
+                      separatorBuilder: (_, __) => Container(margin: const EdgeInsets.only(left: 56), height: 1, color: kSurfaceContainerHighest),
+                      itemBuilder: (context, index) {
+                        final item = items[index];
+                        return InkWell(
+                          onTap: () {
+                            Widget? page;
+                            switch (item.category) {
+                              case VaultCategory.password:
+                                page = PasswordDetailScreen(item: item);
+                                break;
+                              case VaultCategory.seeds:
+                                page = item.id == 'ledger' ? const LedgerScreen() : SeedsDetailScreen(item: item);
+                                break;
+                              case VaultCategory.apiKeys:
+                                page = ApiKeysDetailScreen(item: item);
+                                break;
+                              case VaultCategory.codes:
+                                break;
+                            }
+                            if (page != null) {
+                              Navigator.of(context).push(MaterialPageRoute(builder: (_) => page!));
+                            }
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+                            child: Row(
+                              children: [
+                                Container(width: 40, height: 40, decoration: BoxDecoration(color: item.iconBgColor, shape: BoxShape.circle), child: Icon(item.icon, size: 20, color: item.iconColor)),
+                                const SizedBox(width: 16),
+                                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Text(item.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: kOnSurface)),
+                                  const SizedBox(height: 2),
+                                  Text(item.subtitle, style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
+                                ])),
+                                const SizedBox(width: 8),
+                                Text(item.date, style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant)),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.chevron_right, size: 16, color: kOutlineVariant),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
         ]),
+      ),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════
+// 2FA CODES LIST — uses CodeWidget for full features
+// (multi-select, reorder, brand icons, coach marks)
+// ════════════════════════════════════════════════
+class _CodesListWidget extends StatefulWidget {
+  final List<Code> codes;
+  const _CodesListWidget({required this.codes});
+
+  @override
+  State<_CodesListWidget> createState() => _CodesListWidgetState();
+}
+
+class _CodesListWidgetState extends State<_CodesListWidget> {
+  bool _isMultiSelect = false;
+  final Set<int> _selectedCodeHashes = {};
+  StreamSubscription<CodesUpdatedEvent>? _codesSub;
+  List<Code> _codes = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _codes = List<Code>.from(widget.codes);
+    _codesSub = CodeStore.instance.onCodesUpdated().listen((_) {
+      if (mounted) _refresh();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _CodesListWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.codes != widget.codes) {
+      _codes = List<Code>.from(widget.codes);
+    }
+  }
+
+  Future<void> _refresh() async {
+    final codes = await CodeStore.instance.getAllCodes();
+    if (!mounted) return;
+    setState(() => _codes = codes);
+  }
+
+  @override
+  void dispose() {
+    _codesSub?.cancel();
+    super.dispose();
+  }
+
+  void _toggleMultiSelect() {
+    setState(() {
+      _isMultiSelect = !_isMultiSelect;
+      if (!_isMultiSelect) _selectedCodeHashes.clear();
+    });
+  }
+
+  void _toggleCodeSelection(Code code) {
+    setState(() {
+      if (_selectedCodeHashes.contains(code.hashCode)) {
+        _selectedCodeHashes.remove(code.hashCode);
+        if (_selectedCodeHashes.isEmpty) _isMultiSelect = false;
+      } else {
+        _selectedCodeHashes.add(code.hashCode);
+      }
+    });
+  }
+
+  Future<void> _bulkDelete() async {
+    final selected = _codes
+        .where((c) => _selectedCodeHashes.contains(c.hashCode))
+        .toList();
+    for (final c in selected) {
+      await CodeStore.instance.removeCode(c);
+    }
+    if (mounted) _toggleMultiSelect();
+  }
+
+  Future<void> _bulkPin(bool pinned) async {
+    final selected = _codes
+        .where((c) => _selectedCodeHashes.contains(c.hashCode))
+        .toList();
+    for (final c in selected) {
+      final updated = c.copyWith(
+        display: c.display.copyWith(pinned: pinned),
+      );
+      await CodeStore.instance.addCode(updated);
+    }
+    if (mounted) _toggleMultiSelect();
+  }
+
+  Future<void> _openReorder() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ReorderCodesPage(codes: _codes),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Column(
+          children: [
+            // Toolbar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  if (_isMultiSelect) ...[
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: _toggleMultiSelect,
+                    ),
+                    Text(
+                      '${_selectedCodeHashes.length} selected',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: kOnSurface),
+                    ),
+                    const Spacer(),
+                  ] else ...[
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.swap_vert, color: kOnSurfaceVariant),
+                      tooltip: 'Reorder',
+                      onPressed: _openReorder,
+                    ),
+                    if (_codes.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.checklist, color: kOnSurfaceVariant),
+                        tooltip: 'Select multiple',
+                        onPressed: _toggleMultiSelect,
+                      ),
+                  ],
+                ],
+              ),
+            ),
+            // Codes list
+            Expanded(
+              child: _codes.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.security, size: 56, color: kOnSurfaceVariant),
+                            const SizedBox(height: 16),
+                            const Text('No 2FA codes yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface)),
+                            const SizedBox(height: 8),
+                            const Text('Tap the + button to add your first code', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant), textAlign: TextAlign.center),
+                          ],
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.only(top: 4, bottom: 80),
+                      itemCount: _codes.length,
+                      itemBuilder: (context, index) {
+                        final code = _codes[index];
+                        final selected = _selectedCodeHashes.contains(code.hashCode);
+                        return CodeWidget(
+                          code,
+                          key: ValueKey(code.generatedID ?? code.hashCode),
+                          isSelectable: _isMultiSelect,
+                          isSelected: selected,
+                          onSelectionChanged: () => _toggleCodeSelection(code),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+        // Multi-select bottom bar
+        if (_isMultiSelect && _selectedCodeHashes.isNotEmpty)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: SafeArea(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: kSurface,
+                  border: Border(top: BorderSide(color: kOutlineVariant.withOpacity(0.5), width: 0.5)),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _MultiSelectAction(icon: Icons.push_pin_outlined, label: 'Pin', onTap: () => _bulkPin(true)),
+                    _MultiSelectAction(icon: Icons.push_pin, label: 'Unpin', onTap: () => _bulkPin(false)),
+                    _MultiSelectAction(icon: Icons.delete_outline, label: 'Delete', destructive: true, onTap: _bulkDelete),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        // Coach mark overlay
+        if (!_isMultiSelect) const CoachMarkOverlay(),
+      ],
+    );
+  }
+}
+
+class _MultiSelectAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool destructive;
+  const _MultiSelectAction({required this.icon, required this.label, required this.onTap, this.destructive = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = destructive ? kError : kOnSurface;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 4),
+            Text(label, style: TextStyle(color: color, fontSize: 12)),
+          ],
+        ),
       ),
     );
   }
