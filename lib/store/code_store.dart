@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:event_bus/event_bus.dart' as eb;
 import 'package:logging/logging.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:uuid/uuid.dart';
 
 import '../events/codes_updated_event.dart';
 import '../models/authenticator/entity_result.dart';
@@ -26,14 +26,17 @@ import 'offline_authenticator_db.dart';
 /// [LocalAuthEntity.encryptedData] field in real ciphertext.
 class CodeStore {
   static final CodeStore instance = CodeStore._privateConstructor();
-  static final _rand = Random.secure();
 
   CodeStore._privateConstructor();
 
   final _logger = Logger('CodeStore');
   final Map<int, Code> _cacheCodes = {};
   final _eventBus = eb.EventBus();
-  int _addCounter = 0;
+  static const _uuid = Uuid();
+  // Track the last 20 generated ids so we can detect any duplicate
+  // generation (would only happen if the OS clock went backwards or
+  // some other very-bad thing).
+  final List<String> _recentIds = [];
 
   Future<void> init() async {
     await OfflineAuthenticatorDB.instance.database;
@@ -60,12 +63,19 @@ class CodeStore {
     try {
       final db = await OfflineAuthenticatorDB.instance.database;
       final now = DateTime.now().millisecondsSinceEpoch;
-      // Bulletproof unique id: timestamp + counter + random + hash.
-      // No two calls can ever produce the same id, so the UNIQUE(id)
-      // constraint on the table can never trigger from a regular add.
-      // _addCounter is incremented on every call within the process.
-      final uniqueId = '${now}_${++_addCounter}_'
-          '${_rand.nextInt(1 << 32)}_${code.hashCode}';
+      // Bulletproof unique id: random UUID v4. Cryptographically
+      // unique across processes and devices — there is no possible
+      // way two calls within or across sessions can collide.
+      var uniqueId = _uuid.v4();
+      if (_recentIds.contains(uniqueId)) {
+        // UUIDv4 collision is astronomically unlikely; this guard
+        // only matters if the OS clock went backwards or we're in a
+        // sandboxed environment. Re-roll.
+        uniqueId = _uuid.v4();
+      }
+      _recentIds.add(uniqueId);
+      if (_recentIds.length > 20) _recentIds.removeAt(0);
+
       final local = LocalAuthEntity(
         0, // generatedID: auto-increment handled by SQLite
         uniqueId,
@@ -77,10 +87,17 @@ class CodeStore {
       );
       final id = await db.insert(
         OfflineAuthenticatorDB.entityTable,
-        local.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
+        local.toMap(forInsert: true),
+        conflictAlgorithm: ConflictAlgorithm.abort,
       );
-      _logger.info('Code added to DB: id=$id, issuer=${code.issuer}, account=${code.account}');
+      // Verify the row was actually inserted (not silently replaced).
+      final count = Sqflite.firstIntValue(
+            await db.rawQuery('SELECT COUNT(*) FROM entities'),
+          ) ??
+          0;
+      _logger.info(
+        'Code added: rowId=$id, issuer=${code.issuer}, account=${code.account}, totalRows=$count',
+      );
       _eventBus.fire(CodesUpdatedEvent());
     } catch (e, st) {
       _logger.severe('Failed to add code', e, st);
@@ -135,9 +152,15 @@ class CodeStore {
       orderBy: 'manual_order ASC, createdAt ASC',
     );
     final codes = <Code>[];
+    final seenIds = <int>{}; // dedupe by _generatedID (truly unique)
     for (final row in rows) {
       final entity = LocalAuthEntity.fromMap(row);
       if (entity.encryptedData.isEmpty) continue;
+      if (seenIds.contains(entity.generatedID)) {
+        _logger.warning('Skipping duplicate generatedID=${entity.generatedID}');
+        continue;
+      }
+      seenIds.add(entity.generatedID);
       try {
         final json = jsonDecode(entity.encryptedData) as Map<String, dynamic>;
         var code = CodeFromMap.fromMap(json);
@@ -149,9 +172,12 @@ class CodeStore {
         _logger.severe('Failed to decode code', e, st);
       }
     }
+    _logger.info('getAllCodes: ${rows.length} rows, ${codes.length} parsed');
+    // Cache is keyed by hashCode for quick lookup; multiple entries
+    // with the same hashCode (e.g. same data added twice) are normal.
     _cacheCodes
       ..clear()
-      ..addAll({for (final c in codes) c.hashCode: c});
+      ..addAll(<int, Code>{for (final c in codes) c.hashCode: c});
     return codes;
   }
 

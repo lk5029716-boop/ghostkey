@@ -58,9 +58,13 @@ class LocalAuthEntity {
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toMap({bool forInsert = false}) {
     return {
-      '_generatedID': generatedID,
+      // For new rows, omit _generatedID so SQLite AUTOINCREMENT picks
+      // the next id. If we pass 0 explicitly, SQLite stores 0 as the
+      // value, and the second insert collides on the PRIMARY KEY,
+      // triggering REPLACE (which silently destroys the first row).
+      if (!forInsert) '_generatedID': generatedID,
       'id': id,
       'encryptedData': encryptedData,
       'header': header,

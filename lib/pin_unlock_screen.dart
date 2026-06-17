@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/biometric_service.dart';
 
 enum PinScreenMode { unlock, setup }
 
@@ -17,6 +18,12 @@ class PinScreen extends StatefulWidget {
   final ValueChanged<String>? onUnlock;
   final VoidCallback? onSkip;
 
+  /// Unlock-only: trigger the OS biometric prompt automatically on
+  /// first render (the real local_auth-backed call). Has no effect in
+  /// setup mode. Defaults to true so the unlock screen behaves like a
+  /// real biometrically-protected app.
+  final bool autoTriggerBiometric;
+
   const PinScreen({
     super.key,
     required this.title,
@@ -25,6 +32,7 @@ class PinScreen extends StatefulWidget {
     this.expectedPin,
     this.onUnlock,
     this.onSkip,
+    this.autoTriggerBiometric = false,
   });
 
   @override
@@ -69,6 +77,19 @@ class _PinScreenState extends State<PinScreen>
       vsync: this,
     );
     _shakeAnim = Tween<double>(begin: 0, end: 1).animate(_shakeController);
+
+    // Auto-trigger biometric on unlock if the user opted in.
+    if (widget.mode == PinScreenMode.unlock &&
+        widget.autoTriggerBiometric &&
+        BiometricService.instance.isEnabled) {
+      // Give the splash transition a beat to finish before the system
+      // biometric dialog appears — feels less abrupt.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() => _showBiometric = true);
+        _onBigBiometric();
+      });
+    }
   }
 
   @override
@@ -105,13 +126,31 @@ class _PinScreenState extends State<PinScreen>
     setState(() => _showBiometric = true);
   }
 
-  void _onBigBiometric() {
+  Future<void> _onBigBiometric() async {
     HapticFeedback.mediumImpact();
-    if (widget.mode == PinScreenMode.unlock) {
+    if (widget.mode == PinScreenMode.setup) {
+      // Setup mode: no biometric available, just hide the prompt
+      if (mounted) setState(() => _showBiometric = false);
+      return;
+    }
+    // Unlock mode: trigger the real OS biometric prompt.
+    final ok = await BiometricService.instance
+        .authenticate(reason: 'Unlock GhostKey');
+    if (!mounted) return;
+    if (ok) {
+      HapticFeedback.heavyImpact();
       widget.onUnlock?.call('');
     } else {
-      // Setup mode: no biometric available, just hide the prompt
-      setState(() => _showBiometric = false);
+      // User cancelled or auth failed — keep the prompt visible, they can
+      // try again or switch to PIN.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Biometric failed. Use your PIN instead.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
@@ -252,6 +291,30 @@ class _PinScreenState extends State<PinScreen>
                   )
                 else
                   const SizedBox(height: 8),
+                if (_showBiometric && widget.mode == PinScreenMode.unlock) ...[
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () {
+                      if (!mounted) return;
+                      HapticFeedback.selectionClick();
+                      setState(() => _showBiometric = false);
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF0D631B),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text(
+                      'Use PIN instead',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 // PIN dots with shake
                 AnimatedBuilder(

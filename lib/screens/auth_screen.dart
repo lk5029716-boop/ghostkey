@@ -18,6 +18,7 @@ import '../main.dart' show
     kOutline,
     kOnSurfaceVariant;
 import '../pin_unlock_screen.dart' show PinScreen, PinScreenMode;
+import '../services/biometric_service.dart';
 
 enum AuthMode { signup, signin }
 
@@ -41,9 +42,25 @@ class _AuthScreenState extends State<AuthScreen> {
           title: 'Create your PIN',
           subtitle: 'A 6-digit code to unlock your vault',
           mode: PinScreenMode.setup,
-          onUnlock: (pin) {
-            prefs.setString('pin', pin);
-            rootNavigatorKey.currentState?.pushReplacement(
+          onUnlock: (pin) async {
+            // AuthScreen has been pushReplacement'd by now, so its `mounted`
+            // is false. Use the root navigator (global) for the rest of the
+            // work, not context.
+            final nav = rootNavigatorKey.currentState;
+            await prefs.setString('pin', pin);
+            // If the device has biometric hardware + at least one enrolled
+            // fingerprint/face, enable biometric unlock by default. The
+            // user can switch it off in Settings later.
+            try {
+              final supported = await BiometricService.instance.isDeviceSupported();
+              final enrolled = await BiometricService.instance.hasEnrolledBiometrics();
+              if (supported && enrolled) {
+                await BiometricService.instance.setEnabled(true);
+              }
+            } catch (_) {
+              // Never block PIN setup on a biometric probe failure.
+            }
+            nav?.pushReplacement(
               MaterialPageRoute(builder: (_) => const MainShell()),
             );
           },

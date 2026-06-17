@@ -13,6 +13,9 @@ import 'qr_scanner_screen.dart';
 import 'pin_unlock_screen.dart' show PinScreen, PinScreenMode;
 import 'seed_phrase_restore_screen.dart';
 import 'screens/auth_screen.dart';
+import 'services/biometric_service.dart';
+import 'services/preference_service.dart';
+import 'splash_screen.dart';
 import 'ui/settings/data_section_widget.dart';
 import 'ui/utils/icon_utils.dart';
 import 'ui/code_widget.dart';
@@ -22,7 +25,6 @@ import 'store/code_store.dart';
 import 'models/code.dart';
 import 'models/code_display.dart';
 import 'events/codes_updated_event.dart';
-import 'services/preference_service.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -50,11 +52,13 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   // Initialize PreferenceService (SharedPreferences)
   await PreferenceService.instance.init();
-  // Pre-load brand icon registry so it's ready when the UI needs it.
-  // Awaited so the first 2FA list render has icons available.
-  await BrandIconRegistry.instance.init();
-  // Initialize CodeStore (opens SQLite DB)
-  await CodeStore.instance.init();
+  // Run heavy inits in parallel so the splash can stay on screen while they
+  // finish — no more "hang" on the second open when SQLite + icon registry
+  // both have to wake back up.
+  await Future.wait([
+    BrandIconRegistry.instance.init(),
+    CodeStore.instance.init(),
+  ]);
   runApp(GhostKeyApp(prefs: prefs));
 }
 
@@ -69,7 +73,6 @@ class GhostKeyApp extends StatefulWidget {
 class _GhostKeyAppState extends State<GhostKeyApp> {
   @override
   Widget build(BuildContext context) {
-    final hasPin = widget.prefs.getString('pin') != null;
     return Provider<SharedPreferences>.value(
       value: widget.prefs,
       child: MaterialApp(
@@ -96,26 +99,29 @@ class _GhostKeyAppState extends State<GhostKeyApp> {
           ),
           useMaterial3: true,
         ),
-        home: _resolveHome(),
+        home: SplashScreen(
+          prefs: widget.prefs,
+          resolveHome: (prefs, hasPin, onboarded) {
+            // !onboarded → OnboardingScreen
+            if (!onboarded) return const OnboardingScreen();
+            // onboarded + hasPin → unlock with biometric prompt
+            if (hasPin) return _unlockScreen(prefs);
+            // onboarded + !hasPin → straight into the app
+            return const MainShell();
+          },
+        ),
       ),
     );
   }
 
-  Widget _resolveHome() {
-    final hasPin = widget.prefs.getString('pin') != null;
-    final onboarded = widget.prefs.getBool('onboarded') ?? false;
-    if (!onboarded) return const OnboardingScreen();
-    if (hasPin) return _unlockScreen();
-    return const MainShell();
-  }
-
-  Widget _unlockScreen() {
-    final stored = widget.prefs.getString('pin') ?? '';
+  Widget _unlockScreen(SharedPreferences prefs) {
+    final stored = prefs.getString('pin') ?? '';
     return PinScreen(
       title: 'Unlock GhostKey',
       subtitle: 'Use your biometric or PIN to continue',
       mode: PinScreenMode.unlock,
       expectedPin: stored,
+      autoTriggerBiometric: true,
       onUnlock: (_) {
         rootNavigatorKey.currentState?.pushReplacement(
           MaterialPageRoute(builder: (_) => const MainShell()),
@@ -125,8 +131,43 @@ class _GhostKeyAppState extends State<GhostKeyApp> {
   }
 }
 
-class OnboardingScreen extends StatelessWidget {
+class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
+
+  @override
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
+}
+
+class _OnboardingScreenState extends State<OnboardingScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _enter;
+  late final Animation<double> _opacity;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _enter = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _opacity = CurvedAnimation(parent: _enter, curve: Curves.easeOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.04),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _enter, curve: Curves.easeOutCubic));
+    // Start after a tiny delay so the splash fade-out has room to play
+    // before the onboarding content appears.
+    Future.delayed(const Duration(milliseconds: 80), () {
+      if (mounted) _enter.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _enter.dispose();
+    super.dispose();
+  }
 
   // M3 design tokens (matching HTML)
   static const Color _accentGreen = Color(0xFF88D982); // primary-fixed-dim
@@ -149,57 +190,74 @@ class OnboardingScreen extends StatelessWidget {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  // Multi-layer glow hero (M3 spec)
-                  SizedBox(
-                    width: 144,
-                    height: 144,
-                    child: Stack(alignment: Alignment.center, children: [
-                      // Outer soft radial glow
-                      Container(
-                        width: 144, height: 144,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: RadialGradient(colors: [kPrimary.withOpacity(0.18), kPrimary.withOpacity(0.0)]),
+                child: FadeTransition(
+                  opacity: _opacity,
+                  child: SlideTransition(
+                    position: _slide,
+                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      // Hero from the splash logo — same brand mark animates
+                      // across the route change so the eye is never lost.
+                      Hero(
+                        tag: 'ghostkey-logo',
+                        child: SizedBox(
+                          width: 144,
+                          height: 144,
+                          child: Stack(alignment: Alignment.center, children: [
+                            // Outer soft radial glow
+                            Container(
+                              width: 144, height: 144,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: RadialGradient(colors: [kPrimary.withOpacity(0.18), kPrimary.withOpacity(0.0)]),
+                              ),
+                            ),
+                            // Mid ring
+                            Container(
+                              width: 112, height: 112,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: kPrimary.withOpacity(0.06),
+                                border: Border.all(color: kPrimary.withOpacity(0.12), width: 1),
+                              ),
+                            ),
+                            // Inner badge (matches splash canvas)
+                            Container(
+                              width: 88, height: 88,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: kSurface,
+                                boxShadow: [BoxShadow(color: kPrimary.withOpacity(0.20), blurRadius: 20, spreadRadius: 2, offset: const Offset(0, 4))],
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(14),
+                                child: Image.asset(
+                                  'assets/Canvas1.png',
+                                  fit: BoxFit.contain,
+                                  filterQuality: FilterQuality.medium,
+                                ),
+                              ),
+                            ),
+                          ]),
                         ),
                       ),
-                      // Mid ring
-                      Container(
-                        width: 112, height: 112,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: kPrimary.withOpacity(0.06),
-                          border: Border.all(color: kPrimary.withOpacity(0.12), width: 1),
-                        ),
-                      ),
-                      // Inner badge
-                      Container(
-                        width: 88, height: 88,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: kSurface,
-                          boxShadow: [BoxShadow(color: kPrimary.withOpacity(0.20), blurRadius: 20, spreadRadius: 2, offset: const Offset(0, 4))],
-                        ),
-                        child: const Icon(Icons.shield, size: 44, color: kPrimary),
-                      ),
+                      const SizedBox(height: 32),
+                      // Title (M3 headline)
+                      const Text('GhostKey', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: kOnSurface, height: 36/28, letterSpacing: -0.25)),
+                      const SizedBox(height: 8),
+                      // Subtitle (M3 body-large)
+                      const Text('Your digital legacy secured.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: kOnSurfaceVariant, height: 24/16, letterSpacing: 0.5)),
+                      const SizedBox(height: 48),
+                      // Features
+                      SizedBox(width: 320, child: Column(children: [
+                        _feat(Icons.vpn_key, 'Bank-grade encryption'),
+                        const SizedBox(height: 24),
+                        _feat(Icons.alarm_on, 'Dead man switch'),
+                        const SizedBox(height: 24),
+                        _feat(Icons.shield, 'Secure inheritance'),
+                      ])),
                     ]),
                   ),
-                  const SizedBox(height: 32),
-                  // Title (M3 headline)
-                  const Text('GhostKey', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: kOnSurface, height: 36/28, letterSpacing: -0.25)),
-                  const SizedBox(height: 8),
-                  // Subtitle (M3 body-large)
-                  const Text('Your digital legacy secured.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: kOnSurfaceVariant, height: 24/16, letterSpacing: 0.5)),
-                  const SizedBox(height: 48),
-                  // Features
-                  SizedBox(width: 320, child: Column(children: [
-                    _feat(Icons.vpn_key, 'Bank-grade encryption'),
-                    const SizedBox(height: 24),
-                    _feat(Icons.alarm_on, 'Dead man switch'),
-                    const SizedBox(height: 24),
-                    _feat(Icons.shield, 'Secure inheritance'),
-                  ])),
-                ]),
+                ),
               ),
             ),
 
@@ -856,7 +914,20 @@ class _CodesListWidgetState extends State<_CodesListWidget> {
   @override
   void didUpdateWidget(covariant _CodesListWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.codes != widget.codes) {
+    // Always sync local _codes from the new widget.codes list. Using
+    // a length/content check is more reliable than reference equality
+    // because the parent may pass the same list reference but with
+    // updated contents in some edge cases.
+    final oldLen = oldWidget.codes.length;
+    final newLen = widget.codes.length;
+    final changed = oldLen != newLen ||
+        (newLen > 0 &&
+            (oldWidget.codes.isEmpty ||
+                oldWidget.codes.first.hashCode !=
+                    widget.codes.first.hashCode ||
+                oldWidget.codes.last.hashCode !=
+                    widget.codes.last.hashCode));
+    if (changed || oldWidget.codes != widget.codes) {
       _codes = List<Code>.from(widget.codes);
     }
   }
@@ -2269,9 +2340,44 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _biometric = true;
+  bool _biometric = false;
+  bool _biometricSupported = false;
+  bool _biometricEnrolled = false;
   bool _emergencyAlerts = true;
   bool _checkinReminders = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _biometric = BiometricService.instance.isEnabled;
+    // Probe hardware in the background so the toggle can show "not available"
+    // on devices without a fingerprint sensor or enrolled biometrics.
+    () async {
+      final supported = await BiometricService.instance.isDeviceSupported();
+      final enrolled = await BiometricService.instance.hasEnrolledBiometrics();
+      if (!mounted) return;
+      setState(() {
+        _biometricSupported = supported;
+        _biometricEnrolled = enrolled;
+      });
+    }();
+  }
+
+  Future<void> _setBiometric(bool v) async {
+    if (v && (!_biometricSupported || !_biometricEnrolled)) {
+      // Don't let the user toggle on when there's no hardware.
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'No biometric is enrolled on this device. Add one in Android Settings.'),
+        ),
+      );
+      return;
+    }
+    await BiometricService.instance.setEnabled(v);
+    if (!mounted) return;
+    setState(() => _biometric = v);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2323,7 +2429,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _sectionHeader('Security', primary),
           const SizedBox(height: 8),
           _card([
-            _switchRow(Icons.fingerprint, 'Biometric Lock', _biometric, (v) => setState(() => _biometric = v)),
+            _switchRow(Icons.fingerprint, 'Biometric Lock', _biometric, _setBiometric),
             _divider(outlineVar),
             _row(Icons.vpn_key, 'Change Master Password', chevron: true),
             _divider(outlineVar),
