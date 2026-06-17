@@ -128,24 +128,6 @@ class OnboardingScreen extends StatelessWidget {
         ),
         child: SafeArea(
           child: Column(children: [
-            // Status bar (M3 standard)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('9:30', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: kOnSurface.withOpacity(0.8))),
-                  Row(children: [
-                    Icon(Icons.signal_cellular_4_bar, size: 16, color: kOnSurface.withOpacity(0.8)),
-                    const SizedBox(width: 4),
-                    Icon(Icons.wifi, size: 16, color: kOnSurface.withOpacity(0.8)),
-                    const SizedBox(width: 4),
-                    Icon(Icons.battery_full, size: 16, color: kOnSurface.withOpacity(0.8)),
-                  ]),
-                ],
-              ),
-            ),
-
             // Main content
             Expanded(
               child: Padding(
