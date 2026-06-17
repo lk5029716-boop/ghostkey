@@ -867,12 +867,11 @@ class _EmailFormScreenState extends State<_EmailFormScreen> {
                                     ),
                                     recognizer: TapGestureRecognizer()
                                       ..onTap = () {
-                                        // Go to the auth methods page in signin mode
-                                        Navigator.of(context).pushAndRemoveUntil(
+                                        // Replace with the auth methods page in signin mode
+                                        Navigator.of(context).pushReplacement(
                                           MaterialPageRoute(
                                             builder: (_) => const AuthScreen(mode: AuthMode.signin),
                                           ),
-                                          (r) => false,
                                         );
                                       },
                                   ),
@@ -1843,13 +1842,12 @@ class _EmailEntryScreenState extends State<_EmailEntryScreen> {
                                 ),
                                 recognizer: TapGestureRecognizer()
                                   ..onTap = () {
-                                    // Go to the auth methods page in signup mode
+                                    // Replace the current route with AuthScreen(signup)
                                     // (Create your account -> Google/Email/Phone/Continue offline)
-                                    Navigator.of(context).pushAndRemoveUntil(
+                                    Navigator.of(context).pushReplacement(
                                       MaterialPageRoute(
                                         builder: (_) => const AuthScreen(mode: AuthMode.signup),
                                       ),
-                                      (r) => false,
                                     );
                                   },
                               ),
