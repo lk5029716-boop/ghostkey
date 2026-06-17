@@ -578,10 +578,17 @@ bool _kIsAndroid = Platform.isAndroid;
 /// Brand SVG icon avatar — shown to the left of the issuer name when
 /// GhostKey recognizes the service. Falls back to a colored circle with
 /// the first letter if the SVG fails to load.
-class _BrandIconAvatar extends StatelessWidget {
+class _BrandIconAvatar extends StatefulWidget {
   final String assetPath;
   final Color? background;
   const _BrandIconAvatar({required this.assetPath, this.background});
+
+  @override
+  State<_BrandIconAvatar> createState() => _BrandIconAvatarState();
+}
+
+class _BrandIconAvatarState extends State<_BrandIconAvatar> {
+  bool _failed = false;
 
   @override
   Widget build(BuildContext context) {
@@ -589,30 +596,54 @@ class _BrandIconAvatar extends StatelessWidget {
       width: 32,
       height: 32,
       decoration: BoxDecoration(
-        color: background ?? const Color(0xFFE8F5E9),
+        color: widget.background ?? const Color(0xFFE8F5E9),
         borderRadius: BorderRadius.circular(8),
       ),
       clipBehavior: Clip.antiAlias,
-      child: SvgPicture.asset(
-        assetPath,
-        width: 20,
-        height: 20,
-        fit: BoxFit.contain,
-        placeholderBuilder: (_) => _fallbackAvatar(context),
-      ),
+      // Padding gives the icon some breathing room from the rounded box edges.
+      padding: const EdgeInsets.all(4),
+      alignment: Alignment.center,
+      child: _failed
+          ? _fallbackAvatar(context)
+          : SvgPicture.asset(
+              widget.assetPath,
+              width: 24,
+              height: 24,
+              fit: BoxFit.contain,
+              placeholderBuilder: (_) => const SizedBox.shrink(),
+              // When flutter_svg fails to parse the SVG (which is common
+              // for the 495+ brand icons in assets/custom-icons — many
+              // contain features like gradients, masks, foreign objects
+              // that the package can't handle), fall back to the letter
+              // avatar so the user always sees something.
+              errorBuilder: (context, error, stackTrace) {
+                if (!_failed) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) setState(() => _failed = true);
+                  });
+                }
+                return _fallbackAvatar(context);
+              },
+            ),
     );
   }
 
   Widget _fallbackAvatar(BuildContext context) {
-    final name = assetPath.split('/').last.split('.').first;
-    final letter = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    // Use the issuer from the asset filename (e.g. "github" -> "G") so
+    // the chip is recognizable. If the name starts with a digit or
+    // non-letter, fall back to "?".
+    final name = widget.assetPath.split('/').last.split('.').first;
+    final stripped = name.replaceAll(RegExp(r'^[\d_]+'), '');
+    final letter = stripped.isNotEmpty
+        ? stripped[0].toUpperCase()
+        : (name.isNotEmpty ? name[0].toUpperCase() : '?');
     return Center(
       child: Text(
         letter,
         style: TextStyle(
-          fontSize: 14,
+          fontSize: 16,
           fontWeight: FontWeight.w700,
-          color: background != null
+          color: widget.background != null
               ? Colors.white
               : const Color(0xFF40493D),
         ),

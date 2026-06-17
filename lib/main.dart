@@ -50,10 +50,11 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   // Initialize PreferenceService (SharedPreferences)
   await PreferenceService.instance.init();
-  // Pre-load brand icon registry so it's ready when the UI needs it
-  unawaited(BrandIconRegistry.instance.init());
+  // Pre-load brand icon registry so it's ready when the UI needs it.
+  // Awaited so the first 2FA list render has icons available.
+  await BrandIconRegistry.instance.init();
   // Initialize CodeStore (opens SQLite DB)
-  unawaited(CodeStore.instance.init());
+  await CodeStore.instance.init();
   runApp(GhostKeyApp(prefs: prefs));
 }
 

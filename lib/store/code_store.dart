@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:event_bus/event_bus.dart' as eb;
@@ -25,12 +26,14 @@ import 'offline_authenticator_db.dart';
 /// [LocalAuthEntity.encryptedData] field in real ciphertext.
 class CodeStore {
   static final CodeStore instance = CodeStore._privateConstructor();
+  static final _rand = Random.secure();
 
   CodeStore._privateConstructor();
 
   final _logger = Logger('CodeStore');
   final Map<int, Code> _cacheCodes = {};
   final _eventBus = eb.EventBus();
+  int _addCounter = 0;
 
   Future<void> init() async {
     await OfflineAuthenticatorDB.instance.database;
@@ -57,11 +60,12 @@ class CodeStore {
     try {
       final db = await OfflineAuthenticatorDB.instance.database;
       final now = DateTime.now().millisecondsSinceEpoch;
-      // Use a per-add unique id (timestamp + random) so multiple adds of
-      // the same code never collide on the UNIQUE(id) constraint. The
-      // primary key is still the autoincrement _generatedID.
-      final uniqueId =
-          '${now}_${code.hashCode}_${DateTime.now().microsecondsSinceEpoch}';
+      // Bulletproof unique id: timestamp + counter + random + hash.
+      // No two calls can ever produce the same id, so the UNIQUE(id)
+      // constraint on the table can never trigger from a regular add.
+      // _addCounter is incremented on every call within the process.
+      final uniqueId = '${now}_${++_addCounter}_'
+          '${_rand.nextInt(1 << 32)}_${code.hashCode}';
       final local = LocalAuthEntity(
         0, // generatedID: auto-increment handled by SQLite
         uniqueId,

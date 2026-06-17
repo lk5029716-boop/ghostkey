@@ -1,12 +1,22 @@
 # This is a generated file; do not edit or check into version control.
 file_picker=/opt/data/.pub-cache/hosted/pub.dev/file_picker-8.3.2/
 file_saver=/opt/data/.pub-cache/hosted/pub.dev/file_saver-0.2.14/
+file_selector_linux=/opt/data/.pub-cache/hosted/pub.dev/file_selector_linux-0.9.3+2/
+file_selector_macos=/opt/data/.pub-cache/hosted/pub.dev/file_selector_macos-0.9.4+2/
+file_selector_windows=/opt/data/.pub-cache/hosted/pub.dev/file_selector_windows-0.9.3+4/
 flutter_plugin_android_lifecycle=/opt/data/.pub-cache/hosted/pub.dev/flutter_plugin_android_lifecycle-2.0.22/
 flutter_secure_storage=/opt/data/.pub-cache/hosted/pub.dev/flutter_secure_storage-9.2.4/
 flutter_secure_storage_linux=/opt/data/.pub-cache/hosted/pub.dev/flutter_secure_storage_linux-1.2.3/
 flutter_secure_storage_macos=/opt/data/.pub-cache/hosted/pub.dev/flutter_secure_storage_macos-3.1.3/
 flutter_secure_storage_web=/opt/data/.pub-cache/hosted/pub.dev/flutter_secure_storage_web-1.2.1/
 flutter_secure_storage_windows=/opt/data/.pub-cache/hosted/pub.dev/flutter_secure_storage_windows-3.1.2/
+image_picker=/opt/data/.pub-cache/hosted/pub.dev/image_picker-1.1.2/
+image_picker_android=/opt/data/.pub-cache/hosted/pub.dev/image_picker_android-0.8.12+12/
+image_picker_for_web=/opt/data/.pub-cache/hosted/pub.dev/image_picker_for_web-3.0.6/
+image_picker_ios=/opt/data/.pub-cache/hosted/pub.dev/image_picker_ios-0.8.12+2/
+image_picker_linux=/opt/data/.pub-cache/hosted/pub.dev/image_picker_linux-0.2.1+2/
+image_picker_macos=/opt/data/.pub-cache/hosted/pub.dev/image_picker_macos-0.2.1+2/
+image_picker_windows=/opt/data/.pub-cache/hosted/pub.dev/image_picker_windows-0.2.1+1/
 local_auth=/opt/data/.pub-cache/hosted/pub.dev/local_auth-2.3.0/
 local_auth_android=/opt/data/.pub-cache/hosted/pub.dev/local_auth_android-1.0.43/
 local_auth_darwin=/opt/data/.pub-cache/hosted/pub.dev/local_auth_darwin-1.4.3/
