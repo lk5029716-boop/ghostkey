@@ -184,7 +184,30 @@ class _PinScreenState extends State<PinScreen>
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: [
-                const SizedBox(height: 24),
+                // Top bar with optional Skip on the right
+                if (widget.onSkip != null)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: widget.onSkip,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text(
+                        'Skip',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF707A6C),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  const SizedBox(height: 8),
+                const SizedBox(height: 16),
                 // Headlines
                 Text(
                   widget.title,
@@ -249,19 +272,6 @@ class _PinScreenState extends State<PinScreen>
                 const Spacer(),
                 // Number pad
                 _buildKeypad(),
-                const SizedBox(height: 16),
-                if (widget.onSkip != null)
-                  TextButton(
-                    onPressed: widget.onSkip,
-                    child: const Text(
-                      'Skip for now',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF707A6C),
-                      ),
-                    ),
-                  ),
                 const SizedBox(height: 8),
               ],
             ),
