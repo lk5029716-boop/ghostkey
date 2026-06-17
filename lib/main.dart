@@ -15,6 +15,8 @@ import 'seed_phrase_restore_screen.dart';
 import 'screens/auth_screen.dart';
 import 'ui/settings/data_section_widget.dart';
 import 'ui/utils/icon_utils.dart';
+import 'ui/home_page.dart';
+import 'store/code_store.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -42,6 +44,8 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   // Pre-load brand icon registry so it's ready when the UI needs it
   unawaited(BrandIconRegistry.instance.init());
+  // Initialize CodeStore (opens SQLite DB)
+  unawaited(CodeStore.instance.init());
   runApp(GhostKeyApp(prefs: prefs));
 }
 
@@ -655,7 +659,6 @@ class _VaultPageState extends State<VaultPage> {
   @override
   void initState() {
     super.initState();
-    // Sync initial value to notifier
     widget.filterNotifier?.value = _selectedFilter;
   }
 
@@ -683,12 +686,13 @@ class _VaultPageState extends State<VaultPage> {
     }
   }
 
-  void _showAddSheet(BuildContext context) {
-    _showAddSecretSheet(context);
-  }
-
   @override
   Widget build(BuildContext context) {
+    // 2FA filter: show real codes from CodeStore via HomePage
+    if (_selectedFilter == '2FA') {
+      return const HomePage();
+    }
+    // Other filters: show mock vault items
     final items = _filteredItems;
     return Scaffold(
       backgroundColor: kSurface,
@@ -705,10 +709,6 @@ class _VaultPageState extends State<VaultPage> {
               separatorBuilder: (_, __) => Container(margin: const EdgeInsets.only(left: 56), height: 1, color: kSurfaceContainerHighest),
               itemBuilder: (context, index) {
                 final item = items[index];
-                // 2FA filter: show live code + timer inline
-                if (_selectedFilter == '2FA') {
-                  return _TotpListItem(item: item);
-                }
                 return InkWell(
                   onTap: () {
                     Widget? page;
@@ -751,11 +751,10 @@ class _VaultPageState extends State<VaultPage> {
               },
             ),
           ),
-        ],
+        ]),
       ),
-    ),
-  );
-}
+    );
+  }
 }
 
 // Ledger Screen - matches HTML design

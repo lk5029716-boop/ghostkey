@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../models/code.dart';
+import '../models/code_display.dart';
+import '../store/code_store.dart';
+
 class EnterKeyManuallyScreen extends StatefulWidget {
   const EnterKeyManuallyScreen({super.key});
   @override
@@ -326,12 +330,44 @@ class _EnterKeyManuallyScreenState extends State<EnterKeyManuallyScreen> {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      HapticFeedback.lightImpact();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('2FA account added!'), duration: Duration(seconds: 2)),
-                      );
-                      Navigator.pop(context);
+                    onPressed: () async {
+                      final service = _serviceCtrl.text.trim();
+                      final account = _accountCtrl.text.trim();
+                      final secret = _keyCtrl.text.trim().replaceAll(' ', '');
+                      if (service.isEmpty || secret.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Service name and secret key are required')),
+                        );
+                        return;
+                      }
+                      final digits = int.tryParse(_digitsCtrl.text.trim()) ?? 6;
+                      final period = int.tryParse(_refreshCtrl.text.trim()) ?? 30;
+                      final counter = int.tryParse(_usageCtrl.text.trim()) ?? 0;
+                      final algo = _parseAlgorithm(_algorithm);
+                      final type = _parseType(_authType);
+                      try {
+                        final code = Code.fromAccountAndSecret(
+                          type,
+                          account.isEmpty ? service : account,
+                          service,
+                          secret,
+                          null,
+                          digits,
+                          algorithm: algo,
+                          period: period,
+                        );
+                        await CodeStore.instance.addCode(code);
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('2FA account added!'), duration: Duration(seconds: 2)),
+                        );
+                        Navigator.pop(context);
+                      } catch (e) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to add: $e')),
+                        );
+                      }
                     },
                     icon: const Icon(Icons.add_task),
                     label: const Text('Add Account', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
@@ -349,5 +385,21 @@ class _EnterKeyManuallyScreenState extends State<EnterKeyManuallyScreen> {
         ],
       ),
     );
+  }
+
+  Algorithm _parseAlgorithm(String s) {
+    switch (s.toUpperCase()) {
+      case 'SHA256': return Algorithm.sha256;
+      case 'SHA512': return Algorithm.sha512;
+      default: return Algorithm.sha1;
+    }
+  }
+
+  Type _parseType(String s) {
+    switch (s.toUpperCase()) {
+      case 'HOTP': return Type.hotp;
+      case 'STEAM': return Type.steam;
+      default: return Type.totp;
+    }
   }
 }
