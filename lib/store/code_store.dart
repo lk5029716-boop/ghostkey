@@ -49,23 +49,29 @@ class CodeStore {
   /// Persist [code] to the local SQLite store and broadcast a
   /// [CodesUpdatedEvent] so the UI can refresh.
   Future<void> addCode(Code code) async {
-    final db = await OfflineAuthenticatorDB.instance.database;
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final local = LocalAuthEntity(
-      0, // generatedID: auto-increment handled by SQLite
-      code.hashCode.toString(), // id: stable string key
-      jsonEncode(code.toMap()), // encryptedData: JSON payload
-      '', // header: empty for now
-      now, // createdAt
-      now, // updatedAt
-      false, // shouldSync: local-only, no server
-    );
-    await db.insert(
-      OfflineAuthenticatorDB.entityTable,
-      local.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-    _eventBus.fire(CodesUpdatedEvent());
+    try {
+      final db = await OfflineAuthenticatorDB.instance.database;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final local = LocalAuthEntity(
+        0, // generatedID: auto-increment handled by SQLite
+        code.hashCode.toString(), // id: stable string key
+        jsonEncode(code.toMap()), // encryptedData: JSON payload
+        '', // header: empty for now
+        now, // createdAt
+        now, // updatedAt
+        false, // shouldSync: local-only, no server
+      );
+      final id = await db.insert(
+        OfflineAuthenticatorDB.entityTable,
+        local.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      _logger.info('Code added to DB: id=$id, issuer=${code.issuer}, account=${code.account}');
+      _eventBus.fire(CodesUpdatedEvent());
+    } catch (e, st) {
+      _logger.severe('Failed to add code', e, st);
+      rethrow;
+    }
   }
 
   /// Read all codes from the store. Decodes the JSON payload stored in

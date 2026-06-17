@@ -331,21 +331,21 @@ class _EnterKeyManuallyScreenState extends State<EnterKeyManuallyScreen> {
                   height: 56,
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      final service = _serviceCtrl.text.trim();
-                      final account = _accountCtrl.text.trim();
-                      final secret = _keyCtrl.text.trim().replaceAll(' ', '');
-                      if (service.isEmpty || secret.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Service name and secret key are required')),
-                        );
-                        return;
-                      }
-                      final digits = int.tryParse(_digitsCtrl.text.trim()) ?? 6;
-                      final period = int.tryParse(_refreshCtrl.text.trim()) ?? 30;
-                      final counter = int.tryParse(_usageCtrl.text.trim()) ?? 0;
-                      final algo = _parseAlgorithm(_algorithm);
-                      final type = _parseType(_authType);
                       try {
+                        final service = _serviceCtrl.text.trim();
+                        final account = _accountCtrl.text.trim();
+                        final secret = _keyCtrl.text.trim().replaceAll(' ', '');
+                        if (service.isEmpty || secret.isEmpty) {
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Service name and secret key are required')),
+                          );
+                          return;
+                        }
+                        final digits = int.tryParse(_digitsCtrl.text.trim()) ?? 6;
+                        final period = int.tryParse(_refreshCtrl.text.trim()) ?? 30;
+                        final algo = _parseAlgorithm(_algorithm);
+                        final type = _parseType(_authType);
                         final code = Code.fromAccountAndSecret(
                           type,
                           account.isEmpty ? service : account,
@@ -362,10 +362,11 @@ class _EnterKeyManuallyScreenState extends State<EnterKeyManuallyScreen> {
                           const SnackBar(content: Text('2FA account added!'), duration: Duration(seconds: 2)),
                         );
                         Navigator.pop(context);
-                      } catch (e) {
+                      } catch (e, st) {
+                        debugPrint('Add 2FA error: $e\n$st');
                         if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Failed to add: $e')),
+                          SnackBar(content: Text('Failed: ${e.toString().substring(0, e.toString().length > 80 ? 80 : e.toString().length)}'), duration: const Duration(seconds: 4)),
                         );
                       }
                     },
