@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../main.dart';
+import '../common/report_bug.dart';
 import 'data/import/import_service.dart';
 import 'data/local_backup/local_backup_widget.dart';
 
@@ -105,6 +106,18 @@ class DataSectionWidget extends StatelessWidget {
               ),
             );
           },
+        ),
+        const SizedBox(height: 24),
+        _SectionHeader(title: 'Support'),
+        const SizedBox(height: 4),
+        _ImportRow(
+          icon: Icons.bug_report_outlined,
+          title: 'Report a bug',
+          subtitle: 'Send device info + description to support',
+          onTap: () => showDialog(
+            context: context,
+            builder: (_) => const ReportBugDialog(),
+          ),
         ),
         const SizedBox(height: 32),
       ],

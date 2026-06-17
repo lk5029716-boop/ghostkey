@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:logging/logging.dart';
 
 import '../models/code.dart';
@@ -10,31 +11,34 @@ import '../services/preference_service.dart';
 import '../store/code_store.dart';
 import '../utils/totp_util.dart';
 import 'code_timer_progress.dart';
+import 'utils/icon_utils.dart';
 
 /// The Vault's primary building block. Renders a single TOTP/HOTP code
 /// with:
 ///
-///   - issuer + account header
+///   - issuer + account header (with optional brand SVG icon)
 ///   - live 6-digit code that refreshes on every TOTP period boundary
 ///   - circular progress ring showing seconds remaining in the period
 ///   - tap-to-copy with "Copied" toast
 ///   - long-press → context menu (Pin, Delete, Edit, Copy)
-///
-/// Ported from ente's `CodeWidget` (1173 lines) — kept the live-timer
-/// state machine, dropped the ente-specific l10n / theme / custom-icons
-/// / event-bus / multi-select / drag-to-reorder / share-to-cloud flow.
-/// All visual styling goes through `Theme.of(context).colorScheme` so
-/// GhostKey's M3 theme (light surface, green primary) applies.
+///   - multi-select support via [isSelectable] + [isSelected]
+///   - drag handle for reorder mode via [isReordering]
 class CodeWidget extends StatefulWidget {
   final Code code;
   final bool isCompactMode;
   final bool isReordering;
+  final bool isSelectable;
+  final bool isSelected;
+  final VoidCallback? onSelectionChanged;
 
   const CodeWidget(
     this.code, {
     super.key,
     this.isCompactMode = false,
     this.isReordering = false,
+    this.isSelectable = false,
+    this.isSelected = false,
+    this.onSelectionChanged,
   });
 
   @override
@@ -175,6 +179,29 @@ class _CodeWidgetState extends State<CodeWidget> {
     );
   }
 
+  /// Multi-select toggle: dispatches to the parent via [onSelectionChanged].
+  void _toggleSelect() {
+    widget.onSelectionChanged?.call();
+  }
+
+  /// Brand color from the icon registry. Returns null if the icon is
+  /// rendered as a multi-color SVG (we just show the default tint).
+  Color? _brandColorForIssuer(String issuer) {
+    if (issuer.isEmpty) return null;
+    // A few well-known brand colors so the chip feels recognizable
+    // even when the SVG isn't loaded.
+    final l = issuer.toLowerCase();
+    if (l.contains('github')) return const Color(0xFF24292E);
+    if (l.contains('google')) return const Color(0xFF4285F4);
+    if (l.contains('aws') || l.contains('amazon')) {
+      return const Color(0xFFFF9900);
+    }
+    if (l.contains('microsoft')) return const Color(0xFF00A4EF);
+    if (l.contains('discord')) return const Color(0xFF5865F2);
+    if (l.contains('cloudflare')) return const Color(0xFFF38020);
+    return null;
+  }
+
   // ---------------------------------------------------------------------------
   // Build
   // ---------------------------------------------------------------------------
@@ -194,16 +221,32 @@ class _CodeWidgetState extends State<CodeWidget> {
         ? widget.code.account
         : widget.code.issuer;
 
+    // Brand icon: lookup if user has a custom icon, else try the registry
+    final customIconPath = widget.code.display.isCustomIcon
+        ? 'assets/custom-icons/icons/${widget.code.display.iconID}.svg'
+        : null;
+    final registryPath = customIconPath ??
+        BrandIconRegistry.instance.assetPathForIssuer(widget.code.issuer);
+    final iconColor = widget.code.display.isCustomIcon
+        ? null
+        : _brandColorForIssuer(widget.code.issuer);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Material(
         elevation: 0,
-        color: scheme.surfaceContainerHigh,
+        color: widget.isSelected
+            ? scheme.primaryContainer.withOpacity(0.25)
+            : scheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: _copyToClipboard,
-          onLongPress: _showContextMenu,
+          onTap: widget.isSelectable
+              ? () => _toggleSelect()
+              : (widget.isReordering ? null : _copyToClipboard),
+          onLongPress: widget.isReordering || widget.isSelectable
+              ? null
+              : _showContextMenu,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
             child: Column(
@@ -212,6 +255,31 @@ class _CodeWidgetState extends State<CodeWidget> {
               children: [
                 Row(
                   children: [
+                    if (widget.isSelectable) ...[
+                      Icon(
+                        widget.isSelected
+                            ? Icons.check_circle
+                            : Icons.radio_button_unchecked,
+                        size: 22,
+                        color: widget.isSelected
+                            ? scheme.primary
+                            : scheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 12),
+                    ] else if (widget.isReordering) ...[
+                      Icon(
+                        Icons.drag_handle,
+                        size: 22,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 12),
+                    ] else if (registryPath != null) ...[
+                      _BrandIconAvatar(
+                        assetPath: registryPath,
+                        background: iconColor,
+                      ),
+                      const SizedBox(width: 12),
+                    ],
                     if (widget.code.isPinned) ...[
                       Icon(Icons.push_pin,
                           size: 14, color: scheme.primary),
@@ -343,3 +411,32 @@ class _CountdownRing extends StatelessWidget {
 // unused import if you ever trim dart:io.
 // ignore: unused_element
 bool _kIsAndroid = Platform.isAndroid;
+
+/// Brand SVG icon avatar — shown to the left of the issuer name when
+/// GhostKey recognizes the service. Falls back to a colored circle with
+/// the first letter if the SVG fails to load.
+class _BrandIconAvatar extends StatelessWidget {
+  final String assetPath;
+  final Color? background;
+  const _BrandIconAvatar({required this.assetPath, this.background});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: background ?? const Color(0xFFF3F4F5),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: SvgPicture.asset(
+        assetPath,
+        width: 22,
+        height: 22,
+        fit: BoxFit.contain,
+        placeholderBuilder: (_) => const SizedBox.shrink(),
+      ),
+    );
+  }
+}

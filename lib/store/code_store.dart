@@ -70,20 +70,23 @@ class CodeStore {
 
   /// Read all codes from the store. Decodes the JSON payload stored in
   /// [LocalAuthEntity.encryptedData] — for the demo we skip decryption and
-  /// trust the local DB.
+  /// trust the local DB. Also populates each Code's `generatedID` and
+  /// `manualOrder` from the row.
   Future<List<Code>> getAllCodes() async {
     final db = await OfflineAuthenticatorDB.instance.database;
-    final rows = await db.query(OfflineAuthenticatorDB.entityTable);
+    final rows = await db.query(
+      OfflineAuthenticatorDB.entityTable,
+      orderBy: 'manual_order ASC, createdAt ASC',
+    );
     final codes = <Code>[];
     for (final row in rows) {
       final entity = LocalAuthEntity.fromMap(row);
-      if (entity.encryptedData.isEmpty) {
-        continue;
-      }
+      if (entity.encryptedData.isEmpty) continue;
       try {
-        final raw = entity.encryptedData;
-        final json = jsonDecode(raw) as Map<String, dynamic>;
-        codes.add(CodeFromMap.fromMap(json));
+        final json = jsonDecode(entity.encryptedData) as Map<String, dynamic>;
+        var code = CodeFromMap.fromMap(json);
+        code = code.copyWith(generatedID: entity.generatedID);
+        codes.add(code);
       } on CodeParseError catch (e) {
         _logger.warning('Skipping unparseable code: ${e.message}');
       } catch (e, st) {
@@ -134,6 +137,40 @@ class CodeStore {
       }
     }
     return changedCount;
+  }
+
+  /// Save the new manual order of codes (from drag-to-reorder).
+  /// Updates [LocalAuthEntity.manualOrder] in the DB; the rest of the
+  /// data is left untouched. Returns true if any row changed.
+  Future<bool> saveUpdatedIndexes(List<Code> codes) async {
+    final db = await OfflineAuthenticatorDB.instance.database;
+    final batch = db.batch();
+    var changed = false;
+    for (var i = 0; i < codes.length; i++) {
+      final rows = await db.query(
+        OfflineAuthenticatorDB.entityTable,
+        where: 'id = ?',
+        whereArgs: [codes[i].hashCode.toString()],
+        limit: 1,
+      );
+      if (rows.isEmpty) continue;
+      final generatedId = rows.first['_generatedID'] as int;
+      final currentOrder = (rows.first['manual_order'] as int?) ?? 0;
+      if (currentOrder != i) {
+        batch.update(
+          OfflineAuthenticatorDB.entityTable,
+          {'manual_order': i},
+          where: '_generatedID = ?',
+          whereArgs: [generatedId],
+        );
+        changed = true;
+      }
+    }
+    if (changed) {
+      await batch.commit(noResult: true);
+      _eventBus.fire(CodesUpdatedEvent());
+    }
+    return changed;
   }
 
   // ---------------------------------------------------------------------------

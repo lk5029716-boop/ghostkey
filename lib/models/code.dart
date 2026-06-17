@@ -91,6 +91,7 @@ class Code {
     Type? type,
     int? counter,
     CodeDisplay? display,
+    int? generatedID,
   }) {
     final String updateAccount = account ?? this.account;
     final String updateIssuer = issuer ?? this.issuer;

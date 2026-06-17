@@ -12,7 +12,7 @@ import '../utils/directory_utils.dart';
 
 class OfflineAuthenticatorDB {
   static const _databaseName = "ente.offline_authenticator.db";
-  static const _databaseVersion = 1;
+  static const _databaseVersion = 2;
 
   static const entityTable = 'entities';
 
@@ -35,6 +35,7 @@ class OfflineAuthenticatorDB {
         options: OpenDatabaseOptions(
           version: _databaseVersion,
           onCreate: _onCreate,
+          onUpgrade: _onUpgrade,
         ),
       );
     }
@@ -47,6 +48,7 @@ class OfflineAuthenticatorDB {
       path,
       version: _databaseVersion,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -60,9 +62,18 @@ class OfflineAuthenticatorDB {
                   createdAt INTEGER NOT NULL,
                   updatedAt INTEGER NOT NULL,
                   shouldSync INTEGER DEFAULT 0,
+                  manual_order INTEGER DEFAULT 0,
                   UNIQUE(id)
                 );
       ''');
+  }
+
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // v2: add manual_order for drag-to-reorder
+      await db
+          .execute('ALTER TABLE $entityTable ADD COLUMN manual_order INTEGER DEFAULT 0');
+    }
   }
 
   Future<int> insert(String encData, String header) async {

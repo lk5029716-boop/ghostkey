@@ -21,15 +21,20 @@ class LocalAuthEntity {
   // app should try to sync it to the server during next sync
   final bool shouldSync;
 
-  LocalAuthEntity(
+  // manualOrder is set by drag-to-reorder; lower = earlier in the list.
+  // Defaults to 0; codes without manual ordering fall back to createdAt.
+  final int manualOrder;
+
+  const LocalAuthEntity(
     this.generatedID,
     this.id,
     this.encryptedData,
     this.header,
     this.createdAt,
     this.updatedAt,
-    this.shouldSync,
-  );
+    this.shouldSync, {
+    this.manualOrder = 0,
+  });
 
   LocalAuthEntity copyWith({
     int? generatedID,
@@ -39,6 +44,7 @@ class LocalAuthEntity {
     int? createdAt,
     int? updatedAt,
     bool? shouldSync,
+    int? manualOrder,
   }) {
     return LocalAuthEntity(
       generatedID ?? this.generatedID,
@@ -48,6 +54,7 @@ class LocalAuthEntity {
       createdAt ?? this.createdAt,
       updatedAt ?? this.updatedAt,
       shouldSync ?? this.shouldSync,
+      manualOrder: manualOrder ?? this.manualOrder,
     );
   }
 
@@ -61,6 +68,7 @@ class LocalAuthEntity {
       'updatedAt': updatedAt,
       // sqlite doesn't support bool type. map true to 1 and false to 0
       'shouldSync': shouldSync ? 1 : 0,
+      'manual_order': manualOrder,
     };
   }
 
@@ -73,6 +81,7 @@ class LocalAuthEntity {
       map['createdAt']!,
       map['updatedAt']!,
       (map['shouldSync']! == 0) ? false : true,
+      manualOrder: map['manual_order'] as int? ?? 0,
     );
   }
 
