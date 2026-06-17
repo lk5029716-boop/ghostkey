@@ -22,6 +22,7 @@ import 'store/code_store.dart';
 import 'models/code.dart';
 import 'models/code_display.dart';
 import 'events/codes_updated_event.dart';
+import 'services/preference_service.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -47,6 +48,8 @@ const Color kWarning = Color(0xFFF59E0B);
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
+  // Initialize PreferenceService (SharedPreferences)
+  await PreferenceService.instance.init();
   // Pre-load brand icon registry so it's ready when the UI needs it
   unawaited(BrandIconRegistry.instance.init());
   // Initialize CodeStore (opens SQLite DB)

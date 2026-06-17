@@ -61,15 +61,18 @@ class _CodeWidgetState extends State<CodeWidget> {
   void initState() {
     super.initState();
     _refreshOtp(now: DateTime.now().millisecondsSinceEpoch);
-    _timer = Timer.periodic(_tickInterval, (_) {
-      if (!mounted) return;
-      final nowMs = DateTime.now().millisecondsSinceEpoch;
-      // Refresh the OTP when we cross a period boundary.
-      if (nowMs >= _periodEndMs) {
-        _refreshOtp(now: nowMs);
-      }
-      setState(() {}); // tick the countdown digits
-    });
+    // Skip the timer when reordering to avoid setState during list rebuild
+    if (!widget.isReordering) {
+      _timer = Timer.periodic(_tickInterval, (_) {
+        if (!mounted) return;
+        final nowMs = DateTime.now().millisecondsSinceEpoch;
+        // Refresh the OTP when we cross a period boundary.
+        if (nowMs >= _periodEndMs) {
+          _refreshOtp(now: nowMs);
+        }
+        setState(() {}); // tick the countdown digits
+      });
+    }
   }
 
   void _refreshOtp({required int now}) {
