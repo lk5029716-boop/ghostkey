@@ -1,16 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Pre-Android-12 launch theme. windowBackground is the layer-list
+         drawable: white background + centered green shield logo. -->
     <style name="LaunchTheme" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowBackground">@drawable/launch_background</item>
-        <item name="android:windowSplashScreenBackground">#FFFFFF</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash</item>
-        <item name="android:windowSplashScreenIconBackgroundColor">#FFFFFF</item>
-        <item name="android:statusBarColor">#000000</item>
-        <item name="android:navigationBarColor">#000000</item>
     </style>
+    <!-- NormalTheme: clean system color so there's no drawable transition
+         when Flutter takes over (prevents the white flash on first install). -->
     <style name="NormalTheme" parent="Theme.AppCompat.NoActionBar">
-        <item name="android:windowBackground">@drawable/launch_background</item>
-        <item name="android:statusBarColor">#000000</item>
-        <item name="android:navigationBarColor">#000000</item>
+        <item name="android:windowBackground">?android:colorBackground</item>
     </style>
 </resources>

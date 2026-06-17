@@ -1,16 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="LaunchTheme" parent="Theme.AppCompat.NoActionBar">
-        <item name="android:windowBackground">@drawable/launch_background</item>
-        <item name="android:windowSplashScreenBackground">#FFFFFF</item>
+    <!-- Theme applied to the Android Window while the process is starting
+         when the OS's Dark Mode setting is off.
+         Matches ente's LaunchTheme pattern: relies on the Android 12+
+         SplashScreen API attributes only, with NO windowBackground that
+         would conflict with the new API. -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:forceDarkAllowed">false</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">false</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:windowSplashScreenBackground">#F8F9FA</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash</item>
-        <item name="android:windowSplashScreenIconBackgroundColor">#FFFFFF</item>
-        <item name="android:statusBarColor">#000000</item>
-        <item name="android:navigationBarColor">#000000</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">#F8F9FA</item>
     </style>
-    <style name="NormalTheme" parent="Theme.AppCompat.NoActionBar">
-        <item name="android:windowBackground">@drawable/launch_background</item>
-        <item name="android:statusBarColor">#000000</item>
-        <item name="android:navigationBarColor">#000000</item>
+    <!-- Theme applied to the Android Window as soon as the process has started.
+         Uses ?android:colorBackground (a single system color) so the window
+         doesn't flash when Flutter takes over — no drawable transition. -->
+    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">?android:colorBackground</item>
     </style>
 </resources>
