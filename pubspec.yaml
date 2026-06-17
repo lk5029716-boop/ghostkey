@@ -35,6 +35,7 @@ dependencies:
   qr_flutter: ^4.1.0
   mobile_scanner: ^5.0.0
   image_picker: ^1.0.0
+  qr_code_dart_decoder: ^0.1.2
   share_plus: ^7.2.0
   package_info_plus: ^8.0.0
   email_validator: ^2.1.0

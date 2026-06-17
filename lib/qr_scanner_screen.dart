@@ -1,9 +1,12 @@
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:qr_code_dart_decoder/qr_code_dart_decoder.dart' as qr_decoder;
 import '../enter_key_manually_screen.dart';
 import '../models/code.dart';
 import '../store/code_store.dart';
@@ -88,7 +91,9 @@ class _QrScannerScreenState extends State<QrScannerScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Could not open gallery: ${e.toString().substring(0, e.toString().length > 80 ? 80 : e.toString().length)}'),
+          content: Text(
+            'Could not open gallery: ${_truncate(e.toString())}',
+          ),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -98,78 +103,80 @@ class _QrScannerScreenState extends State<QrScannerScreen>
       // User cancelled the picker.
       return;
     }
-    final path = picked.path;
+    await _decodeFromFileAndProcess(picked);
+  }
+
+  /// Read the picked image, try to decode it with the platform scanner
+  /// (fast, uses ML Kit on Android), and fall back to a pure-Dart QR
+  /// decoder for any platform that can't analyze the file directly.
+  Future<void> _decodeFromFileAndProcess(XFile file) async {
+    String? raw;
+    String? lastError;
+    // 1) Try the platform's analyzeImage first (uses Google ML Kit on
+    //    Android; Vision on iOS). This is the fastest path and works
+    //    for the majority of gallery images.
     try {
-      final result = await _scannerController.analyzeImage(path);
-      if (result == null) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No QR code found in the selected image'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-        return;
+      final result = await _scannerController.analyzeImage(file.path);
+      final barcodes = result?.barcodes;
+      if (barcodes != null && barcodes.isNotEmpty) {
+        raw = barcodes.first.rawValue;
       }
-      final barcodes = result.barcodes;
-      if (barcodes == null || barcodes.isEmpty) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No QR code found in the selected image'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-        return;
-      }
-      final raw = barcodes.first.rawValue;
-      if (raw == null || raw.isEmpty) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('QR code in the image is empty'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-        return;
-      }
-      await _processScannedData(raw);
     } catch (e) {
-      if (!mounted) return;
-      // Some platforms (notably older Android) cannot analyze a file
-      // directly. We fall back to using the `qr_code_scanner_plus`
-      // pure-Dart decoder which works on bytes.
-      final fallback = await _decodeWithFallback(path);
-      if (fallback != null) {
-        await _processScannedData(fallback);
-        return;
+      lastError = e.toString();
+    }
+    // 2) Fallback: pure-Dart decoder. We always try this too because
+    //    some platforms return an empty BarcodeCapture even when a QR
+    //    is present. Reading bytes and decoding with qr_dart_decoder
+    //    works regardless of platform.
+    if (raw == null || raw.isEmpty) {
+      try {
+        final bytes = await file.readAsBytes();
+        final decoded = await _decodeBytes(bytes);
+        if (decoded != null && decoded.isNotEmpty) {
+          raw = decoded;
+        }
+      } catch (e) {
+        lastError ??= e.toString();
       }
+    }
+    if (!mounted) return;
+    if (raw == null || raw.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Could not read the image: ${e.toString().substring(0, e.toString().length > 80 ? 80 : e.toString().length)}'),
+          content: Text(
+            lastError != null
+                ? 'No QR code found: ${_truncate(lastError)}'
+                : 'No QR code found in the selected image',
+          ),
           duration: const Duration(seconds: 3),
         ),
       );
+      return;
+    }
+    await _processScannedData(raw);
+  }
+
+  /// Decode a QR code from image bytes using the pure-Dart decoder.
+  /// Returns the payload string or null on failure.
+  Future<String?> _decodeBytes(Uint8List bytes) async {
+    try {
+      // qr_code_dart_decoder works directly from bytes — no need to
+      // write a temp file. The library wraps ZXing and supports
+      // multiple barcode formats; we only need QR.
+      final decoder = qr_decoder.QrCodeDartDecoder(
+        formats: const [qr_decoder.BarcodeFormat.qrCode],
+      );
+      final result = await decoder.decodeFile(bytes);
+      if (result == null || result.text == null) return null;
+      return result.text;
+    } catch (e) {
+      if (kDebugMode) debugPrint('qr_code_dart_decoder failed: $e');
+      return null;
     }
   }
 
-  /// Fallback QR decoder for when the platform's analyzer can't process
-  /// the file. Reads the bytes and uses a tiny pure-Dart QR decoder
-  /// (zlib-free; only depends on image bytes). Returns the decoded
-  /// payload or null on failure.
-  Future<String?> _decodeWithFallback(String path) async {
-    try {
-      // Without a pure-Dart QR decoder in the project, the best we can
-      // do is hand the file path to the OS via a custom platform
-      // channel. For now, we surface a clear error to the user.
-      // Returning null makes the caller show the "could not read" toast.
-      // If you need this to work, drop in `qr_code_scanner_plus` or
-      // `ai_barcode_scanner` and call its decoder here.
-      if (!await File(path).exists()) return null;
-      return null;
-    } catch (_) {
-      return null;
-    }
+  String _truncate(String s) {
+    return s.length > 80 ? '${s.substring(0, 80)}…' : s;
   }
 
   void _goManual() {

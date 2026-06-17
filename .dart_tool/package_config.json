@@ -44,6 +44,12 @@
       "languageVersion": "2.12"
     },
     {
+      "name": "charset",
+      "rootUri": "file:///opt/data/.pub-cache/hosted/pub.dev/charset-2.0.1",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "clock",
       "rootUri": "file:///opt/data/.pub-cache/hosted/pub.dev/clock-1.1.1",
       "packageUri": "lib/",
@@ -276,6 +282,12 @@
       "rootUri": "file:///opt/data/.pub-cache/hosted/pub.dev/http_parser-4.0.2",
       "packageUri": "lib/",
       "languageVersion": "2.12"
+    },
+    {
+      "name": "image",
+      "rootUri": "file:///opt/data/.pub-cache/hosted/pub.dev/image-4.3.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.15"
     },
     {
       "name": "image_picker",
@@ -554,6 +566,12 @@
       "languageVersion": "3.4"
     },
     {
+      "name": "qr_code_dart_decoder",
+      "rootUri": "file:///opt/data/.pub-cache/hosted/pub.dev/qr_code_dart_decoder-0.1.2",
+      "packageUri": "lib/",
+      "languageVersion": "2.16"
+    },
+    {
       "name": "qr_flutter",
       "rootUri": "file:///opt/data/.pub-cache/hosted/pub.dev/qr_flutter-4.1.0",
       "packageUri": "lib/",
@@ -818,13 +836,19 @@
       "languageVersion": "3.2"
     },
     {
+      "name": "zxing_lib",
+      "rootUri": "file:///opt/data/.pub-cache/hosted/pub.dev/zxing_lib-1.1.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
       "name": "ghostkey",
       "rootUri": "../",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     }
   ],
-  "generated": "2026-06-17T20:51:03.900757Z",
+  "generated": "2026-06-17T20:53:41.697647Z",
   "generator": "pub",
   "generatorVersion": "3.4.0",
   "flutterRoot": "file:///tmp/flutter",
