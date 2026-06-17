@@ -47,19 +47,34 @@ const Color kOnSurfaceVariant = Color(0xFF40493D);
 const Color kError = Color(0xFFBA1A1A);
 const Color kWarning = Color(0xFFF59E0B);
 
+/// Completes once the heavy background inits (icon registry + code store)
+/// finish. The splash screen waits on this before navigating away so the
+/// user never sees a half-loaded home tab.
+final Completer<void> appReadyCompleter = Completer<void>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
-  // Initialize PreferenceService (SharedPreferences)
+  // PreferenceService is a tiny wrapper around SharedPreferences — safe to
+  // await inline.
   await PreferenceService.instance.init();
-  // Run heavy inits in parallel so the splash can stay on screen while they
-  // finish — no more "hang" on the second open when SQLite + icon registry
-  // both have to wake back up.
-  await Future.wait([
+  // Hand control to Flutter immediately so the splash can show the wordmark,
+  // tagline, and pulse ring instead of the bare Android launch drawable.
+  // Heavy inits run in the background and unblock the splash via
+  // [appReadyCompleter] when done.
+  runApp(GhostKeyApp(prefs: prefs));
+  Future.wait([
     BrandIconRegistry.instance.init(),
     CodeStore.instance.init(),
-  ]);
-  runApp(GhostKeyApp(prefs: prefs));
+  ]).then((_) {
+    if (!appReadyCompleter.isCompleted) appReadyCompleter.complete();
+  }).catchError((e, st) {
+    // Don't deadlock the splash on init failures — log and unblock so the
+    // user can at least reach the home tab and see the error.
+    debugPrint('Background init failed: $e\n$st');
+    if (!appReadyCompleter.isCompleted) appReadyCompleter.complete();
+    return null;
+  });
 }
 
 class GhostKeyApp extends StatefulWidget {

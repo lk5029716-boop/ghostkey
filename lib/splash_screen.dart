@@ -1,10 +1,15 @@
 // ═══════════════════════════════════════════════════════════════
 // SPLASH SCREEN — Brand logo on light surface, fades + scales in.
 // Always shown on every launch (cold + warm) for 1.5s minimum.
+// Waits for the heavy background inits to finish before navigating
+// away so the home tab never renders before SQLite / icon registry
+// are ready.
 // ═══════════════════════════════════════════════════════════════
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'main.dart' show appReadyCompleter;
 
 const Color _bgTop = Color(0xFFF8F9FA);
 const Color _bgBottom = Color(0xFFF3F4F5);
@@ -24,6 +29,68 @@ class SplashScreen extends StatefulWidget {
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
+}
+
+/// Small loading indicator that spins until [ready] flips to true.
+/// Used by the splash to signal that the background inits (icons +
+/// SQLite) are still running on the very first launch.
+class _ReadySpinner extends StatefulWidget {
+  final bool ready;
+  const _ReadySpinner({required this.ready});
+
+  @override
+  State<_ReadySpinner> createState() => _ReadySpinnerState();
+}
+
+class _ReadySpinnerState extends State<_ReadySpinner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _spin;
+
+  @override
+  void initState() {
+    super.initState();
+    _spin = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    if (!widget.ready) _spin.repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ReadySpinner oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.ready && _spin.isAnimating) {
+      _spin.stop();
+    } else if (!widget.ready && !_spin.isAnimating) {
+      _spin.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.ready) {
+      // Fade-out: a quiet checkmark says "ready" without making the
+      // splash feel busy.
+      return const Icon(Icons.check_circle, size: 18, color: _primary);
+    }
+    return SizedBox(
+      width: 18,
+      height: 18,
+      child: RotationTransition(
+        turns: _spin,
+        child: const CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(_primary),
+        ),
+      ),
+    );
+  }
 }
 
 class _SplashScreenState extends State<SplashScreen>
@@ -57,8 +124,21 @@ class _SplashScreenState extends State<SplashScreen>
 
     _enter.forward();
 
-    // Navigate after the enter animation + a brief hold
-    Future.delayed(const Duration(milliseconds: 1500), _navigate);
+    // Show the splash for AT LEAST 1.5s for the brand impression, but do
+    // NOT navigate until both (a) the min display time is up AND (b) the
+    // background inits (icons + SQLite) have finished.
+    _whenReadyToNavigate();
+    // Rebuild when the completer flips so the spinner becomes a checkmark.
+    appReadyCompleter.future.whenComplete(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  Future<void> _whenReadyToNavigate() async {
+    final minHold = Future.delayed(const Duration(milliseconds: 1500));
+    await Future.wait([minHold, appReadyCompleter.future]);
+    if (!mounted) return;
+    _navigate();
   }
 
   void _navigate() {
@@ -169,6 +249,11 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                 ),
+                const SizedBox(height: 32),
+                // Tiny spinner so a slow first launch (loading 495 brand
+                // icons + opening SQLite) doesn't look frozen. Stops
+                // spinning the moment [appReadyCompleter] fires.
+                _ReadySpinner(ready: appReadyCompleter.isCompleted),
               ],
             ),
           ),
