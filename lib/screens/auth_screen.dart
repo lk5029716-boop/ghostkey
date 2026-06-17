@@ -865,7 +865,16 @@ class _EmailFormScreenState extends State<_EmailFormScreen> {
                                       color: kPrimary,
                                       fontWeight: FontWeight.w700,
                                     ),
-                                    recognizer: TapGestureRecognizer()..onTap = () => Navigator.of(context).pop(),
+                                    recognizer: TapGestureRecognizer()
+                                      ..onTap = () {
+                                        // Go to the auth methods page in signin mode
+                                        Navigator.of(context).pushAndRemoveUntil(
+                                          MaterialPageRoute(
+                                            builder: (_) => const AuthScreen(mode: AuthMode.signin),
+                                          ),
+                                          (r) => false,
+                                        );
+                                      },
                                   ),
                                 ],
                               ),
@@ -1625,7 +1634,7 @@ class _EmailEntryScreenState extends State<_EmailEntryScreen> {
               ),
               // Brand identity
               Padding(
-                padding: const EdgeInsets.only(top: 24, bottom: 40),
+                padding: const EdgeInsets.only(top: 16, bottom: 24),
                 child: Column(
                   children: [
                     Container(
@@ -1648,7 +1657,7 @@ class _EmailEntryScreenState extends State<_EmailEntryScreen> {
                         color: Color(0xFFCBFFC2), // on-primary-container
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
                     const Text(
                       'GhostKey',
                       style: TextStyle(
@@ -1664,8 +1673,8 @@ class _EmailEntryScreenState extends State<_EmailEntryScreen> {
               ),
               // Form
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
