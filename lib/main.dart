@@ -17,6 +17,7 @@ import 'ui/settings/data_section_widget.dart';
 import 'ui/utils/icon_utils.dart';
 import 'store/code_store.dart';
 import 'models/code.dart';
+import 'events/codes_updated_event.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -658,11 +659,23 @@ class _VaultPageState extends State<VaultPage> {
   List<Code> _realCodes = [];
   bool _codesLoaded = false;
 
+  StreamSubscription<CodesUpdatedEvent>? _codesSub;
+
   @override
   void initState() {
     super.initState();
     widget.filterNotifier?.value = _selectedFilter;
     _loadRealCodes();
+    // Listen for code updates from the store
+    _codesSub = CodeStore.instance.onCodesUpdated().listen((_) {
+      if (mounted) _loadRealCodes();
+    });
+  }
+
+  @override
+  void dispose() {
+    _codesSub?.cancel();
+    super.dispose();
   }
 
   void _setFilter(String f) {
