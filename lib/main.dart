@@ -15,8 +15,8 @@ import 'seed_phrase_restore_screen.dart';
 import 'screens/auth_screen.dart';
 import 'ui/settings/data_section_widget.dart';
 import 'ui/utils/icon_utils.dart';
-import 'ui/home_page.dart';
 import 'store/code_store.dart';
+import 'models/code.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -655,23 +655,55 @@ class VaultPage extends StatefulWidget {
 class _VaultPageState extends State<VaultPage> {
   String _selectedFilter = 'All';
   final _filters = ['All', 'Password', 'Seeds', 'API Keys', '2FA', 'Codes'];
+  List<Code> _realCodes = [];
+  bool _codesLoaded = false;
 
   @override
   void initState() {
     super.initState();
     widget.filterNotifier?.value = _selectedFilter;
+    _loadRealCodes();
   }
 
   void _setFilter(String f) {
     setState(() => _selectedFilter = f);
     widget.filterNotifier?.value = f;
+    if (f == '2FA') _loadRealCodes();
+  }
+
+  Future<void> _loadRealCodes() async {
+    try {
+      final codes = await CodeStore.instance.getAllCodes();
+      if (!mounted) return;
+      setState(() {
+        _realCodes = codes;
+        _codesLoaded = true;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _codesLoaded = true);
+    }
   }
 
   List<VaultItem> get _filteredItems {
-    if (_selectedFilter == 'All') return kVaultItems;
     if (_selectedFilter == '2FA') {
-      return kVaultItems.where((i) => i.id == 'google_2fa' || i.id == 'binance_2fa' || i.id == 'github_2fa').toList();
+      // Convert real Code objects to VaultItem for display
+      return _realCodes.map((c) => VaultItem(
+        id: c.hashCode.toString(),
+        title: c.issuer.isNotEmpty ? c.issuer : c.account,
+        subtitle: c.account.isNotEmpty ? c.account : 'TOTP',
+        category: VaultCategory.codes,
+        icon: Icons.security,
+        iconColor: kPrimary,
+        iconBgColor: const Color(0xFFC8E6C9),
+        date: 'Today',
+        fields: {
+          'TOTP Secret': c.secret,
+          'Username': c.account,
+        },
+      )).toList();
     }
+    if (_selectedFilter == 'All') return kVaultItems;
     final cat = _filterToCategory(_selectedFilter);
     return kVaultItems.where((i) => i.category == cat).toList();
   }
@@ -688,11 +720,6 @@ class _VaultPageState extends State<VaultPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 2FA filter: show real codes from CodeStore via HomePage
-    if (_selectedFilter == '2FA') {
-      return const HomePage();
-    }
-    // Other filters: show mock vault items
     final items = _filteredItems;
     return Scaffold(
       backgroundColor: kSurface,
@@ -702,55 +729,77 @@ class _VaultPageState extends State<VaultPage> {
           Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Container(height: 48, padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: kSurfaceContainerLow, borderRadius: BorderRadius.circular(12), border: Border.all(color: kSurfaceContainerHighest)), child: Row(children: [const Icon(Icons.search, color: kOnSurfaceVariant, size: 20), const SizedBox(width: 12), const Expanded(child: TextField(style: TextStyle(color: kOnSurface, fontSize: 14), decoration: InputDecoration(hintText: 'Search secrets', hintStyle: TextStyle(color: kOnSurfaceVariant, fontSize: 14), border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero)))]))),
           SizedBox(height: 44, child: ListView.separated(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: _filters.length, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (context, index) { final f = _filters[index]; final isActive = f == _selectedFilter; return GestureDetector(onTap: () => _setFilter(f), child: Container(padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: isActive ? Border.all(color: kPrimary, width: 1.5) : Border.all(color: kSurfaceContainerHighest)), alignment: Alignment.center, child: Text(f, style: TextStyle(color: isActive ? kPrimary : kOnSurfaceVariant, fontSize: 14, fontWeight: FontWeight.w500)))); })),
           const SizedBox(height: 8),
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: items.length,
-              separatorBuilder: (_, __) => Container(margin: const EdgeInsets.only(left: 56), height: 1, color: kSurfaceContainerHighest),
-              itemBuilder: (context, index) {
-                final item = items[index];
-                return InkWell(
-                  onTap: () {
-                    Widget? page;
-                    switch (item.category) {
-                      case VaultCategory.password:
-                        page = PasswordDetailScreen(item: item);
-                        break;
-                      case VaultCategory.seeds:
-                        page = item.id == 'ledger' ? const LedgerScreen() : SeedsDetailScreen(item: item);
-                        break;
-                      case VaultCategory.apiKeys:
-                        page = ApiKeysDetailScreen(item: item);
-                        break;
-                      case VaultCategory.codes:
-                        break;
-                    }
-                    if (page != null) {
-                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => page!));
-                    }
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
-                    child: Row(
-                      children: [
-                        Container(width: 40, height: 40, decoration: BoxDecoration(color: item.iconBgColor, shape: BoxShape.circle), child: Icon(item.icon, size: 20, color: item.iconColor)),
-                        const SizedBox(width: 16),
-                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(item.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: kOnSurface)),
-                          const SizedBox(height: 2),
-                          Text(item.subtitle, style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
-                        ])),
-                        const SizedBox(width: 8),
-                        Text(item.date, style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant)),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.chevron_right, size: 16, color: kOutlineVariant),
-                      ],
-                    ),
+          if (_selectedFilter == '2FA' && _realCodes.isEmpty && _codesLoaded)
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.security, size: 56, color: kOnSurfaceVariant),
+                      const SizedBox(height: 16),
+                      Text('No 2FA codes yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface)),
+                      const SizedBox(height: 8),
+                      Text('Tap the + button to add your first code', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant), textAlign: TextAlign.center),
+                    ],
                   ),
-                );
-              },
+                ),
+              ),
+            )
+          else
+            Expanded(
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: items.length,
+                separatorBuilder: (_, __) => Container(margin: const EdgeInsets.only(left: 56), height: 1, color: kSurfaceContainerHighest),
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  if (_selectedFilter == '2FA') {
+                    return _TotpListItem(item: item);
+                  }
+                  return InkWell(
+                    onTap: () {
+                      Widget? page;
+                      switch (item.category) {
+                        case VaultCategory.password:
+                          page = PasswordDetailScreen(item: item);
+                          break;
+                        case VaultCategory.seeds:
+                          page = item.id == 'ledger' ? const LedgerScreen() : SeedsDetailScreen(item: item);
+                          break;
+                        case VaultCategory.apiKeys:
+                          page = ApiKeysDetailScreen(item: item);
+                          break;
+                        case VaultCategory.codes:
+                          break;
+                      }
+                      if (page != null) {
+                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => page!));
+                      }
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+                      child: Row(
+                        children: [
+                          Container(width: 40, height: 40, decoration: BoxDecoration(color: item.iconBgColor, shape: BoxShape.circle), child: Icon(item.icon, size: 20, color: item.iconColor)),
+                          const SizedBox(width: 16),
+                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(item.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: kOnSurface)),
+                            const SizedBox(height: 2),
+                            Text(item.subtitle, style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
+                          ])),
+                          const SizedBox(width: 8),
+                          Text(item.date, style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant)),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.chevron_right, size: 16, color: kOutlineVariant),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
         ]),
       ),
     );

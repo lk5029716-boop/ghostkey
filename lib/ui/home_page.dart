@@ -7,7 +7,6 @@ import '../events/codes_updated_event.dart';
 import '../models/code.dart';
 import '../services/preference_service.dart';
 import '../store/code_store.dart';
-import '../../qr_scanner_screen.dart';
 import 'code_error_widget.dart';
 import 'code_widget.dart';
 import 'home/coach_mark_widget.dart';
@@ -374,9 +373,7 @@ class _HomePageState extends State<HomePage> {
     if (goodCodes.isEmpty && errors.isEmpty) {
       return _EmptyState(
         searchText: _searchText,
-        onAdd: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const QrScannerScreen()),
-        ),
+        onAdd: () => Navigator.of(context).pushNamed('/scanner'),
       );
     }
 
