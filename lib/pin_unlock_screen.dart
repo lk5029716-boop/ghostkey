@@ -466,6 +466,7 @@ class _PinScreenState extends State<PinScreen>
   }
 
   Widget _buildKeypad() {
+    final isUnlock = widget.mode == PinScreenMode.unlock;
     return SizedBox(
       width: 280,
       child: GridView.count(
@@ -485,8 +486,12 @@ class _PinScreenState extends State<PinScreen>
           _key('7'),
           _key('8'),
           _key('9'),
-          // Row 4: small fingerprint | 0 | backspace (same in both modes)
-          _smallBiometricKey(),
+          // Row 4: small fingerprint in UNLOCK mode only.
+          // In setup mode, this slot is empty (user is creating a new PIN,
+          // not authenticating — biometric doesn't apply yet).
+          isUnlock
+              ? _smallBiometricKey()
+              : const SizedBox.shrink(),
           _key('0'),
           _backspaceKey(),
         ],
