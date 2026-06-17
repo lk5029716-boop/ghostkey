@@ -15,6 +15,7 @@ class PinScreen extends StatefulWidget {
   final PinScreenMode mode;
   final String? expectedPin;
   final ValueChanged<String>? onUnlock;
+  final VoidCallback? onSkip;
 
   const PinScreen({
     super.key,
@@ -23,6 +24,7 @@ class PinScreen extends StatefulWidget {
     this.mode = PinScreenMode.unlock,
     this.expectedPin,
     this.onUnlock,
+    this.onSkip,
   });
 
   @override
@@ -248,6 +250,19 @@ class _PinScreenState extends State<PinScreen>
                 // Number pad
                 _buildKeypad(),
                 const SizedBox(height: 16),
+                if (widget.onSkip != null)
+                  TextButton(
+                    onPressed: widget.onSkip,
+                    child: const Text(
+                      'Skip for now',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF707A6C),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 8),
               ],
             ),
           ),
