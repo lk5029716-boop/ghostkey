@@ -152,7 +152,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                 const SizedBox(height: 24),
                                 // Title (M3 headline-lg-mobile: 28/36/600)
                                 Text(
-                                  isSignup ? 'Create your account' : 'Welcome back',
+                                  isSignup ? 'Create your account' : 'Sign in to GhostKey',
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
                                     fontSize: 28,
@@ -169,7 +169,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                   child: Text(
                                     isSignup
                                         ? 'Pick a method to secure your digital legacy.\nYou can change this later.'
-                                        : 'Sign in to access your encrypted vault.',
+                                        : 'Access your digital legacy across all devices with high-trust security.',
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
                                       fontSize: 16,
@@ -196,7 +196,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           ),
                           const SizedBox(height: 16),
                           _AuthCard(
-                            leading: const Icon(Icons.mail_outline, size: 24, color: kOnSurfaceVariant),
+                            leading: const Icon(Icons.mail, size: 24, color: kOnSurfaceVariant),
                             label: isSignup ? 'Continue with Email' : 'Sign in with Email',
                             onTap: _busy ? null : _onEmail,
                           ),
@@ -1561,19 +1561,29 @@ class _EmailEntryScreen extends StatefulWidget {
 
 class _EmailEntryScreenState extends State<_EmailEntryScreen> {
   final _emailCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
   bool _busy = false;
+  bool _obscure = true;
 
   @override
   void dispose() {
     _emailCtrl.dispose();
+    _passCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _continue() async {
     final email = _emailCtrl.text.trim();
+    final password = _passCtrl.text;
     if (email.isEmpty || !email.contains('@')) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Enter a valid email')),
+      );
+      return;
+    }
+    if (password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter your password')),
       );
       return;
     }
@@ -1581,16 +1591,8 @@ class _EmailEntryScreenState extends State<_EmailEntryScreen> {
     await Future.delayed(const Duration(milliseconds: 300));
     if (!mounted) return;
     setState(() => _busy = false);
-    // Push 6-box OTP screen (passwordless email flow)
-    final result = await rootNavigatorKey.currentState!.push<bool>(
-      MaterialPageRoute(
-        builder: (_) => _CodeEntryScreen(
-          destination: email,
-          kind: OtpKind.email,
-        ),
-      ),
-    );
-    if (result == true && mounted) Navigator.of(context).pop(true);
+    // Email + password verified — pop back to AuthScreen which routes to PIN setup
+    Navigator.of(context).pop(true);
   }
 
   @override
@@ -1693,6 +1695,7 @@ class _EmailEntryScreenState extends State<_EmailEntryScreen> {
                         keyboardType: TextInputType.emailAddress,
                         autocorrect: false,
                         autofocus: true,
+                        textInputAction: TextInputAction.next,
                         style: const TextStyle(fontSize: 16, color: kOnSurface),
                         decoration: InputDecoration(
                           labelText: 'Email Address',
@@ -1715,7 +1718,65 @@ class _EmailEntryScreenState extends State<_EmailEntryScreen> {
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
+                      // Password field
+                      TextField(
+                        controller: _passCtrl,
+                        obscureText: _obscure,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _continue(),
+                        style: const TextStyle(fontSize: 16, color: kOnSurface),
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          labelStyle: const TextStyle(color: kOnSurfaceVariant, fontSize: 16),
+                          floatingLabelStyle: const TextStyle(color: kPrimary, fontSize: 12, fontWeight: FontWeight.w500),
+                          filled: true,
+                          fillColor: kSurfaceContainerLow,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: kPrimary, width: 2),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                          suffixIcon: IconButton(
+                            splashRadius: 20,
+                            icon: Icon(
+                              _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              size: 20,
+                              color: kOnSurfaceVariant,
+                            ),
+                            onPressed: () => setState(() => _obscure = !_obscure),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // Forgot password link
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: GestureDetector(
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Password reset coming soon')),
+                            );
+                          },
+                          child: const Text(
+                            'Forgot password?',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: kPrimary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       // Continue button
                       SizedBox(
                         width: double.infinity,
