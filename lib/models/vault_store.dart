@@ -1,12 +1,10 @@
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 
 enum TimerStatus { active, warning, expired }
 
 class VaultStore extends ChangeNotifier {
   bool _isLoggedIn = false;
-  
+
   TimerStatus get timerStatus => TimerStatus.active;
   int get daysRemaining => 65;
   bool get isLoggedIn => _isLoggedIn;

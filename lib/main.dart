@@ -13,6 +13,7 @@ import 'qr_scanner_screen.dart';
 import 'pin_unlock_screen.dart' show PinScreen, PinScreenMode;
 import 'seed_phrase_restore_screen.dart';
 import 'screens/auth_screen.dart';
+import 'ui/settings/data_section_widget.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -2071,6 +2072,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _divider(outlineVar),
             _row(Icons.ios_share, 'Data Export (Encrypted)', trailing: Icon(Icons.download, color: onSurfaceVar, size: 20)),
           ]),
+          const SizedBox(height: 24),
+
+          // Data section — Import / Export (M3)
+          _sectionHeader('Data', primary),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFBFCABA).withOpacity(0.2)),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4, offset: const Offset(0, 1))],
+            ),
+            child: const DataSectionWidget(),
+          ),
           const SizedBox(height: 24),
 
           // Notifications section
