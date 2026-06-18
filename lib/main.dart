@@ -1045,6 +1045,12 @@ class _VaultPageState extends State<VaultPage> {
       case VaultCategory.codes:
         page = TwoFactorDetailScreen(item: item);
         break;
+      case VaultCategory.totp:
+        page = TwoFactorDetailScreen(item: item);
+        break;
+      case VaultCategory.notes:
+      case VaultCategory.privateKeys:
+        break;
     }
     if (page != null) {
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => page!));
