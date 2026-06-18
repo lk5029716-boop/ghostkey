@@ -788,7 +788,7 @@ class _VaultPageState extends State<VaultPage> {
   List<VaultItem> _vaultItems = [];
   List<Code> _codes = [];
   bool _loaded = false;
-  int _selectedFilterIndex = -1; // -1 = show all (no chip selected)
+  int _selectedFilterIndex = 0; // default: Password filter selected
   StreamSubscription<VaultItemsUpdatedEvent>? _vaultSub;
   StreamSubscription<CodesUpdatedEvent>? _codesSub;
 
@@ -857,9 +857,8 @@ class _VaultPageState extends State<VaultPage> {
     return list;
   }
 
-  /// Items filtered by selected chip, or all if none selected
+  /// Items filtered by selected chip
   List<VaultItem> get _filteredItems {
-    if (_selectedFilterIndex < 0) return _allVaultItems;
     final cat = _filterCategories[_selectedFilterIndex].category;
     return _allVaultItems.where((i) => i.category == cat).toList();
   }
@@ -868,11 +867,6 @@ class _VaultPageState extends State<VaultPage> {
 
   /// Navigate to the add screen for the currently selected filter
   Future<void> _onFabPressed(BuildContext context) async {
-    if (_selectedFilterIndex < 0) {
-      // No filter selected — show bottom sheet
-      _showAddSecretSheet(context);
-      return;
-    }
     final cat = _filterCategories[_selectedFilterIndex].category;
     Widget? page;
     switch (cat) {
@@ -894,12 +888,11 @@ class _VaultPageState extends State<VaultPage> {
       case VaultCategory.totp:
         page = const QrScannerScreen();
         break;
-      default:
-        _showAddSecretSheet(context);
-        return;
+      case VaultCategory.privateKeys:
+        return; // not implemented yet
     }
     // Navigate and wait for result — refresh vault when user comes back
-    final result = await Navigator.of(context).push(MaterialPageRoute(builder: (_) => page!));
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => page!));
     // Refresh vault list regardless of result (item may have been added)
     _loadVaultItems();
     _loadCodes();
@@ -942,7 +935,7 @@ class _VaultPageState extends State<VaultPage> {
                   selected: selected,
                   onSelected: (_) {
                     setState(() {
-                      _selectedFilterIndex = selected ? -1 : i;
+                      _selectedFilterIndex = i;
                     });
                   },
                   selectedColor: kSecondaryContainer,
