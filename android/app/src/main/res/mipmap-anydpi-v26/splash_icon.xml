@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive icon for the Android 12+ SplashScreen API.
+
+  Adaptive icons (XML in mipmap-anydpi-v26) avoid the race condition that
+  flat PNGs have on first cold install — the system renders the icon from
+  the XML declaratively, no async decode needed.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/splash_background"/>
+    <foreground android:drawable="@drawable/splash"/>
+</adaptive-icon>
