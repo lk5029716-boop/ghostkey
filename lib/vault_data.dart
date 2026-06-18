@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════════
 import 'package:flutter/material.dart';
 
-enum VaultCategory { password, seeds, apiKeys, codes }
+enum VaultCategory { password, seeds, apiKeys, codes, totp, notes, privateKeys }
 
 class VaultItem {
   final String id;

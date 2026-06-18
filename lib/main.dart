@@ -619,14 +619,7 @@ class _MainShellState extends State<MainShell> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               child: const Icon(Icons.add, color: kOnPrimary, size: 28),
             )
-          : _currentIndex == 1
-              ? FloatingActionButton(
-                  onPressed: () => _showAddSecretSheet(context),
-                  backgroundColor: kPrimary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  child: const Icon(Icons.add, color: kOnPrimary, size: 28),
-                )
-              : null,
+          : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
@@ -775,10 +768,27 @@ class VaultPage extends StatefulWidget {
   State<VaultPage> createState() => _VaultPageState();
 }
 
+/// Filter chip categories — NO "All" chip
+const _filterCategories = <_FilterChip>[
+  _FilterChip(label: 'Password', category: VaultCategory.password),
+  _FilterChip(label: 'Seeds', category: VaultCategory.seeds),
+  _FilterChip(label: 'API Keys', category: VaultCategory.apiKeys),
+  _FilterChip(label: '2FA', category: VaultCategory.totp),
+  _FilterChip(label: 'Codes', category: VaultCategory.codes),
+  _FilterChip(label: 'Notes', category: VaultCategory.notes),
+];
+
+class _FilterChip {
+  final String label;
+  final VaultCategory category;
+  const _FilterChip({required this.label, required this.category});
+}
+
 class _VaultPageState extends State<VaultPage> {
   List<VaultItem> _vaultItems = [];
   List<Code> _codes = [];
   bool _loaded = false;
+  int _selectedFilterIndex = -1; // -1 = show all (no chip selected)
   StreamSubscription<VaultItemsUpdatedEvent>? _vaultSub;
   StreamSubscription<CodesUpdatedEvent>? _codesSub;
 
@@ -786,7 +796,6 @@ class _VaultPageState extends State<VaultPage> {
   void initState() {
     super.initState();
     _loadAll();
-    // Listen for changes — auto refresh
     _vaultSub = VaultStore.instance.onVaultItemsUpdated().listen((_) => _loadVaultItems());
     _codesSub = CodeStore.instance.onCodesUpdated().listen((_) => _loadCodes());
   }
@@ -829,9 +838,9 @@ class _VaultPageState extends State<VaultPage> {
     }
   }
 
-  /// Combined list: vault items first, then 2FA codes
-  List<dynamic> get _allItems {
-    final list = <dynamic>[..._vaultItems];
+  /// All vault items + 2FA codes merged
+  List<VaultItem> get _allVaultItems {
+    final list = <VaultItem>[..._vaultItems];
     for (final c in _codes) {
       list.add(VaultItem(
         id: 'code_${c.hashCode}',
@@ -848,11 +857,53 @@ class _VaultPageState extends State<VaultPage> {
     return list;
   }
 
-  bool get _isEmpty => _allItems.isEmpty;
+  /// Items filtered by selected chip, or all if none selected
+  List<VaultItem> get _filteredItems {
+    if (_selectedFilterIndex < 0) return _allVaultItems;
+    final cat = _filterCategories[_selectedFilterIndex].category;
+    return _allVaultItems.where((i) => i.category == cat).toList();
+  }
+
+  bool get _isEmpty => _allVaultItems.isEmpty;
+
+  /// Navigate to the add screen for the currently selected filter
+  void _onFabPressed(BuildContext context) {
+    if (_selectedFilterIndex < 0) {
+      // No filter selected — show bottom sheet
+      _showAddSecretSheet(context);
+      return;
+    }
+    final cat = _filterCategories[_selectedFilterIndex].category;
+    Widget? page;
+    switch (cat) {
+      case VaultCategory.password:
+        page = const PasswordAddScreen();
+        break;
+      case VaultCategory.seeds:
+        page = const SeedPhraseRestoreScreen();
+        break;
+      case VaultCategory.apiKeys:
+        page = const ApiKeyAddScreen();
+        break;
+      case VaultCategory.codes:
+        page = const RecoveryCodesAddScreen();
+        break;
+      case VaultCategory.notes:
+        page = const SecureNoteAddScreen();
+        break;
+      case VaultCategory.totp:
+        page = const QrScannerScreen();
+        break;
+      default:
+        _showAddSecretSheet(context);
+        return;
+    }
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => page!));
+  }
 
   @override
   Widget build(BuildContext context) {
-    final items = _allItems;
+    final items = _filteredItems;
     return Scaffold(
       backgroundColor: kSurface,
       body: SafeArea(
@@ -871,6 +922,39 @@ class _VaultPageState extends State<VaultPage> {
               ],
             ),
           ),
+          // Filter chips row
+          SizedBox(
+            height: 44,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _filterCategories.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, i) {
+                final chip = _filterCategories[i];
+                final selected = _selectedFilterIndex == i;
+                return FilterChip(
+                  label: Text(chip.label),
+                  selected: selected,
+                  onSelected: (_) {
+                    setState(() {
+                      _selectedFilterIndex = selected ? -1 : i;
+                    });
+                  },
+                  selectedColor: kSecondaryContainer,
+                  checkmarkColor: kPrimary,
+                  labelStyle: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: selected ? kPrimary : kOnSurfaceVariant,
+                  ),
+                  side: BorderSide(color: selected ? kPrimary : kSurfaceContainerHighest),
+                  showCheckmark: false,
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 4),
           if (!_loaded)
             const Expanded(child: Center(child: CircularProgressIndicator(color: kPrimary)))
           else if (_isEmpty)
@@ -885,6 +969,12 @@ class _VaultPageState extends State<VaultPage> {
               ),
             ),
         ]),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _onFabPressed(context),
+        backgroundColor: kPrimary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: const Icon(Icons.add, color: kOnPrimary, size: 28),
       ),
     );
   }
@@ -934,6 +1024,9 @@ class _VaultPageState extends State<VaultPage> {
       case VaultCategory.seeds: return 'Seed';
       case VaultCategory.apiKeys: return 'API Key';
       case VaultCategory.codes: return 'Code';
+      case VaultCategory.totp: return '2FA';
+      case VaultCategory.notes: return 'Note';
+      case VaultCategory.privateKeys: return 'Key';
     }
   }
 
