@@ -665,15 +665,11 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
-            width: 16,
+            width: 14,
             child: Text('${i + 1}',
-                style: const TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    color: _outline,
-                    letterSpacing: 0)),
+                style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w700, color: _outline, letterSpacing: 0)),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 2),
           Expanded(
             child: TextField(
               controller: _wordCtrls[i],
@@ -682,11 +678,10 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
               decoration: const InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
-                hintText: 'word',
-                hintStyle: TextStyle(color: _outlineVariant),
+                hintText: '',
                 contentPadding: EdgeInsets.zero,
               ),
-              style: const TextStyle(fontSize: 13, color: _onSurface),
+              style: const TextStyle(fontSize: 12, color: _onSurface),
               autocorrect: false,
               enableSuggestions: false,
               textCapitalization: TextCapitalization.none,
@@ -711,15 +706,9 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
             ),
           ),
           if (isValid)
-            const Padding(
-              padding: EdgeInsets.only(left: 4),
-              child: Icon(Icons.check_circle, size: 14, color: _primary),
-            )
+            const Icon(Icons.check_circle, size: 12, color: _primary)
           else if (isInvalid)
-            const Padding(
-              padding: EdgeInsets.only(left: 4),
-              child: Icon(Icons.error_outline, size: 14, color: _error),
-            ),
+            const Icon(Icons.error_outline, size: 12, color: _error),
         ],
       ),
     );

@@ -13,6 +13,10 @@ import 'qr_scanner_screen.dart';
 import 'pin_unlock_screen.dart' show PinScreen, PinScreenMode;
 import 'seed_phrase_restore_screen.dart';
 import 'crypto/bip39.dart';
+import 'screens/password_add_screen.dart';
+import 'screens/api_key_add_screen.dart';
+import 'screens/recovery_codes_add_screen.dart';
+import 'screens/secure_note_add_screen.dart';
 import 'screens/auth_screen.dart';
 import 'services/biometric_service.dart';
 import 'services/preference_service.dart';
@@ -653,8 +657,28 @@ class _MainShellState extends State<MainShell> {
                             )),
                           );
                         } else {
-                          // All other filters: show add sheet with filter
-                          _showAddSecretSheet(context, filter: filter == 'All' ? null : filter);
+                          // All other filters: go directly to the correct add screen
+                          Widget? page;
+                          switch (filter) {
+                            case 'Password':
+                              page = const PasswordAddScreen();
+                              break;
+                            case 'API Keys':
+                              page = const ApiKeyAddScreen();
+                              break;
+                            case 'Codes':
+                              page = const RecoveryCodesAddScreen();
+                              break;
+                            case 'All':
+                              _showAddSecretSheet(context);
+                              return;
+                            default:
+                              _showAddSecretSheet(context, filter: filter);
+                              return;
+                          }
+                          if (page != null) {
+                            Navigator.of(context).push(MaterialPageRoute(builder: (_) => page!));
+                          }
                         }
                       },
                       backgroundColor: kPrimary,
