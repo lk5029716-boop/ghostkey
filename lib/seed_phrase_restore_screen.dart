@@ -332,32 +332,30 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
                   children: [
                     const Text('Recovery Phrase',
                         style: TextStyle(
-                            fontSize: 28,
-                            height: 36 / 28,
+                            fontSize: 24,
                             fontWeight: FontWeight.w600,
                             color: _onSurface)),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       _manualMode
-                          ? 'Enter your $_wordCount-word phrase in order'
+                          ? 'Enter your $_wordCount-word phrase'
                           : 'Paste your $_wordCount-word phrase separated by spaces',
                       style: const TextStyle(
-                          fontSize: 14,
-                          color: _onSurfaceVariant,
-                          height: 20 / 14),
+                          fontSize: 13,
+                          color: _onSurfaceVariant),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 12),
                     _buildWordCountSelector(),
                     const SizedBox(height: 12),
                     _buildModeSelector(),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
                     _buildPasteBar(),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     _buildProgressBar(),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     if (_errorMessage != null) ...[
                       _buildErrorBanner(),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                     ],
                     if (!_wordlistLoaded)
                       _buildLoadingIndicator()
@@ -411,7 +409,7 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
             child: GestureDetector(
               onTap: () => _setWordCount(n),
               child: Container(
-                height: 44,
+                height: 36,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: active ? _primary : _surfaceContainerLow,
@@ -454,7 +452,7 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
             color: active ? _surface : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
@@ -473,22 +471,26 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
 
   // ── Paste bar ─────────────────────────────────────────────────
   Widget _buildPasteBar() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 8,
+      runSpacing: 4,
       children: [
         // Security notice
         Row(
+          mainAxisSize: MainAxisSize.min,
           children: const [
-            Icon(Icons.lock_outline, size: 16, color: _outline),
+            Icon(Icons.lock_outline, size: 14, color: _outline),
             SizedBox(width: 4),
-            Text('Processed offline — never leaves your device',
-                style: TextStyle(fontSize: 11, color: _outline)),
+            Text('Processed offline',
+                style: TextStyle(fontSize: 10, color: _outline)),
           ],
         ),
         GestureDetector(
           onTap: _wordlistLoaded ? _pasteFromClipboard : null,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: _secondaryContainer,
               borderRadius: BorderRadius.circular(9999),
@@ -496,11 +498,11 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: const [
-                Icon(Icons.content_paste, size: 18, color: _onSecondaryContainer),
-                SizedBox(width: 6),
+                Icon(Icons.content_paste, size: 16, color: _onSecondaryContainer),
+                SizedBox(width: 4),
                 Text('Paste',
                     style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.w500,
                         color: _onSecondaryContainer)),
               ],
@@ -528,12 +530,12 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
               const Icon(Icons.check_circle, size: 16, color: _primary),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         ClipRRect(
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
             value: _progress,
-            minHeight: 6,
+            minHeight: 4,
             backgroundColor: _outlineVariant.withOpacity(0.3),
             valueColor: const AlwaysStoppedAnimation(_primary),
           ),
