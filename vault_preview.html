@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GhostKey Vault — UI Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #F8F9FA; color: #191C1D; }
+
+  /* Colors */
+  :root {
+    --primary: #0D631B;
+    --on-primary: #FFFFFF;
+    --surface: #F8F9FA;
+    --surface-container: #F3F4F5;
+    --surface-container-low: #F3F4F5;
+    --surface-container-high: #E1E3E4;
+    --surface-container-highest: #E1E3E4;
+    --on-surface: #191C1D;
+    --on-surface-variant: #40493D;
+    --outline: #707A6C;
+    --outline-variant: #BFCABA;
+    --secondary-container: #ACF4A4;
+    --on-secondary-container: #307231;
+    --error: #BA1A1A;
+  }
+
+  .phone {
+    max-width: 390px;
+    margin: 20px auto;
+    background: var(--surface);
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08);
+    border: 8px solid #1a1a1a;
+    min-height: 800px;
+  }
+
+  /* Status bar */
+  .status-bar {
+    background: var(--surface);
+    padding: 8px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* Header */
+  .header {
+    padding: 8px 16px 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .header h1 { font-size: 28px; font-weight: 700; }
+  .header-actions { display: flex; gap: 4px; }
+  .icon-btn {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--on-surface-variant);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+  .icon-btn:hover { background: var(--surface-container); }
+
+  /* Filter chips */
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    padding: 8px 16px 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .filter-row::-webkit-scrollbar { display: none; }
+
+  .filter-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--surface-container-highest);
+    background: white;
+    color: var(--on-surface-variant);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .filter-chip .icon { font-size: 16px; }
+  .filter-chip .count {
+    background: var(--surface-container-highest);
+    color: var(--on-surface-variant);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 10px;
+  }
+  .filter-chip.active {
+    background: rgba(172, 244, 164, 0.4);
+    border-color: rgba(13, 99, 27, 0.3);
+    color: var(--primary);
+  }
+  .filter-chip.active .count {
+    background: rgba(13, 99, 27, 0.12);
+    color: var(--primary);
+  }
+  .filter-chip:hover { border-color: var(--outline); }
+
+  /* Vault cards */
+  .vault-list {
+    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .vault-card {
+    background: white;
+    border-radius: 14px;
+    border: 1px solid var(--surface-container-highest);
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .vault-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transform: translateY(-1px);
+  }
+  .vault-card:active { transform: scale(0.98); }
+
+  .card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .card-content { flex: 1; min-width: 0; }
+  .card-title { font-size: 15px; font-weight: 600; color: var(--on-surface); }
+  .card-subtitle { font-size: 13px; color: var(--on-surface-variant); margin-top: 2px; }
+
+  .card-badge {
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .card-chevron {
+    color: var(--outline-variant);
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  /* Category colors */
+  .bg-blue { background: #BBDEFB; color: #4285F4; }
+  .bg-green { background: #C8E6C9; color: #0D631B; }
+  .bg-yellow { background: #FFF3CD; color: #F0B90B; }
+  .bg-orange { background: #FFE0B2; color: #FF9900; }
+  .bg-purple { background: #E1BEE7; color: #7B1FA2; }
+  .bg-teal { background: #B2DFDB; color: #00796B; }
+  .bg-dark { background: #E1E3E4; color: #24292E; }
+  .bg-red { background: #F8BBD0; color: #C2185B; }
+  .bg-amber { background: #FFF3CD; color: #F59E0B; }
+
+  /* FAB */
+  .fab {
+    position: absolute;
+    bottom: 90px;
+    right: 16px;
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: var(--primary);
+    color: var(--on-primary);
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(13, 99, 27, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .fab:hover { transform: scale(1.05); box-shadow: 0 6px 16px rgba(13, 99, 27, 0.5); }
+  .fab:active { transform: scale(0.95); }
+
+  /* Bottom nav */
+  .bottom-nav {
+    background: var(--surface-container);
+    border-top: 1px solid var(--surface-container-highest);
+    padding: 8px 0 12px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+  }
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 12px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--on-surface-variant);
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .nav-item .nav-icon { font-size: 22px; }
+  .nav-item.active { color: var(--primary); }
+  .nav-item.active .nav-icon { color: var(--primary); }
+
+  /* Empty state */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 32px;
+    text-align: center;
+  }
+  .empty-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--surface-container-low);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    color: var(--on-surface-variant);
+    margin-bottom: 20px;
+  }
+  .empty-title { font-size: 18px; font-weight: 600; color: var(--on-surface); }
+  .empty-subtitle { font-size: 14px; color: var(--on-surface-variant); margin-top: 8px; }
+  .empty-btn {
+    margin-top: 24px;
+    padding: 12px 24px;
+    background: var(--primary);
+    color: var(--on-primary);
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Add sheet overlay */
+  .sheet-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 100;
+    align-items: flex-end;
+  }
+  .sheet-overlay.show { display: flex; }
+
+  .bottom-sheet {
+    background: var(--surface);
+    border-radius: 24px 24px 0 0;
+    padding: 12px 16px 20px;
+    width: 100%;
+    max-height: 70%;
+    overflow-y: auto;
+  }
+  .sheet-handle {
+    width: 40px;
+    height: 4px;
+    background: var(--outline-variant);
+    border-radius: 2px;
+    margin: 0 auto 12px;
+  }
+  .sheet-title { font-size: 22px; font-weight: 600; }
+  .sheet-subtitle { font-size: 14px; color: var(--on-surface-variant); margin-top: 4px; margin-bottom: 12px; }
+
+  .sheet-item {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid var(--surface-container-high);
+    padding: 14px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+  }
+  .sheet-item:hover { background: var(--surface-container-low); }
+  .sheet-item-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+  .sheet-item-text { flex: 1; }
+  .sheet-item-title { font-size: 15px; font-weight: 600; }
+  .sheet-item-sub { font-size: 13px; color: var(--on-surface-variant); margin-top: 2px; }
+
+  /* Screen tabs */
+  .screen-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 16px;
+    justify-content: center;
+  }
+  .screen-tab {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--outline-variant);
+    background: white;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .screen-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .phone-wrap { position: relative; min-height: 780px; }
+</style>
+</head>
+<body>
+
+<div class="screen-tabs">
+  <button class="screen-tab active" onclick="showScreen('vault', this)">Vault List</button>
+  <button class="screen-tab" onclick="showScreen('empty', this)">Empty State</button>
+  <button class="screen-tab" onclick="showScreen('addsheet', this)">Add Sheet</button>
+  <button class="screen-tab" onclick="showScreen('filter', this)">Filter: Seeds</button>
+</div>
+
+<!-- Screen 1: Vault List (All) -->
+<div id="screen-vault" class="screen active">
+<div class="phone">
+  <div class="status-bar">
+    <span>9:41</span>
+    <span>🔶 100%</span>
+  </div>
+  <div class="header">
+    <h1>Vault</h1>
+    <div class="header-actions">
+      <button class="icon-btn">🔍</button>
+      <button class="icon-btn">⋮</button>
+    </div>
+  </div>
+  <div class="filter-row">
+    <div class="filter-chip active" onclick="selectFilter(this)">
+      <span class="icon">⊞</span> All <span class="count">8</span>
+    </div>
+    <div class="filter-chip" onclick="selectFilter(this)">
+      <span class="icon">🔒</span> Password <span class="count">2</span>
+    </div>
+    <div class="filter-chip" onclick="selectFilter(this)">
+      <span class="icon">💾</span> Seeds <span class="count">1</span>
+    </div>
+    <div class="filter-chip" onclick="selectFilter(this)">
+      <span class="icon">🔑</span> API Keys <span class="count">2</span>
+    </div>
+    <div class="filter-chip" onclick="selectFilter(this)">
+      <span class="icon">🛡️</span> 2FA <span class="count">3</span>
+    </div>
+    <div class="filter-chip" onclick="selectFilter(this)">
+      <span class="icon">⊞</span> Codes <span class="count">1</span>
+    </div>
+  </div>
+  <div class="vault-list" style="padding-bottom: 100px;">
+    <div class="vault-card">
+      <div class="card-icon bg-blue">🔑</div>
+      <div class="card-content">
+        <div class="card-title">Google Account</div>
+        <div class="card-subtitle">alex@gmail.com</div>
+      </div>
+      <span class="card-badge bg-blue" style="color:#4285F4;font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;background:rgba(66,133,244,0.12)">Password</span>
+      <span class="card-chevron">›</span>
+    </div>
+    <div class="vault-card">
+      <div class="card-icon bg-yellow">₿</div>
+      <div class="card-content">
+        <div class="card-title">Binance Account</div>
+        <div class="card-subtitle">alex@gmail.com</div>
+      </div>
+      <span class="card-badge" style="color:#F0B90B;font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;background:rgba(240,185,11,0.12)">Password</span>
+      <span class="card-chevron">›</span>
+    </div>
+    <div class="vault-card">
+      <div class="card-icon bg-green">💾</div>
+      <div class="card-content">
+        <div class="card-title">Ledger Seed Phrase</div>
+        <div class="card-subtitle">24 words</div>
+      </div>
+      <span class="card-badge" style="color:#0D631B;font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;background:rgba(13,99,27,0.12)">Seed</span>
+      <span class="card-chevron">›</span>
+    </div>
+    <div class="vault-card">
+      <div class="card-icon bg-orange">🔢</div>
+      <div class="card-content">
+        <div class="card-title">AWS Root Key</div>
+        <div class="card-subtitle">AKIA....EXAMPLE</div>
+      </div>
+      <span class="card-badge" style="color:#FF9900;font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;background:rgba(255,153,0,0.12)">API Key</span>
+      <span class="card-chevron">›</span>
+    </div>
+    <div class="vault-card">
+      <div class="card-icon bg-teal">🔑</div>
+      <div class="card-content">
+        <div class="card-title">Crypto.com API</div>
+        <div class="card-subtitle">Read-only</div>
+      </div>
+      <span class="card-badge" style="color:#00796B;font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;background:rgba(0,121,107,0.12)">API Key</span>
+      <span class="card-chevron">›</span>
+    </div>
+    <div class="vault-card">
+      <div class="card-icon bg-purple">⊞</div>
+      <div class="card-content">
+        <div class="card-title">Recovery Codes</div>
+        <div class="card-subtitle">8 codes</div>
+      </div>
+      <span class="card-badge" style="color:#7B1FA2;font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;background:rgba(123,31,162,0.12)">2FA</span>
+      <span class="card-chevron">›</span>
+    </div>
+    <div class="vault-card">
+      <div class="card-icon bg-blue">🔑</div>
+      <div class="card-content">
+        <div class="card-title">Google</div>
+        <div class="card-subtitle">alex@gmail.com</div>
+      </div>
+      <span class="card-badge" style="color:#4285F4;font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;background:rgba(66,133,244,0.12)">2FA</span>
+      <span class="card-chevron">›</span>
+    </div>
+    <div class="vault-card">
+      <div class="card-icon bg-yellow">₿</div>
+      <div class="card-content">
+        <div class="card-title">Binance</div>
+        <div class="card-subtitle">alex_crypto</div>
+      </div>
+      <span class="card-badge" style="color:#F0B90B;font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;background:rgba(240,185,11,0.12)">2FA</span>
+      <span class="card-chevron">›</span>
+    </div>
+  </div>
+  <div class="phone-wrap">
+    <button class="fab" onclick="showSheet()">+</button>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-item">
+      <span class="nav-icon">🏠</span> Home
+    </button>
+    <button class="nav-item active">
+      <span class="nav-icon">🔒</span> Vault
+    </button>
+    <button class="nav-item">
+      <span class="nav-icon">👥</span> Heirs
+    </button>
+    <button class="nav-item">
+      <span class="nav-icon">⚙️</span> Settings
+    </button>
+  </div>
+</div>
+</div>
+
+<!-- Screen 2: Empty State -->
+<div id="screen-empty" class="screen">
+<div class="phone">
+  <div class="status-bar"><span>9:41</span><span>🔶 100%</span></div>
+  <div class="header">
+    <h1>Vault</h1>
+    <div class="header-actions">
+      <button class="icon-btn">🔍</button>
+      <button class="icon-btn">⋮</button>
+    </div>
+  </div>
+  <div class="filter-row">
+    <div class="filter-chip" onclick="selectFilter(this)"><span class="icon">⊞</span> All <span class="count">0</span></div>
+    <div class="filter-chip active" onclick="selectFilter(this)"><span class="icon">💾</span> Seeds <span class="count">0</span></div>
+    <div class="filter-chip" onclick="selectFilter(this)"><span class="icon">🔑</span> API Keys <span class="count">0</span></div>
+  </div>
+  <div class="empty-state">
+    <div class="empty-icon">💾</div>
+    <div class="empty-title">No seed phrases yet</div>
+    <div class="empty-subtitle">Store crypto seed phrases for your hardware wallets</div>
+    <button class="empty-btn">➕ Add Seed Phrase</button>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-item"><span class="nav-icon">🏠</span> Home</button>
+    <button class="nav-item active"><span class="nav-icon">🔒</span> Vault</button>
+    <button class="nav-item"><span class="nav-icon">👥</span> Heirs</button>
+    <button class="nav-item"><span class="nav-icon">⚙️</span> Settings</button>
+  </div>
+</div>
+</div>
+
+<!-- Screen 3: Add Sheet -->
+<div id="screen-addsheet" class="screen">
+<div class="phone">
+  <div class="status-bar"><span>9:41</span><span>🔶 100%</span></div>
+  <div class="header">
+    <h1>Vault</h1>
+    <div class="header-actions"><button class="icon-btn">🔍</button><button class="icon-btn">⋮</button></div>
+  </div>
+  <div class="filter-row">
+    <div class="filter-chip active"><span class="icon">⊞</span> All <span class="count">8</span></div>
+    <div class="filter-chip"><span class="icon">🔒</span> Password <span class="count">2</span></div>
+  </div>
+  <div class="vault-list"><div class="vault-card"><div class="card-icon bg-blue">🔑</div><div class="card-content"><div class="card-title">Google Account</div><div class="card-subtitle">alex@gmail.com</div></div><span class="card-chevron">›</span></div></div>
+  <div class="bottom-nav">
+    <button class="nav-item"><span class="nav-icon">🏠</span> Home</button>
+    <button class="nav-item active"><span class="nav-icon">🔒</span> Vault</button>
+    <button class="nav-item"><span class="nav-icon">👥</span> Heirs</button>
+    <button class="nav-item"><span class="nav-icon">⚙️</span> Settings</button>
+  </div>
+
+  <!-- Bottom sheet overlay -->
+  <div class="sheet-overlay show">
+    <div class="bottom-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">Add Secret</div>
+      <div class="sheet-subtitle">Select the type of secret you want to add</div>
+      <div class="sheet-item">
+        <div class="sheet-item-icon bg-blue">🔒</div>
+        <div class="sheet-item-text"><div class="sheet-item-title">Password</div><div class="sheet-item-sub">Store website or app passwords</div></div>
+        <span style="color:var(--outline-variant)">›</span>
+      </div>
+      <div class="sheet-item">
+        <div class="sheet-item-icon bg-green">🔑</div>
+        <div class="sheet-item-text"><div class="sheet-item-title">Seed Phrase</div><div class="sheet-item-sub">Store crypto seed phrases</div></div>
+        <span style="color:var(--outline-variant)">›</span>
+      </div>
+      <div class="sheet-item">
+        <div class="sheet-item-icon bg-purple">🔑</div>
+        <div class="sheet-item-text"><div class="sheet-item-title">Private Key</div><div class="sheet-item-sub">Store private keys</div></div>
+        <span style="color:var(--outline-variant)">›</span>
+      </div>
+      <div class="sheet-item">
+        <div class="sheet-item-icon bg-orange">💻</div>
+        <div class="sheet-item-text"><div class="sheet-item-title">API Key</div><div class="sheet-item-sub">Store API keys (read-only)</div></div>
+        <span style="color:var(--outline-variant)">›</span>
+      </div>
+      <div class="sheet-item">
+        <div class="sheet-item-icon bg-amber">🛡️</div>
+        <div class="sheet-item-text"><div class="sheet-item-title">2FA</div><div class="sheet-item-sub">Store TOTP secrets and backup codes</div></div>
+        <span style="color:var(--outline-variant)">›</span>
+      </div>
+      <div class="sheet-item">
+        <div class="sheet-item-icon bg-red">⊞</div>
+        <div class="sheet-item-text"><div class="sheet-item-title">Recovery Code</div><div class="sheet-item-sub">Store backup codes</div></div>
+        <span style="color:var(--outline-variant)">›</span>
+      </div>
+      <div class="sheet-item">
+        <div class="sheet-item-icon bg-teal">📝</div>
+        <div class="sheet-item-text"><div class="sheet-item-title">Secure Note</div><div class="sheet-item-sub">Store encrypted notes or docs</div></div>
+        <span style="color:var(--outline-variant)">›</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Screen 4: Filtered view (Seeds) -->
+<div id="screen-filter" class="screen">
+<div class="phone">
+  <div class="status-bar"><span>9:41</span><span>🔶 100%</span></div>
+  <div class="header">
+    <h1>Vault</h1>
+    <div class="header-actions"><button class="icon-btn">🔍</button><button class="icon-btn">⋮</button></div>
+  </div>
+  <div class="filter-row">
+    <div class="filter-chip" onclick="selectFilter(this)"><span class="icon">⊞</span> All <span class="count">8</span></div>
+    <div class="filter-chip" onclick="selectFilter(this)"><span class="icon">🔒</span> Password <span class="count">2</span></div>
+    <div class="filter-chip active" onclick="selectFilter(this)"><span class="icon">💾</span> Seeds <span class="count">1</span></div>
+    <div class="filter-chip" onclick="selectFilter(this)"><span class="icon">🔑</span> API Keys <span class="count">2</span></div>
+    <div class="filter-chip" onclick="selectFilter(this)"><span class="icon">🛡️</span> 2FA <span class="count">3</span></div>
+    <div class="filter-chip" onclick="selectFilter(this)"><span class="icon">⊞</span> Codes <span class="count">1</span></div>
+  </div>
+  <div class="vault-list" style="padding-bottom: 100px;">
+    <div class="vault-card">
+      <div class="card-icon bg-green">💾</div>
+      <div class="card-content">
+        <div class="card-title">Ledger Seed Phrase</div>
+        <div class="card-subtitle">24 words</div>
+      </div>
+      <span class="card-badge" style="color:#0D631B;font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;background:rgba(13,99,27,0.12)">Seed</span>
+      <span class="card-chevron">›</span>
+    </div>
+  </div>
+  <div class="phone-wrap">
+    <button class="fab">+</button>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-item"><span class="nav-icon">🏠</span> Home</button>
+    <button class="nav-item active"><span class="nav-icon">🔒</span> Vault</button>
+    <button class="nav-item"><span class="nav-icon">👥</span> Heirs</button>
+    <button class="nav-item"><span class="nav-icon">⚙️</span> Settings</button>
+  </div>
+</div>
+</div>
+
+<script>
+function selectFilter(el) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+function showSheet() {
+  document.getElementById('screen-addsheet').classList.add('active');
+  document.getElementById('screen-vault').classList.remove('active');
+}
+function showScreen(id, btn) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.screen-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

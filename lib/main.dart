@@ -12,15 +12,18 @@ import 'vault_screens.dart';
 import 'qr_scanner_screen.dart';
 import 'pin_unlock_screen.dart' show PinScreen, PinScreenMode;
 import 'seed_phrase_restore_screen.dart';
+import 'crypto/bip39.dart';
 import 'screens/auth_screen.dart';
 import 'services/biometric_service.dart';
 import 'services/preference_service.dart';
+import 'services/seed_phrase_storage.dart';
 import 'ui/settings/data_section_widget.dart';
 import 'ui/utils/icon_utils.dart';
 import 'ui/code_widget.dart';
 import 'ui/reorder_codes_page.dart';
 import 'ui/home/coach_mark_widget.dart';
 import 'store/code_store.dart';
+import 'store/vault_store.dart';
 import 'models/code.dart';
 import 'models/code_display.dart';
 import 'events/codes_updated_event.dart';
@@ -58,11 +61,39 @@ void main() async {
     await Future.wait([
       BrandIconRegistry.instance.init(),
       CodeStore.instance.init(),
+      Bip39Validator.loadWordlist(),
+      VaultStore.instance.database, // create vault DB if not exists
     ]);
+
+    // Unlock vault with master key (stored in secure storage)
+    // On first launch, generate a new master key
+    var masterKey = await SeedPhraseStorage.readMasterKey();
+    if (masterKey == null) {
+      masterKey = SeedPhraseStorage.generateMasterKey();
+      await SeedPhraseStorage.storeMasterKey(masterKey);
+    }
+    VaultStore.instance.setMasterKey(masterKey);
+
+    // Seed demo data if vault is empty
+    await _seedDemoDataIfNeeded();
   } catch (e, st) {
     debugPrint('Init failed: $e\n$st');
   }
   runApp(GhostKeyApp(prefs: prefs));
+}
+
+/// Seed demo vault items on first launch only.
+Future<void> _seedDemoDataIfNeeded() async {
+  if (await VaultStore.instance.totalCount > 0) return;
+
+  for (final item in kVaultItems) {
+    try {
+      await VaultStore.instance.addItem(item);
+    } catch (e) {
+      debugPrint('Failed to seed demo item ${item.title}: $e');
+    }
+  }
+  debugPrint('Seeded ${kVaultItems.length} demo vault items');
 }
 
 class GhostKeyApp extends StatefulWidget {
@@ -489,7 +520,47 @@ Widget _buildAddSheetItem(BuildContext ctx, _AddSecretItem item) {
       color: Colors.white,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
-        onTap: () => Navigator.of(ctx).pop(),
+        onTap: () {
+          Navigator.of(ctx).pop();
+          // Navigate to the correct add screen based on type
+          Widget? page;
+          switch (item.title) {
+            case 'Seed Phrase':
+              page = SeedPhraseRestoreScreen(
+                onSave: (phrase) async {
+                  try {
+                    await VaultStore.instance.addItem(VaultItem(
+                      id: '',
+                      title: 'Seed Phrase',
+                      subtitle: '${phrase.split(' ').length} words',
+                      category: VaultCategory.seeds,
+                      icon: Icons.memory,
+                      iconColor: kPrimary,
+                      iconBgColor: const Color(0xFFC8E6C9),
+                      date: 'Today',
+                      fields: {
+                        'Seed Phrase': phrase,
+                        'Word Count': '${phrase.split(' ').length}',
+                      },
+                    ));
+                  } catch (e) {
+                    debugPrint('Failed to save seed phrase to vault: $e');
+                  }
+                },
+              );
+              break;
+            case '2FA':
+              page = const QrScannerScreen();
+              break;
+            default:
+              // Can't show snackbar here — no Scaffold context available
+              // after pop. The user will see the sheet close.
+              return;
+          }
+          if (page != null) {
+            Navigator.of(ctx).push(MaterialPageRoute(builder: (_) => page!));
+          }
+        },
         borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: const EdgeInsets.all(14),
@@ -498,12 +569,12 @@ Widget _buildAddSheetItem(BuildContext ctx, _AddSecretItem item) {
             border: Border.all(color: kSurfaceContainerHigh),
           ),
           child: Row(children: [
-            Container(width: 36, height: 36, decoration: BoxDecoration(color: item.bgColor, borderRadius: BorderRadius.circular(8)), child: Icon(item.icon, color: item.iconColor, size: 20)),
+            Container(width: 40, height: 40, decoration: BoxDecoration(color: item.bgColor, borderRadius: BorderRadius.circular(10)), child: Icon(item.icon, color: item.iconColor, size: 22)),
             const SizedBox(width: 14),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(item.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: kOnSurface)),
+              Text(item.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: kOnSurface)),
               const SizedBox(height: 2),
-              Text(item.subtitle, style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant)),
+              Text(item.subtitle, style: const TextStyle(fontSize: 13, color: kOnSurfaceVariant)),
             ])),
             const Icon(Icons.chevron_right, size: 18, color: kOutlineVariant),
           ]),
@@ -562,7 +633,13 @@ class _MainShellState extends State<MainShell> {
                           : isSeeds
                               ? () {
                                   Navigator.of(context).push(
-                                    MaterialPageRoute(builder: (_) => const SeedPhraseRestoreScreen()),
+                                    MaterialPageRoute(builder: (_) => SeedPhraseRestoreScreen(
+                                      onSave: (phrase) {
+                                        // Seed phrase is now encrypted and stored by the screen itself.
+                                        // Just show confirmation — the screen handles storage.
+                                        debugPrint('Seed phrase saved (${phrase.split(' ').length} words)');
+                                      },
+                                    )),
                                   );
                                 }
                               : () {},
@@ -726,16 +803,44 @@ class _VaultPageState extends State<VaultPage> {
   String _selectedFilter = 'All';
   final _filters = ['All', 'Password', 'Seeds', 'API Keys', '2FA', 'Codes'];
   List<Code> _realCodes = [];
+  List<VaultItem> _vaultItems = [];
   bool _codesLoaded = false;
+  bool _vaultItemsLoaded = false;
 
   StreamSubscription<CodesUpdatedEvent>? _codesSub;
+
+  // Filter icon mapping
+  IconData _filterIcon(String filter) {
+    switch (filter) {
+      case 'All': return Icons.grid_view_rounded;
+      case 'Password': return Icons.lock_outline;
+      case 'Seeds': return Icons.memory;
+      case 'API Keys': return Icons.vpn_key;
+      case '2FA': return Icons.security;
+      case 'Codes': return Icons.grid_view;
+      default: return Icons.grid_view_rounded;
+    }
+  }
+
+  // Item count per filter
+  int _itemCount(String filter) {
+    if (filter == 'All') {
+      return _vaultItems.length + (_codesLoaded ? _realCodes.length : 0);
+    }
+    if (filter == '2FA') return _realCodes.length;
+    if (_vaultItemsLoaded) {
+      final cat = _filterToCategory(filter);
+      return _vaultItems.where((i) => i.category == cat).length;
+    }
+    return 0;
+  }
 
   @override
   void initState() {
     super.initState();
     widget.filterNotifier?.value = _selectedFilter;
     _loadRealCodes();
-    // Listen for code updates from the store
+    _loadVaultItems();
     _codesSub = CodeStore.instance.onCodesUpdated().listen((_) {
       if (mounted) _loadRealCodes();
     });
@@ -767,9 +872,27 @@ class _VaultPageState extends State<VaultPage> {
     }
   }
 
+  Future<void> _loadVaultItems() async {
+    try {
+      final items = await VaultStore.instance.getAllItems();
+      if (!mounted) return;
+      setState(() {
+        _vaultItems = items;
+        _vaultItemsLoaded = true;
+      });
+    } catch (e) {
+      debugPrint('Failed to load vault items: $e');
+      if (!mounted) return;
+      setState(() => _vaultItemsLoaded = true);
+    }
+  }
+
+  Future<void> refresh() async {
+    await _loadVaultItems();
+  }
+
   List<VaultItem> get _filteredItems {
     if (_selectedFilter == '2FA') {
-      // Convert real Code objects to VaultItem for display
       return _realCodes.map((c) => VaultItem(
         id: c.hashCode.toString(),
         title: c.issuer.isNotEmpty ? c.issuer : c.account,
@@ -785,9 +908,9 @@ class _VaultPageState extends State<VaultPage> {
         },
       )).toList();
     }
-    if (_selectedFilter == 'All') return kVaultItems;
+    if (_selectedFilter == 'All') return _vaultItems;
     final cat = _filterToCategory(_selectedFilter);
-    return kVaultItems.where((i) => i.category == cat).toList();
+    return _vaultItems.where((i) => i.category == cat).toList();
   }
 
   VaultCategory _filterToCategory(String filter) {
@@ -800,6 +923,54 @@ class _VaultPageState extends State<VaultPage> {
     }
   }
 
+  // Get empty state info for each filter
+  _EmptyStateInfo _emptyStateForFilter(String filter) {
+    switch (filter) {
+      case 'Password':
+        return _EmptyStateInfo(
+          icon: Icons.lock_outline,
+          title: 'No passwords yet',
+          subtitle: 'Store website and app passwords securely',
+          actionLabel: 'Add Password',
+        );
+      case 'Seeds':
+        return _EmptyStateInfo(
+          icon: Icons.memory,
+          title: 'No seed phrases yet',
+          subtitle: 'Store crypto seed phrases for your hardware wallets',
+          actionLabel: 'Add Seed Phrase',
+        );
+      case 'API Keys':
+        return _EmptyStateInfo(
+          icon: Icons.vpn_key,
+          title: 'No API keys yet',
+          subtitle: 'Store API keys for your services and exchanges',
+          actionLabel: 'Add API Key',
+        );
+      case '2FA':
+        return _EmptyStateInfo(
+          icon: Icons.security,
+          title: 'No 2FA codes yet',
+          subtitle: 'Add TOTP secrets to generate live codes',
+          actionLabel: 'Scan QR Code',
+        );
+      case 'Codes':
+        return _EmptyStateInfo(
+          icon: Icons.grid_view,
+          title: 'No recovery codes yet',
+          subtitle: 'Store backup and recovery codes',
+          actionLabel: 'Add Codes',
+        );
+      default:
+        return _EmptyStateInfo(
+          icon: Icons.add_circle_outline,
+          title: 'Your vault is empty',
+          subtitle: 'Add your first secret to get started',
+          actionLabel: 'Add Secret',
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final items = _filteredItems;
@@ -807,28 +978,67 @@ class _VaultPageState extends State<VaultPage> {
       backgroundColor: kSurface,
       body: SafeArea(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Vault', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: kOnSurface)), IconButton(onPressed: () {}, icon: const Icon(Icons.create_new_folder, color: kOnSurfaceVariant, size: 28))])),
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Container(height: 48, padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: kSurfaceContainerLow, borderRadius: BorderRadius.circular(12), border: Border.all(color: kSurfaceContainerHighest)), child: Row(children: [const Icon(Icons.search, color: kOnSurfaceVariant, size: 20), const SizedBox(width: 12), const Expanded(child: TextField(style: TextStyle(color: kOnSurface, fontSize: 14), decoration: InputDecoration(hintText: 'Search secrets', hintStyle: TextStyle(color: kOnSurfaceVariant, fontSize: 14), border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero)))]))),
-          SizedBox(height: 44, child: ListView.separated(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: _filters.length, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (context, index) { final f = _filters[index]; final isActive = f == _selectedFilter; return GestureDetector(onTap: () => _setFilter(f), child: Container(padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: isActive ? Border.all(color: kPrimary, width: 1.5) : Border.all(color: kSurfaceContainerHighest)), alignment: Alignment.center, child: Text(f, style: TextStyle(color: isActive ? kPrimary : kOnSurfaceVariant, fontSize: 14, fontWeight: FontWeight.w500)))); })),
-          const SizedBox(height: 8),
-          if (_selectedFilter == '2FA' && _realCodes.isEmpty && _codesLoaded)
-            Expanded(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.security, size: 56, color: kOnSurfaceVariant),
-                      const SizedBox(height: 16),
-                      Text('No 2FA codes yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface)),
-                      const SizedBox(height: 8),
-                      Text('Tap the + button to add your first code', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant), textAlign: TextAlign.center),
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Vault', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: kOnSurface)),
+                Row(children: [
+                  IconButton(onPressed: () {}, icon: const Icon(Icons.search, color: kOnSurfaceVariant, size: 24)),
+                  const SizedBox(width: 4),
+                  IconButton(onPressed: () {}, icon: const Icon(Icons.more_vert, color: kOnSurfaceVariant, size: 24)),
+                ]),
+              ],
+            ),
+          ),
+          // Filter chips
+          SizedBox(
+            height: 52,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _filters.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final f = _filters[index];
+                final isActive = f == _selectedFilter;
+                final count = _itemCount(f);
+                return FilterChip(
+                  selected: isActive,
+                  onSelected: (_) => _setFilter(f),
+                  showCheckmark: false,
+                  avatar: Icon(_filterIcon(f), size: 18, color: isActive ? kPrimary : kOnSurfaceVariant),
+                  label: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text(f, style: TextStyle(color: isActive ? kPrimary : kOnSurfaceVariant, fontSize: 13, fontWeight: FontWeight.w500)),
+                    if (count > 0) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: isActive ? kPrimary.withOpacity(0.12) : kSurfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text('$count', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isActive ? kPrimary : kOnSurfaceVariant)),
+                      ),
                     ],
-                  ),
-                ),
-              ),
-            )
+                  ]),
+                  selectedColor: kSecondaryContainer.withOpacity(0.4),
+                  backgroundColor: Colors.white,
+                  side: BorderSide(color: isActive ? kPrimary.withOpacity(0.3) : kSurfaceContainerHighest),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Content
+          if (_selectedFilter == '2FA' && _realCodes.isEmpty && _codesLoaded)
+            _buildEmptyState(_emptyStateForFilter('2FA'))
+          else if (items.isEmpty && _selectedFilter != '2FA')
+            _buildEmptyState(_emptyStateForFilter(_selectedFilter))
           else
             Expanded(
               child: _selectedFilter == '2FA'
@@ -836,48 +1046,10 @@ class _VaultPageState extends State<VaultPage> {
                   : ListView.separated(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: items.length,
-                      separatorBuilder: (_, __) => Container(margin: const EdgeInsets.only(left: 56), height: 1, color: kSurfaceContainerHighest),
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final item = items[index];
-                        return InkWell(
-                          onTap: () {
-                            Widget? page;
-                            switch (item.category) {
-                              case VaultCategory.password:
-                                page = PasswordDetailScreen(item: item);
-                                break;
-                              case VaultCategory.seeds:
-                                page = item.id == 'ledger' ? const LedgerScreen() : SeedsDetailScreen(item: item);
-                                break;
-                              case VaultCategory.apiKeys:
-                                page = ApiKeysDetailScreen(item: item);
-                                break;
-                              case VaultCategory.codes:
-                                break;
-                            }
-                            if (page != null) {
-                              Navigator.of(context).push(MaterialPageRoute(builder: (_) => page!));
-                            }
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
-                            child: Row(
-                              children: [
-                                Container(width: 40, height: 40, decoration: BoxDecoration(color: item.iconBgColor, shape: BoxShape.circle), child: Icon(item.icon, size: 20, color: item.iconColor)),
-                                const SizedBox(width: 16),
-                                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                  Text(item.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: kOnSurface)),
-                                  const SizedBox(height: 2),
-                                  Text(item.subtitle, style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
-                                ])),
-                                const SizedBox(width: 8),
-                                Text(item.date, style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant)),
-                                const SizedBox(width: 4),
-                                const Icon(Icons.chevron_right, size: 16, color: kOutlineVariant),
-                              ],
-                            ),
-                          ),
-                        );
+                        return _buildVaultCard(context, item);
                       },
                     ),
             ),
@@ -885,6 +1057,136 @@ class _VaultPageState extends State<VaultPage> {
       ),
     );
   }
+
+  Widget _buildVaultCard(BuildContext context, VaultItem item) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: () {
+          Widget? page;
+          switch (item.category) {
+            case VaultCategory.password:
+              page = PasswordDetailScreen(item: item);
+              break;
+            case VaultCategory.seeds:
+              page = item.id == 'ledger' ? const LedgerScreen() : SeedsDetailScreen(item: item);
+              break;
+            case VaultCategory.apiKeys:
+              page = ApiKeysDetailScreen(item: item);
+              break;
+            case VaultCategory.codes:
+              page = TwoFactorDetailScreen(item: item);
+              break;
+          }
+          if (page != null) {
+            Navigator.of(context).push(MaterialPageRoute(builder: (_) => page!));
+          }
+        },
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: kSurfaceContainerHighest),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(color: item.iconBgColor, borderRadius: BorderRadius.circular(12)),
+                child: Icon(item.icon, size: 22, color: item.iconColor),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: kOnSurface)),
+                    const SizedBox(height: 2),
+                    Text(item.subtitle, style: const TextStyle(fontSize: 13, color: kOnSurfaceVariant)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: item.iconBgColor.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  _categoryLabel(item.category),
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: item.iconColor),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right, size: 18, color: kOutlineVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _categoryLabel(VaultCategory cat) {
+    switch (cat) {
+      case VaultCategory.password: return 'Password';
+      case VaultCategory.seeds: return 'Seed';
+      case VaultCategory.apiKeys: return 'API Key';
+      case VaultCategory.codes: return '2FA';
+    }
+  }
+
+  Widget _buildEmptyState(_EmptyStateInfo info) {
+    return Expanded(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: kSurfaceContainerLow,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(info.icon, size: 32, color: kOnSurfaceVariant),
+              ),
+              const SizedBox(height: 20),
+              Text(info.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface)),
+              const SizedBox(height: 8),
+              Text(info.subtitle, style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant), textAlign: TextAlign.center),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () => _showAddSecretSheet(context, filter: _selectedFilter == 'All' ? null : _selectedFilter),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kPrimary,
+                  foregroundColor: kOnPrimary,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(info.actionLabel, style: const TextStyle(fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyStateInfo {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String actionLabel;
+  const _EmptyStateInfo({required this.icon, required this.title, required this.subtitle, required this.actionLabel});
 }
 
 // ════════════════════════════════════════════════
