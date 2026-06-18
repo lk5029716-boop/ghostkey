@@ -14,6 +14,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../crypto/bip39.dart';
 import '../services/seed_phrase_storage.dart';
+import '../store/vault_store.dart';
+import '../vault_data.dart';
 
 class SeedPhraseRestoreScreen extends StatefulWidget {
   final ValueChanged<String>? onSave;
@@ -263,6 +265,23 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
       // Encrypt and store seed phrase
       final phrase = filled.join(' ');
       await SeedPhraseStorage.storeSeedPhrase(phrase, masterKey);
+
+      // Also save to vault store so it appears in the vault list
+      try {
+        await VaultStore.instance.addItem(VaultItem(
+          id: '',
+          title: 'Seed Phrase (${_wordCount} words)',
+          subtitle: 'BIP39 recovery phrase',
+          category: VaultCategory.seeds,
+          icon: Icons.key,
+          iconColor: const Color(0xFF0D631B),
+          iconBgColor: const Color(0xFFC8E6C9),
+          date: 'Today',
+          fields: {'Seed Phrase': phrase, 'Word Count': '$_wordCount'},
+        ));
+      } catch (e) {
+        debugPrint('VaultStore seed save failed (non-critical): $e');
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -566,31 +585,30 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
     );
   }
 
-  // ── Manual grid ───────────────────────────────────────────────
+  // ── Manual grid — uses Wrap to avoid overflow in SingleChildScrollView ──
   Widget _buildManualGrid() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Max 2 columns on mobile to prevent overflow
-        final crossAxisCount = constraints.maxWidth > 500 ? 3 : 2;
-        return Column(
-          children: [
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-                childAspectRatio: 2.8,
-              ),
-              itemCount: _wordCount,
-              itemBuilder: (context, i) => _wordInput(i),
-            ),
-            if (_autocompleteSuggestions.isNotEmpty && _autocompleteForIndex >= 0)
-              _buildAutocompleteDropdown(),
-          ],
-        );
-      },
+    final screenWidth = MediaQuery.of(context).size.width;
+    // 2 columns on narrow screens, 3 on wider
+    final cols = screenWidth > 500 ? 3 : 2;
+    final cellWidth = (screenWidth - 32 - (cols - 1) * 8) / cols; // 16px padding each side + 8px gap
+    final cellHeight = 42.0; // fixed compact height per cell
+
+    return Column(
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: List.generate(_wordCount, (i) {
+            return SizedBox(
+              width: cellWidth,
+              height: cellHeight,
+              child: _wordInput(i),
+            );
+          }),
+        ),
+        if (_autocompleteSuggestions.isNotEmpty && _autocompleteForIndex >= 0)
+          _buildAutocompleteDropdown(),
+      ],
     );
   }
 
@@ -653,21 +671,21 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
     if (isInvalid) bgColor = _errorContainer.withOpacity(0.3);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: bgColor ?? _surfaceContainerLow,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(6),
         border: Border(
-          bottom: BorderSide(color: borderColor, width: 2),
+          bottom: BorderSide(color: borderColor, width: 1.5),
         ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
-            width: 14,
+            width: 12,
             child: Text('${i + 1}',
-                style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w700, color: _outline, letterSpacing: 0)),
+                style: const TextStyle(fontSize: 7, fontWeight: FontWeight.w700, color: _outline)),
           ),
           const SizedBox(width: 2),
           Expanded(
@@ -678,10 +696,9 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
               decoration: const InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
-                hintText: '',
                 contentPadding: EdgeInsets.zero,
               ),
-              style: const TextStyle(fontSize: 12, color: _onSurface),
+              style: const TextStyle(fontSize: 11, color: _onSurface),
               autocorrect: false,
               enableSuggestions: false,
               textCapitalization: TextCapitalization.none,
@@ -706,9 +723,9 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
             ),
           ),
           if (isValid)
-            const Icon(Icons.check_circle, size: 12, color: _primary)
+            const Icon(Icons.check_circle, size: 10, color: _primary)
           else if (isInvalid)
-            const Icon(Icons.error_outline, size: 12, color: _error),
+            const Icon(Icons.error_outline, size: 10, color: _error),
         ],
       ),
     );

@@ -867,7 +867,7 @@ class _VaultPageState extends State<VaultPage> {
   bool get _isEmpty => _allVaultItems.isEmpty;
 
   /// Navigate to the add screen for the currently selected filter
-  void _onFabPressed(BuildContext context) {
+  Future<void> _onFabPressed(BuildContext context) async {
     if (_selectedFilterIndex < 0) {
       // No filter selected — show bottom sheet
       _showAddSecretSheet(context);
@@ -898,7 +898,11 @@ class _VaultPageState extends State<VaultPage> {
         _showAddSecretSheet(context);
         return;
     }
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => page!));
+    // Navigate and wait for result — refresh vault when user comes back
+    final result = await Navigator.of(context).push(MaterialPageRoute(builder: (_) => page!));
+    // Refresh vault list regardless of result (item may have been added)
+    _loadVaultItems();
+    _loadCodes();
   }
 
   @override
