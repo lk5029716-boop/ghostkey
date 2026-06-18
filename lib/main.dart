@@ -621,28 +621,42 @@ class _MainShellState extends State<MainShell> {
               ? ValueListenableBuilder<String>(
                   valueListenable: _vaultFilterNotifier,
                   builder: (context, filter, _) {
-                    final is2FA = filter == '2FA';
-                    final isSeeds = filter == 'Seeds';
                     return FloatingActionButton(
-                      onPressed: is2FA
-                          ? () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const QrScannerScreen()),
-                              );
-                            }
-                          : isSeeds
-                              ? () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(builder: (_) => SeedPhraseRestoreScreen(
-                                      onSave: (phrase) {
-                                        // Seed phrase is now encrypted and stored by the screen itself.
-                                        // Just show confirmation — the screen handles storage.
-                                        debugPrint('Seed phrase saved (${phrase.split(' ').length} words)');
-                                      },
-                                    )),
-                                  );
+                      onPressed: () {
+                        if (filter == '2FA') {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const QrScannerScreen()),
+                          );
+                        } else if (filter == 'Seeds') {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => SeedPhraseRestoreScreen(
+                              onSave: (phrase) async {
+                                try {
+                                  await VaultStore.instance.addItem(VaultItem(
+                                    id: '',
+                                    title: 'Seed Phrase',
+                                    subtitle: '${phrase.split(' ').length} words',
+                                    category: VaultCategory.seeds,
+                                    icon: Icons.memory,
+                                    iconColor: kPrimary,
+                                    iconBgColor: const Color(0xFFC8E6C9),
+                                    date: 'Today',
+                                    fields: {
+                                      'Seed Phrase': phrase,
+                                      'Word Count': '${phrase.split(' ').length}',
+                                    },
+                                  ));
+                                } catch (e) {
+                                  debugPrint('Failed to save seed phrase to vault: $e');
                                 }
-                              : () {},
+                              },
+                            )),
+                          );
+                        } else {
+                          // All other filters: show add sheet with filter
+                          _showAddSecretSheet(context, filter: filter == 'All' ? null : filter);
+                        }
+                      },
                       backgroundColor: kPrimary,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       child: const Icon(Icons.add, color: kOnPrimary, size: 28),
@@ -1160,19 +1174,6 @@ class _VaultPageState extends State<VaultPage> {
               Text(info.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface)),
               const SizedBox(height: 8),
               Text(info.subtitle, style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant), textAlign: TextAlign.center),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: () => _showAddSecretSheet(context, filter: _selectedFilter == 'All' ? null : _selectedFilter),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: kPrimary,
-                  foregroundColor: kOnPrimary,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                icon: const Icon(Icons.add, size: 18),
-                label: Text(info.actionLabel, style: const TextStyle(fontWeight: FontWeight.w600)),
-              ),
             ],
           ),
         ),

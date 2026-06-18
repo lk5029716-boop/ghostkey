@@ -570,8 +570,8 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
   Widget _buildManualGrid() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount =
-            constraints.maxWidth > 600 ? 4 : (constraints.maxWidth > 400 ? 3 : 2);
+        // Max 2 columns on mobile to prevent overflow
+        final crossAxisCount = constraints.maxWidth > 500 ? 3 : 2;
         return Column(
           children: [
             GridView.builder(
@@ -579,14 +579,13 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: crossAxisCount,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: 2.4,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childAspectRatio: 2.8,
               ),
               itemCount: _wordCount,
               itemBuilder: (context, i) => _wordInput(i),
             ),
-            // Autocomplete dropdown
             if (_autocompleteSuggestions.isNotEmpty && _autocompleteForIndex >= 0)
               _buildAutocompleteDropdown(),
           ],
@@ -654,7 +653,7 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
     if (isInvalid) bgColor = _errorContainer.withOpacity(0.3);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: bgColor ?? _surfaceContainerLow,
         borderRadius: BorderRadius.circular(8),
@@ -666,14 +665,15 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
-            width: 18,
+            width: 16,
             child: Text('${i + 1}',
                 style: const TextStyle(
-                    fontSize: 10,
+                    fontSize: 9,
                     fontWeight: FontWeight.w700,
                     color: _outline,
-                    letterSpacing: 0.5)),
+                    letterSpacing: 0)),
           ),
+          const SizedBox(width: 4),
           Expanded(
             child: TextField(
               controller: _wordCtrls[i],
@@ -686,7 +686,7 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
                 hintStyle: TextStyle(color: _outlineVariant),
                 contentPadding: EdgeInsets.zero,
               ),
-              style: const TextStyle(fontSize: 14, color: _onSurface),
+              style: const TextStyle(fontSize: 13, color: _onSurface),
               autocorrect: false,
               enableSuggestions: false,
               textCapitalization: TextCapitalization.none,
@@ -711,9 +711,15 @@ class _SeedPhraseRestoreScreenState extends State<SeedPhraseRestoreScreen> {
             ),
           ),
           if (isValid)
-            const Icon(Icons.check_circle, size: 14, color: _primary)
+            const Padding(
+              padding: EdgeInsets.only(left: 4),
+              child: Icon(Icons.check_circle, size: 14, color: _primary),
+            )
           else if (isInvalid)
-            const Icon(Icons.error_outline, size: 14, color: _error),
+            const Padding(
+              padding: EdgeInsets.only(left: 4),
+              child: Icon(Icons.error_outline, size: 14, color: _error),
+            ),
         ],
       ),
     );
