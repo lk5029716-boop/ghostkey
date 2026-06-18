@@ -28,6 +28,7 @@ import 'ui/reorder_codes_page.dart';
 import 'ui/home/coach_mark_widget.dart';
 import 'store/code_store.dart';
 import 'store/vault_store.dart';
+import 'events/vault_items_updated_event.dart';
 import 'models/code.dart';
 import 'models/code_display.dart';
 import 'events/codes_updated_event.dart';
@@ -597,11 +598,8 @@ class _MainShellState extends State<MainShell> {
     const SettingsScreen(),
   ];
 
-  final ValueNotifier<String> _vaultFilterNotifier = ValueNotifier<String>('All');
-
   @override
   void dispose() {
-    _vaultFilterNotifier.dispose();
     super.dispose();
   }
 
@@ -610,7 +608,7 @@ class _MainShellState extends State<MainShell> {
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: [
         const VaultDashboard(),
-        VaultPage(filterNotifier: _vaultFilterNotifier),
+        const VaultPage(),
         const HeirsPage(),
         const SettingsScreen(),
       ]),
@@ -622,70 +620,11 @@ class _MainShellState extends State<MainShell> {
               child: const Icon(Icons.add, color: kOnPrimary, size: 28),
             )
           : _currentIndex == 1
-              ? ValueListenableBuilder<String>(
-                  valueListenable: _vaultFilterNotifier,
-                  builder: (context, filter, _) {
-                    return FloatingActionButton(
-                      onPressed: () {
-                        if (filter == '2FA') {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const QrScannerScreen()),
-                          );
-                        } else if (filter == 'Seeds') {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => SeedPhraseRestoreScreen(
-                              onSave: (phrase) async {
-                                try {
-                                  await VaultStore.instance.addItem(VaultItem(
-                                    id: '',
-                                    title: 'Seed Phrase',
-                                    subtitle: '${phrase.split(' ').length} words',
-                                    category: VaultCategory.seeds,
-                                    icon: Icons.memory,
-                                    iconColor: kPrimary,
-                                    iconBgColor: const Color(0xFFC8E6C9),
-                                    date: 'Today',
-                                    fields: {
-                                      'Seed Phrase': phrase,
-                                      'Word Count': '${phrase.split(' ').length}',
-                                    },
-                                  ));
-                                } catch (e) {
-                                  debugPrint('Failed to save seed phrase to vault: $e');
-                                }
-                              },
-                            )),
-                          );
-                        } else {
-                          // All other filters: go directly to the correct add screen
-                          Widget? page;
-                          switch (filter) {
-                            case 'Password':
-                              page = const PasswordAddScreen();
-                              break;
-                            case 'API Keys':
-                              page = const ApiKeyAddScreen();
-                              break;
-                            case 'Codes':
-                              page = const RecoveryCodesAddScreen();
-                              break;
-                            case 'All':
-                              _showAddSecretSheet(context);
-                              return;
-                            default:
-                              _showAddSecretSheet(context, filter: filter);
-                              return;
-                          }
-                          if (page != null) {
-                            Navigator.of(context).push(MaterialPageRoute(builder: (_) => page!));
-                          }
-                        }
-                      },
-                      backgroundColor: kPrimary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      child: const Icon(Icons.add, color: kOnPrimary, size: 28),
-                    );
-                  },
+              ? FloatingActionButton(
+                  onPressed: () => _showAddSecretSheet(context),
+                  backgroundColor: kPrimary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: const Icon(Icons.add, color: kOnPrimary, size: 28),
                 )
               : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -831,83 +770,36 @@ class _TotpListItemState extends State<_TotpListItem> {
 }
 
 class VaultPage extends StatefulWidget {
-  final ValueNotifier<String>? filterNotifier;
-  const VaultPage({super.key, this.filterNotifier});
+  const VaultPage({super.key});
   @override
   State<VaultPage> createState() => _VaultPageState();
 }
 
 class _VaultPageState extends State<VaultPage> {
-  String _selectedFilter = 'All';
-  final _filters = ['All', 'Password', 'Seeds', 'API Keys', '2FA', 'Codes'];
-  List<Code> _realCodes = [];
   List<VaultItem> _vaultItems = [];
-  bool _codesLoaded = false;
-  bool _vaultItemsLoaded = false;
-
+  List<Code> _codes = [];
+  bool _loaded = false;
+  StreamSubscription<VaultItemsUpdatedEvent>? _vaultSub;
   StreamSubscription<CodesUpdatedEvent>? _codesSub;
-
-  // Filter icon mapping
-  IconData _filterIcon(String filter) {
-    switch (filter) {
-      case 'All': return Icons.grid_view_rounded;
-      case 'Password': return Icons.lock_outline;
-      case 'Seeds': return Icons.memory;
-      case 'API Keys': return Icons.vpn_key;
-      case '2FA': return Icons.security;
-      case 'Codes': return Icons.grid_view;
-      default: return Icons.grid_view_rounded;
-    }
-  }
-
-  // Item count per filter
-  int _itemCount(String filter) {
-    if (filter == 'All') {
-      return _vaultItems.length + (_codesLoaded ? _realCodes.length : 0);
-    }
-    if (filter == '2FA') return _realCodes.length;
-    if (_vaultItemsLoaded) {
-      final cat = _filterToCategory(filter);
-      return _vaultItems.where((i) => i.category == cat).length;
-    }
-    return 0;
-  }
 
   @override
   void initState() {
     super.initState();
-    widget.filterNotifier?.value = _selectedFilter;
-    _loadRealCodes();
-    _loadVaultItems();
-    _codesSub = CodeStore.instance.onCodesUpdated().listen((_) {
-      if (mounted) _loadRealCodes();
-    });
+    _loadAll();
+    // Listen for changes — auto refresh
+    _vaultSub = VaultStore.instance.onVaultItemsUpdated().listen((_) => _loadVaultItems());
+    _codesSub = CodeStore.instance.onCodesUpdated().listen((_) => _loadCodes());
   }
 
   @override
   void dispose() {
+    _vaultSub?.cancel();
     _codesSub?.cancel();
     super.dispose();
   }
 
-  void _setFilter(String f) {
-    setState(() => _selectedFilter = f);
-    widget.filterNotifier?.value = f;
-    if (f == '2FA') _loadRealCodes();
-  }
-
-  Future<void> _loadRealCodes() async {
-    try {
-      final codes = await CodeStore.instance.getAllCodes();
-      if (!mounted) return;
-      setState(() {
-        _realCodes = codes;
-        _codesLoaded = true;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _codesLoaded = true);
-    }
+  Future<void> _loadAll() async {
+    await Future.wait([_loadVaultItems(), _loadCodes()]);
   }
 
   Future<void> _loadVaultItems() async {
@@ -916,23 +808,33 @@ class _VaultPageState extends State<VaultPage> {
       if (!mounted) return;
       setState(() {
         _vaultItems = items;
-        _vaultItemsLoaded = true;
+        _loaded = true;
       });
     } catch (e) {
       debugPrint('Failed to load vault items: $e');
-      if (!mounted) return;
-      setState(() => _vaultItemsLoaded = true);
+      if (mounted) setState(() => _loaded = true);
     }
   }
 
-  Future<void> refresh() async {
-    await _loadVaultItems();
+  Future<void> _loadCodes() async {
+    try {
+      final codes = await CodeStore.instance.getAllCodes();
+      if (!mounted) return;
+      setState(() {
+        _codes = codes;
+        _loaded = true;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _loaded = true);
+    }
   }
 
-  List<VaultItem> get _filteredItems {
-    if (_selectedFilter == '2FA') {
-      return _realCodes.map((c) => VaultItem(
-        id: c.hashCode.toString(),
+  /// Combined list: vault items first, then 2FA codes
+  List<dynamic> get _allItems {
+    final list = <dynamic>[..._vaultItems];
+    for (final c in _codes) {
+      list.add(VaultItem(
+        id: 'code_${c.hashCode}',
         title: c.issuer.isNotEmpty ? c.issuer : c.account,
         subtitle: c.account.isNotEmpty ? c.account : 'TOTP',
         category: VaultCategory.codes,
@@ -940,83 +842,21 @@ class _VaultPageState extends State<VaultPage> {
         iconColor: kPrimary,
         iconBgColor: const Color(0xFFC8E6C9),
         date: 'Today',
-        fields: {
-          'TOTP Secret': c.secret,
-          'Username': c.account,
-        },
-      )).toList();
+        fields: {'TOTP Secret': c.secret, 'Username': c.account},
+      ));
     }
-    if (_selectedFilter == 'All') return _vaultItems;
-    final cat = _filterToCategory(_selectedFilter);
-    return _vaultItems.where((i) => i.category == cat).toList();
+    return list;
   }
 
-  VaultCategory _filterToCategory(String filter) {
-    switch (filter) {
-      case 'Password': return VaultCategory.password;
-      case 'Seeds': return VaultCategory.seeds;
-      case 'API Keys': return VaultCategory.apiKeys;
-      case 'Codes': return VaultCategory.codes;
-      default: return VaultCategory.password;
-    }
-  }
-
-  // Get empty state info for each filter
-  _EmptyStateInfo _emptyStateForFilter(String filter) {
-    switch (filter) {
-      case 'Password':
-        return _EmptyStateInfo(
-          icon: Icons.lock_outline,
-          title: 'No passwords yet',
-          subtitle: 'Store website and app passwords securely',
-          actionLabel: 'Add Password',
-        );
-      case 'Seeds':
-        return _EmptyStateInfo(
-          icon: Icons.memory,
-          title: 'No seed phrases yet',
-          subtitle: 'Store crypto seed phrases for your hardware wallets',
-          actionLabel: 'Add Seed Phrase',
-        );
-      case 'API Keys':
-        return _EmptyStateInfo(
-          icon: Icons.vpn_key,
-          title: 'No API keys yet',
-          subtitle: 'Store API keys for your services and exchanges',
-          actionLabel: 'Add API Key',
-        );
-      case '2FA':
-        return _EmptyStateInfo(
-          icon: Icons.security,
-          title: 'No 2FA codes yet',
-          subtitle: 'Add TOTP secrets to generate live codes',
-          actionLabel: 'Scan QR Code',
-        );
-      case 'Codes':
-        return _EmptyStateInfo(
-          icon: Icons.grid_view,
-          title: 'No recovery codes yet',
-          subtitle: 'Store backup and recovery codes',
-          actionLabel: 'Add Codes',
-        );
-      default:
-        return _EmptyStateInfo(
-          icon: Icons.add_circle_outline,
-          title: 'Your vault is empty',
-          subtitle: 'Add your first secret to get started',
-          actionLabel: 'Add Secret',
-        );
-    }
-  }
+  bool get _isEmpty => _allItems.isEmpty;
 
   @override
   Widget build(BuildContext context) {
-    final items = _filteredItems;
+    final items = _allItems;
     return Scaffold(
       backgroundColor: kSurface,
       body: SafeArea(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: Row(
@@ -1024,103 +864,37 @@ class _VaultPageState extends State<VaultPage> {
               children: [
                 const Text('Vault', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: kOnSurface)),
                 Row(children: [
-                  IconButton(onPressed: () {}, icon: const Icon(Icons.search, color: kOnSurfaceVariant, size: 24)),
+                  IconButton(onPressed: _loadAll, icon: const Icon(Icons.refresh, color: kOnSurfaceVariant, size: 24)),
                   const SizedBox(width: 4),
                   IconButton(onPressed: () {}, icon: const Icon(Icons.more_vert, color: kOnSurfaceVariant, size: 24)),
                 ]),
               ],
             ),
           ),
-          // Filter chips
-          SizedBox(
-            height: 52,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _filters.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final f = _filters[index];
-                final isActive = f == _selectedFilter;
-                final count = _itemCount(f);
-                return FilterChip(
-                  selected: isActive,
-                  onSelected: (_) => _setFilter(f),
-                  showCheckmark: false,
-                  avatar: Icon(_filterIcon(f), size: 18, color: isActive ? kPrimary : kOnSurfaceVariant),
-                  label: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Text(f, style: TextStyle(color: isActive ? kPrimary : kOnSurfaceVariant, fontSize: 13, fontWeight: FontWeight.w500)),
-                    if (count > 0) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: isActive ? kPrimary.withOpacity(0.12) : kSurfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text('$count', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isActive ? kPrimary : kOnSurfaceVariant)),
-                      ),
-                    ],
-                  ]),
-                  selectedColor: kSecondaryContainer.withOpacity(0.4),
-                  backgroundColor: Colors.white,
-                  side: BorderSide(color: isActive ? kPrimary.withOpacity(0.3) : kSurfaceContainerHighest),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
-          // Content
-          if (_selectedFilter == '2FA' && _realCodes.isEmpty && _codesLoaded)
-            _buildEmptyState(_emptyStateForFilter('2FA'))
-          else if (items.isEmpty && _selectedFilter != '2FA')
-            _buildEmptyState(_emptyStateForFilter(_selectedFilter))
+          if (!_loaded)
+            const Expanded(child: Center(child: CircularProgressIndicator(color: kPrimary)))
+          else if (_isEmpty)
+            _buildEmptyState()
           else
             Expanded(
-              child: _selectedFilter == '2FA'
-                  ? _CodesListWidget(codes: _realCodes)
-                  : ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: items.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemBuilder: (context, index) {
-                        final item = items[index];
-                        return _buildVaultCard(context, item);
-                      },
-                    ),
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                itemCount: items.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, i) => _buildCard(items[i]),
+              ),
             ),
         ]),
       ),
     );
   }
 
-  Widget _buildVaultCard(BuildContext context, VaultItem item) {
+  Widget _buildCard(VaultItem item) {
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        onTap: () {
-          Widget? page;
-          switch (item.category) {
-            case VaultCategory.password:
-              page = PasswordDetailScreen(item: item);
-              break;
-            case VaultCategory.seeds:
-              page = item.id == 'ledger' ? const LedgerScreen() : SeedsDetailScreen(item: item);
-              break;
-            case VaultCategory.apiKeys:
-              page = ApiKeysDetailScreen(item: item);
-              break;
-            case VaultCategory.codes:
-              page = TwoFactorDetailScreen(item: item);
-              break;
-          }
-          if (page != null) {
-            Navigator.of(context).push(MaterialPageRoute(builder: (_) => page!));
-          }
-        },
+        onTap: () => _openDetail(item),
         borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: const EdgeInsets.all(14),
@@ -1128,90 +902,82 @@ class _VaultPageState extends State<VaultPage> {
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: kSurfaceContainerHighest),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(color: item.iconBgColor, borderRadius: BorderRadius.circular(12)),
-                child: Icon(item.icon, size: 22, color: item.iconColor),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(item.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: kOnSurface)),
-                    const SizedBox(height: 2),
-                    Text(item.subtitle, style: const TextStyle(fontSize: 13, color: kOnSurfaceVariant)),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: item.iconBgColor.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  _categoryLabel(item.category),
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: item.iconColor),
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right, size: 18, color: kOutlineVariant),
-            ],
-          ),
+          child: Row(children: [
+            Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(color: item.iconBgColor, borderRadius: BorderRadius.circular(12)),
+              child: Icon(item.icon, size: 22, color: item.iconColor),
+            ),
+            const SizedBox(width: 14),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(item.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: kOnSurface)),
+              const SizedBox(height: 2),
+              Text(item.subtitle, style: const TextStyle(fontSize: 13, color: kOnSurfaceVariant)),
+            ])),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: item.iconBgColor.withOpacity(0.5), borderRadius: BorderRadius.circular(6)),
+              child: Text(_catLabel(item.category), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: item.iconColor)),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right, size: 18, color: kOutlineVariant),
+          ]),
         ),
       ),
     );
   }
 
-  String _categoryLabel(VaultCategory cat) {
+  String _catLabel(VaultCategory cat) {
     switch (cat) {
       case VaultCategory.password: return 'Password';
       case VaultCategory.seeds: return 'Seed';
       case VaultCategory.apiKeys: return 'API Key';
-      case VaultCategory.codes: return '2FA';
+      case VaultCategory.codes: return 'Code';
     }
   }
 
-  Widget _buildEmptyState(_EmptyStateInfo info) {
+  void _openDetail(VaultItem item) {
+    Widget? page;
+    switch (item.category) {
+      case VaultCategory.password:
+        page = PasswordDetailScreen(item: item);
+        break;
+      case VaultCategory.seeds:
+        page = SeedsDetailScreen(item: item);
+        break;
+      case VaultCategory.apiKeys:
+        page = ApiKeysDetailScreen(item: item);
+        break;
+      case VaultCategory.codes:
+        page = TwoFactorDetailScreen(item: item);
+        break;
+    }
+    if (page != null) {
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => page!));
+    }
+  }
+
+  Widget _buildEmptyState() {
     return Expanded(
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: kSurfaceContainerLow,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(info.icon, size: 32, color: kOnSurfaceVariant),
-              ),
-              const SizedBox(height: 20),
-              Text(info.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface)),
-              const SizedBox(height: 8),
-              Text(info.subtitle, style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant), textAlign: TextAlign.center),
-            ],
-          ),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              width: 72, height: 72,
+              decoration: BoxDecoration(color: kSurfaceContainerLow, shape: BoxShape.circle),
+              child: const Icon(Icons.lock_outline, size: 32, color: kOnSurfaceVariant),
+            ),
+            const SizedBox(height: 20),
+            const Text('Your vault is empty', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface)),
+            const SizedBox(height: 8),
+            const Text('Tap the + button to add your first secret', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant), textAlign: TextAlign.center),
+          ]),
         ),
       ),
     );
   }
-}
-
-class _EmptyStateInfo {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final String actionLabel;
-  const _EmptyStateInfo({required this.icon, required this.title, required this.subtitle, required this.actionLabel});
 }
 
 // ════════════════════════════════════════════════
