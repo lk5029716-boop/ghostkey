@@ -469,126 +469,6 @@ int _pow10(int n) {
   return r;
 }
 
-void _showAddSecretSheet(BuildContext context, {String? filter}) {
-  final allOptions = [
-    _AddSecretItem(icon: Icons.lock, iconColor: const Color(0xFF1976D2), bgColor: const Color(0xFFBBDEFB), title: 'Password', subtitle: 'Store website or app passwords'),
-    _AddSecretItem(icon: Icons.key, iconColor: kPrimary, bgColor: const Color(0xFFC8E6C9), title: 'Seed Phrase', subtitle: 'Store crypto seed phrases'),
-    _AddSecretItem(icon: Icons.vpn_key, iconColor: const Color(0xFFF57C00), bgColor: const Color(0xFFFFE0B2), title: 'Private Key', subtitle: 'Store private keys'),
-    _AddSecretItem(icon: Icons.code, iconColor: const Color(0xFF7B1FA2), bgColor: const Color(0xFFE1BEE7), title: 'API Key', subtitle: 'Store API keys (read-only)'),
-    _AddSecretItem(icon: Icons.security, iconColor: const Color(0xFFF59E0B), bgColor: const Color(0xFFFFF3CD), title: '2FA', subtitle: 'Store TOTP secrets and backup codes'),
-    _AddSecretItem(icon: Icons.grid_view, iconColor: const Color(0xFFC2185B), bgColor: const Color(0xFFF8BBD0), title: 'Recovery Code', subtitle: 'Store backup codes'),
-    _AddSecretItem(icon: Icons.description, iconColor: const Color(0xFF00796B), bgColor: const Color(0xFFB2DFDB), title: 'Secure Note', subtitle: 'Store encrypted notes or docs'),
-  ];
-
-  final options = filter != null
-      ? allOptions.where((o) => o.title == filter).toList()
-      : allOptions;
-  final title = filter != null ? 'Add $filter' : 'Add Secret';
-
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: kSurface,
-    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-    builder: (ctx) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(child: Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 12), decoration: BoxDecoration(color: kOutlineVariant, borderRadius: BorderRadius.circular(2)))),
-              Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: kOnSurface)),
-              const SizedBox(height: 4),
-              Text(filter != null ? 'Add a new $filter entry' : 'Select the type of secret you want to add', style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
-              const SizedBox(height: 12),
-              Flexible(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: options.map((item) => _buildAddSheetItem(ctx, item)).toList(),
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        ),
-      );
-    },
-  );
-}
-
-Widget _buildAddSheetItem(BuildContext ctx, _AddSecretItem item) {
-  return Container(
-    margin: const EdgeInsets.only(bottom: 8),
-    child: Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: () {
-          Navigator.of(ctx).pop();
-          // Navigate to the correct add screen based on type
-          Widget? page;
-          switch (item.title) {
-            case 'Seed Phrase':
-              page = SeedPhraseRestoreScreen(
-                onSave: (phrase) async {
-                  try {
-                    await VaultStore.instance.addItem(VaultItem(
-                      id: '',
-                      title: 'Seed Phrase',
-                      subtitle: '${phrase.split(' ').length} words',
-                      category: VaultCategory.seeds,
-                      icon: Icons.memory,
-                      iconColor: kPrimary,
-                      iconBgColor: const Color(0xFFC8E6C9),
-                      date: 'Today',
-                      fields: {
-                        'Seed Phrase': phrase,
-                        'Word Count': '${phrase.split(' ').length}',
-                      },
-                    ));
-                  } catch (e) {
-                    debugPrint('Failed to save seed phrase to vault: $e');
-                  }
-                },
-              );
-              break;
-            case '2FA':
-              page = const QrScannerScreen();
-              break;
-            default:
-              // Can't show snackbar here — no Scaffold context available
-              // after pop. The user will see the sheet close.
-              return;
-          }
-          if (page != null) {
-            Navigator.of(ctx).push(MaterialPageRoute(builder: (_) => page!));
-          }
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: kSurfaceContainerHigh),
-          ),
-          child: Row(children: [
-            Container(width: 40, height: 40, decoration: BoxDecoration(color: item.bgColor, borderRadius: BorderRadius.circular(10)), child: Icon(item.icon, color: item.iconColor, size: 22)),
-            const SizedBox(width: 14),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(item.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: kOnSurface)),
-              const SizedBox(height: 2),
-              Text(item.subtitle, style: const TextStyle(fontSize: 13, color: kOnSurfaceVariant)),
-            ])),
-            const Icon(Icons.chevron_right, size: 18, color: kOutlineVariant),
-          ]),
-        ),
-      ),
-    ),
-  );
-}
-
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
   final _pages = <Widget>[
@@ -612,14 +492,7 @@ class _MainShellState extends State<MainShell> {
         const HeirsPage(),
         const SettingsScreen(),
       ]),
-      floatingActionButton: _currentIndex == 0
-          ? FloatingActionButton(
-              onPressed: () => _showAddSecretSheet(context),
-              backgroundColor: kPrimary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: const Icon(Icons.add, color: kOnPrimary, size: 28),
-            )
-          : null,
+      floatingActionButton: null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
