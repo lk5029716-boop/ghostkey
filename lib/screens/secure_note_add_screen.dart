@@ -45,7 +45,7 @@ class _SecureNoteAddScreenState extends State<SecureNoteAddScreen> {
         subtitle: _contentCtrl.text.trim().length > 50
             ? '${_contentCtrl.text.trim().substring(0, 50)}...'
             : _contentCtrl.text.trim(),
-        category: VaultCategory.codes,
+        category: VaultCategory.notes,
         icon: Icons.description,
         iconColor: const Color(0xFF00796B),
         iconBgColor: const Color(0xFFB2DFDB),
