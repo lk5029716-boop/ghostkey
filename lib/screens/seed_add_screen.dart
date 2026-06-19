@@ -239,7 +239,7 @@ class _SeedAddScreenState extends State<SeedAddScreen> {
           controller: _phraseCtrl,
           obscureText: !_phraseRevealed,
           onChanged: _onPhraseChanged,
-          maxLines: 3,
+          maxLines: _phraseRevealed ? 3 : 1,
           decoration: InputDecoration(
             hintText: 'Enter 12 or 24 word seed phrase',
             hintStyle: const TextStyle(color: _outlineVariant, fontSize: 14),
