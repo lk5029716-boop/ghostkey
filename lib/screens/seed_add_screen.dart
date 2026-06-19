@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../vault_data.dart';
@@ -210,7 +211,7 @@ class _SeedAddScreenState extends State<SeedAddScreen> {
     );
   }
 
-  Widget _field(String label, TextEditingController ctrl, String hint, {int maxLines = 1}) {
+  Widget _field(String label, TextEditingController ctrl, String hint, {int maxLines = 1, ValueChanged<String>? onChanged}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -219,7 +220,7 @@ class _SeedAddScreenState extends State<SeedAddScreen> {
         TextField(
           controller: ctrl,
           maxLines: maxLines,
-          onChanged: _onPhraseChanged,
+          onChanged: onChanged,
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: const TextStyle(color: _outlineVariant, fontSize: 14),
@@ -336,9 +337,14 @@ class _SeedAddScreenState extends State<SeedAddScreen> {
       child: OutlinedButton.icon(
         onPressed: _wordlistLoaded && !_saving
             ? () {
-                final words = Bip39Validator.generateMnemonic(strength: 256); // 24 words
-                _phraseCtrl.text = words;
-                _onPhraseChanged(words);
+                // Generate 24 random BIP39 words from the loaded wordlist
+                final wordlist = Bip39Validator.words;
+                if (wordlist == null || wordlist.length != 2048) return;
+                final rng = math.Random.secure();
+                final selected = List.generate(24, (_) => wordlist[rng.nextInt(2048)]);
+                final phrase = selected.join(' ');
+                _phraseCtrl.text = phrase;
+                _onPhraseChanged(phrase);
                 setState(() => _phraseRevealed = true);
               }
             : null,
