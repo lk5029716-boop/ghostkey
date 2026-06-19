@@ -163,10 +163,7 @@ class ImportFromAnotherAppScreen extends StatelessWidget {
   }
 
   void _import(BuildContext context, ImportType type) {
-    Navigator.of(context).pop();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ImportService().initiateImport(context, type);
-    });
+    ImportService().initiateImport(context, type);
   }
 
   Widget _divider(Color c) => Container(

@@ -7,23 +7,14 @@ import 'package:path_provider/path_provider.dart';
 
 final _logger = Logger('GhostKeyImportFileCleanup');
 
-/// Read a file as UTF-8 string. On iOS/Android, deletes the picker-owned copy
-/// afterwards so the secret never lingers in app cache.
+/// Read a file as UTF-8 string. Caller is responsible for cleanup.
 Future<String> readPickedImportFileAsString(String path) async {
-  try {
-    return await File(path).readAsString();
-  } finally {
-    await deletePickedImportFileIfAppOwned(path);
-  }
+  return await File(path).readAsString();
 }
 
-/// Read a file as raw bytes (for encrypted imports).
+/// Read a file as raw bytes (for encrypted imports). Caller is responsible for cleanup.
 Future<Uint8List> readPickedImportFileAsBytes(String path) async {
-  try {
-    return await File(path).readAsBytes();
-  } finally {
-    await deletePickedImportFileIfAppOwned(path);
-  }
+  return await File(path).readAsBytes();
 }
 
 /// Delete the picked import file if GhostKey owns the directory
