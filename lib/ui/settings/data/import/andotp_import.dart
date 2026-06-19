@@ -1,16 +1,16 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:pointycastle/export.dart';
 
 import '../../../../models/code.dart';
 import '../../../../models/code_display.dart';
-import '../../../../store/code_store.dart';
 import 'import_file_cleanup.dart';
 import 'import_helpers.dart';
+import 'import_progress.dart';
 
 final _logger = Logger('AndOTPImport');
 
@@ -49,16 +49,13 @@ Future<void> _pickAndOTPFile(BuildContext context) async {
   }
 
   if (!context.mounted) return;
-  await showGhostKeyProgress(context, 'Importing…');
+  await showGhostKeyProgress(context, 'Parsing…');
 
   try {
-    final count = await compute(
-      _processAndOTPInIsolate,
-      _AndOTPParams(path: path, password: password),
-    );
+    final codes = await _parseAndOTPCodes(bytes, password);
     if (!context.mounted) return;
     await hideGhostKeyProgress(context);
-    if (count != null) await showGhostKeySuccess(context, count);
+    await showImportProgress(context: context, codes: codes);
   } catch (e, s) {
     _logger.severe('andOTP import failed', e, s);
     if (!context.mounted) return;
@@ -83,14 +80,7 @@ bool _looksLikeJson(Uint8List bytes) {
   return false;
 }
 
-class _AndOTPParams {
-  final String path;
-  final String? password;
-  _AndOTPParams({required this.path, this.password});
-}
-
-Future<int?> _processAndOTPInIsolate(_AndOTPParams params) async {
-  final bytes = await readPickedImportFileAsBytes(params.path);
+Future<List<Code>> _parseAndOTPCodes(Uint8List bytes, String? password) async {
   final isPlain = _looksLikeJson(bytes);
 
   late List<dynamic> entries;
@@ -98,10 +88,10 @@ Future<int?> _processAndOTPInIsolate(_AndOTPParams params) async {
     final jsonString = utf8.decode(bytes);
     entries = jsonDecode(jsonString) as List<dynamic>;
   } else {
-    if (params.password == null) {
+    if (password == null) {
       throw Exception('Password required for encrypted andOTP backup');
     }
-    final jsonString = _decryptAndOTPBackup(bytes, params.password!);
+    final jsonString = _decryptAndOTPBackup(bytes, password);
     entries = jsonDecode(jsonString) as List<dynamic>;
   }
 
@@ -145,11 +135,7 @@ Future<int?> _processAndOTPInIsolate(_AndOTPParams params) async {
       _logger.warning('Failed to parse andOTP entry', e, s);
     }
   }
-
-  for (final code in codes) {
-    await CodeStore.instance.addCode(code);
-  }
-  return codes.length;
+  return codes;
 }
 
 /// andOTP encrypted file structure:

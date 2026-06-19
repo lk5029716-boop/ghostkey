@@ -1,16 +1,16 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:pointycastle/export.dart';
 
 import '../../../../models/code.dart';
 import '../../../../models/code_display.dart';
-import '../../../../store/code_store.dart';
 import 'import_file_cleanup.dart';
 import 'import_helpers.dart';
+import 'import_progress.dart';
 
 final _logger = Logger('AegisImport');
 
@@ -48,16 +48,13 @@ Future<void> _pickAegisFile(BuildContext context) async {
   }
 
   if (!context.mounted) return;
-  await showGhostKeyProgress(context, 'Importing…');
+  await showGhostKeyProgress(context, 'Parsing…');
 
   try {
-    final count = await compute(
-      _processAegisInIsolate,
-      _AegisParams(path: path, password: password),
-    );
+    final codes = await _parseAegisCodes(decoded, password);
     if (!context.mounted) return;
     await hideGhostKeyProgress(context);
-    if (count != null) await showGhostKeySuccess(context, count);
+    await showImportProgress(context: context, codes: codes);
   } catch (e, s) {
     _logger.severe('Aegis import failed', e, s);
     if (!context.mounted) return;
@@ -73,23 +70,15 @@ Future<void> _pickAegisFile(BuildContext context) async {
   }
 }
 
-class _AegisParams {
-  final String path;
-  final String? password;
-  _AegisParams({required this.path, this.password});
-}
-
-Future<int?> _processAegisInIsolate(_AegisParams params) async {
-  final jsonString = await readPickedImportFileAsString(params.path);
-  final decoded = jsonDecode(jsonString);
+Future<List<Code>> _parseAegisCodes(dynamic decoded, String? password) async {
   final isEncrypted = decoded['header']?['slots'] != null;
 
   Map? aegisDb;
   if (isEncrypted) {
-    if (params.password == null) {
+    if (password == null) {
       throw Exception('Password required for encrypted Aegis vault');
     }
-    final inner = decryptAegisVault(decoded, password: params.password!);
+    final inner = decryptAegisVault(decoded, password: password);
     aegisDb = jsonDecode(inner) as Map;
   } else {
     aegisDb = decoded['db'];
@@ -144,11 +133,7 @@ Future<int?> _processAegisInIsolate(_AegisParams params) async {
       _logger.warning('Failed to parse Aegis entry', e, s);
     }
   }
-
-  for (final code in codes) {
-    await CodeStore.instance.addCode(code);
-  }
-  return codes.length;
+  return codes;
 }
 
 /// Aegis vault format: header.slots is a list of password slots.

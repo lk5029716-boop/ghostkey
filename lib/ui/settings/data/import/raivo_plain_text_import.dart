@@ -1,14 +1,13 @@
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 
 import '../../../../models/code.dart';
-import '../../../../store/code_store.dart';
 import 'import_file_cleanup.dart';
 import 'import_helpers.dart';
+import 'import_progress.dart';
 
 final _logger = Logger('RaivoImport');
 
@@ -41,13 +40,14 @@ Future<void> _pickRaivoFile(BuildContext context) async {
   }
 
   if (!context.mounted) return;
-  await showGhostKeyProgress(context, 'Importing…');
+  await showGhostKeyProgress(context, 'Parsing…');
 
   try {
-    final count = await compute(_processRaivoInIsolate, path);
+    final jsonString = await readPickedImportFileAsString(path);
+    final codes = _parseRaivoCodes(jsonString);
     if (!context.mounted) return;
     await hideGhostKeyProgress(context);
-    if (count != null) await showGhostKeySuccess(context, count);
+    await showImportProgress(context: context, codes: codes);
   } catch (e, s) {
     _logger.severe('Raivo import failed', e, s);
     if (!context.mounted) return;
@@ -60,8 +60,7 @@ Future<void> _pickRaivoFile(BuildContext context) async {
   }
 }
 
-Future<int?> _processRaivoInIsolate(String path) async {
-  final jsonString = await readPickedImportFileAsString(path);
+List<Code> _parseRaivoCodes(String jsonString) {
   final items = jsonDecode(jsonString) as List<dynamic>;
 
   final codes = <Code>[];
@@ -91,9 +90,5 @@ Future<int?> _processRaivoInIsolate(String path) async {
       _logger.warning('Failed to parse Raivo entry', e, s);
     }
   }
-
-  for (final code in codes) {
-    await CodeStore.instance.addCode(code);
-  }
-  return codes.length;
+  return codes;
 }

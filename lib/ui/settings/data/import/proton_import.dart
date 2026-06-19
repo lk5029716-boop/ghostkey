@@ -7,9 +7,9 @@ import 'package:logging/logging.dart';
 import 'package:pointycastle/export.dart';
 
 import '../../../../models/code.dart';
-import '../../../../store/code_store.dart';
 import 'import_file_cleanup.dart';
 import 'import_helpers.dart';
+import 'import_progress.dart';
 
 const _protonExportVersion = 1;
 const _protonExportNonceLength = 12;
@@ -235,12 +235,9 @@ Future<void> _pickProtonFile(BuildContext context) async {
     }
 
     final codes = parseProtonExport(decoded);
-    for (final code in codes) {
-      await CodeStore.instance.addCode(code);
-    }
     if (!context.mounted) return;
     await hideGhostKeyProgress(context);
-    await showGhostKeySuccess(context, codes.length);
+    await showImportProgress(context: context, codes: codes);
   } catch (e, s) {
     _logger.severe('Proton import failed', e, s);
     if (!context.mounted) return;

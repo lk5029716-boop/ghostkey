@@ -1,15 +1,14 @@
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 
 import '../../../../models/code.dart';
 import '../../../../models/code_display.dart';
-import '../../../../store/code_store.dart';
 import 'import_file_cleanup.dart';
 import 'import_helpers.dart';
+import 'import_progress.dart';
 
 final _logger = Logger('BitwardenImport');
 
@@ -33,13 +32,14 @@ Future<void> _pickBitwardenFile(BuildContext context) async {
   final path = result.files.single.path!;
 
   if (!context.mounted) return;
-  await showGhostKeyProgress(context, 'Importing…');
+  await showGhostKeyProgress(context, 'Parsing…');
 
   try {
-    final count = await compute(_processBitwardenInIsolate, path);
+    final jsonString = await readPickedImportFileAsString(path);
+    final codes = _parseBitwardenCodes(jsonString);
     if (!context.mounted) return;
     await hideGhostKeyProgress(context);
-    if (count != null) await showGhostKeySuccess(context, count);
+    await showImportProgress(context: context, codes: codes);
   } catch (e, s) {
     _logger.severe('Bitwarden import failed', e, s);
     if (!context.mounted) return;
@@ -52,8 +52,7 @@ Future<void> _pickBitwardenFile(BuildContext context) async {
   }
 }
 
-Future<int?> _processBitwardenInIsolate(String path) async {
-  final jsonString = await readPickedImportFileAsString(path);
+List<Code> _parseBitwardenCodes(String jsonString) {
   final data = jsonDecode(jsonString);
   final items = data['items'] as List<dynamic>? ?? [];
 
@@ -102,19 +101,15 @@ Future<int?> _processBitwardenInIsolate(String path) async {
 
       final folderId = item['folderId']?.toString();
       if (folderId != null && folderIdToName.containsKey(folderId)) {
-        code.copyWith(
+        codes.add(code.copyWith(
           display: CodeDisplay(tags: [folderIdToName[folderId]!]),
-        );
+        ));
+      } else {
+        codes.add(code);
       }
-
-      codes.add(code);
     } catch (e, s) {
       _logger.warning('Failed to parse Bitwarden item', e, s);
     }
   }
-
-  for (final code in codes) {
-    await CodeStore.instance.addCode(code);
-  }
-  return codes.length;
+  return codes;
 }

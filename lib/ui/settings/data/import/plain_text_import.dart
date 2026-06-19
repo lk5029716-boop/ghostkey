@@ -2,13 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 
 import '../../../../models/code.dart';
-import '../../../../store/code_store.dart';
 import 'import_helpers.dart';
+import 'import_progress.dart';
 
 final _logger = Logger('PlainTextImport');
 
@@ -31,13 +30,14 @@ Future<void> _pickImportFile(BuildContext context) async {
   final path = result.files.single.path!;
 
   if (!context.mounted) return;
-  await showGhostKeyProgress(context, 'Importing…');
+  await showGhostKeyProgress(context, 'Parsing…');
 
   try {
-    final count = await compute(_processPlainTextInIsolate, path);
+    final contents = await File(path).readAsString();
+    final codes = _parsePlainTextCodes(contents);
     if (!context.mounted) return;
     await hideGhostKeyProgress(context);
-    if (count != null) await showGhostKeySuccess(context, count);
+    await showImportProgress(context: context, codes: codes);
   } catch (e, s) {
     _logger.severe('Plain text import failed', e, s);
     if (!context.mounted) return;
@@ -50,8 +50,7 @@ Future<void> _pickImportFile(BuildContext context) async {
   }
 }
 
-Future<int?> _processPlainTextInIsolate(String path) async {
-  final contents = await File(path).readAsString();
+List<Code> _parsePlainTextCodes(String contents) {
   final codes = <Code>[];
 
   if (contents.trim().startsWith('otpauth://')) {
@@ -79,9 +78,5 @@ Future<int?> _processPlainTextInIsolate(String path) async {
       }
     }
   }
-
-  for (final code in codes) {
-    await CodeStore.instance.addCode(code);
-  }
-  return codes.length;
+  return codes;
 }

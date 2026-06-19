@@ -9,8 +9,8 @@ import 'package:pointycastle/export.dart';
 
 import '../../../../models/code.dart';
 import '../../../../models/export/ente.dart';
-import '../../../../store/code_store.dart';
 import 'import_helpers.dart';
+import 'import_progress.dart';
 import 'secret_box.dart';
 
 final _logger = Logger('EncryptedEnteImport');
@@ -83,12 +83,9 @@ Future<void> _pickEnteFile(BuildContext context) async {
       }
     }
 
-    for (final code in codes) {
-      await CodeStore.instance.addCode(code);
-    }
     if (!context.mounted) return;
     await hideGhostKeyProgress(context);
-    await showGhostKeySuccess(context, codes.length);
+    await showImportProgress(context: context, codes: codes);
   } on SecretBoxMacException {
     if (!context.mounted) return;
     await hideGhostKeyProgress(context);

@@ -1,16 +1,16 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:pointycastle/export.dart';
 
 import '../../../../models/code.dart';
 import '../../../../models/code_display.dart';
-import '../../../../store/code_store.dart';
 import 'import_file_cleanup.dart';
 import 'import_helpers.dart';
+import 'import_progress.dart';
 
 final _logger = Logger('2FASImport');
 
@@ -58,16 +58,13 @@ Future<void> _pick2FasFile(BuildContext context) async {
   }
 
   if (!context.mounted) return;
-  await showGhostKeyProgress(context, 'Importing…');
+  await showGhostKeyProgress(context, 'Parsing…');
 
   try {
-    final count = await compute(
-      _process2FasInIsolate,
-      _TwoFasParams(path: path, password: password),
-    );
+    final codes = await _parse2FasCodes(decoded, password);
     if (!context.mounted) return;
     await hideGhostKeyProgress(context);
-    if (count != null) await showGhostKeySuccess(context, count);
+    await showImportProgress(context: context, codes: codes);
   } catch (e, s) {
     _logger.severe('2FAS import failed', e, s);
     if (!context.mounted) return;
@@ -83,23 +80,16 @@ Future<void> _pick2FasFile(BuildContext context) async {
   }
 }
 
-class _TwoFasParams {
-  final String path;
-  final String? password;
-  _TwoFasParams({required this.path, this.password});
-}
-
-Future<int?> _process2FasInIsolate(_TwoFasParams params) async {
-  final jsonString = await readPickedImportFileAsString(params.path);
-  final decoded = jsonDecode(jsonString);
+/// Parse 2FAS JSON and return a list of Code objects (not yet saved).
+Future<List<Code>> _parse2FasCodes(dynamic decoded, String? password) async {
   final isEncrypted = decoded['reference'] != null;
 
   late List<dynamic> services;
   if (isEncrypted) {
-    if (params.password == null) {
+    if (password == null) {
       throw Exception('Password required for encrypted 2FAS backup');
     }
-    final decryptedJson = decrypt2FasVault(decoded, password: params.password!);
+    final decryptedJson = decrypt2FasVault(decoded, password: password);
     services = jsonDecode(decryptedJson) as List<dynamic>;
   } else {
     services = (decoded['services'] as List<dynamic>?) ?? [];
@@ -148,11 +138,7 @@ Future<int?> _process2FasInIsolate(_TwoFasParams params) async {
       _logger.warning('Failed to parse 2FAS entry', e, s);
     }
   }
-
-  for (final code in codes) {
-    await CodeStore.instance.addCode(code);
-  }
-  return codes.length;
+  return codes;
 }
 
 /// 2FAS encrypted backup layout:
