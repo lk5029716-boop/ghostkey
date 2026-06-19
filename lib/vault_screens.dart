@@ -1229,5 +1229,5 @@ class _CircularProgressPainter extends CustomPainter {
   }
 
   @override
-  bool shouldReaint(covariant _CircularProgressPainter old) => old.progress != progress;
+  bool shouldRepaint(covariant _CircularProgressPainter old) => old.progress != progress;
 }
