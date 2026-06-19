@@ -17,7 +17,6 @@ import 'screens/password_add_screen.dart';
 import 'screens/api_key_add_screen.dart';
 import 'screens/recovery_codes_add_screen.dart';
 import 'screens/secure_note_add_screen.dart';
-import 'screens/seed_add_screen.dart';
 import 'screens/auth_screen.dart';
 import 'services/biometric_service.dart';
 import 'services/preference_service.dart';
@@ -731,7 +730,7 @@ class _VaultPageState extends State<VaultPage> {
         page = const PasswordAddScreen();
         break;
       case VaultCategory.seeds:
-        page = const SeedAddScreen();
+        page = const SeedPhraseRestoreScreen();
         break;
       case VaultCategory.apiKeys:
         page = const ApiKeyAddScreen();

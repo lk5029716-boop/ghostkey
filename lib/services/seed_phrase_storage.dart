@@ -47,7 +47,7 @@ class SeedPhraseStorage {
   /// The [seedPhrase] is zeroed from memory after encryption.
   static Future<void> storeSeedPhrase(String seedPhrase, Uint8List masterKey) async {
     try {
-      final plaintext = utf8.encode(seedPhrase);
+      final plaintext = Uint8List.fromList(utf8.encode(seedPhrase));
       final iv = _generateIv();
       final ciphertext = _encrypt(plaintext, masterKey, iv);
 
