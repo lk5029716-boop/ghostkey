@@ -764,9 +764,13 @@ class _VaultPageState extends State<VaultPage> {
       case VaultCategory.privateKeys:
         return; // not implemented yet
     }
+    // Switch to this category's filter so new item is visible immediately
+    final newIndex = _filterCategories.indexWhere((c) => c.category == cat);
+    if (newIndex >= 0 && newIndex != _selectedFilterIndex) {
+      setState(() => _selectedFilterIndex = newIndex);
+    }
     // Navigate and wait for result — refresh vault when user comes back
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => page!));
-    // Refresh vault list regardless of result (item may have been added)
     _loadVaultItems();
     _loadCodes();
   }
