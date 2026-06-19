@@ -15,9 +15,10 @@ import '../events/vault_items_updated_event.dart';
 import '../vault_data.dart';
 
 /// Encrypted local storage for vault items.
-/// Each item encrypted with per-item key (AES-256-GCM), key wrapped with master key.
+/// Simple design: each item's fields are JSON-encoded, encrypted with
+/// AES-256-GCM using a fixed master key + per-row random 12-byte IV.
 class VaultStore {
-  static const _databaseName = 'ghostkey.vault.db';
+  static const _databaseName = 'ghostkey_v3.db';
   static const _databaseVersion = 1;
   static const _table = 'vault_items';
 
@@ -25,22 +26,19 @@ class VaultStore {
   VaultStore._();
 
   final _eventBus = EventBus();
-  static Future<Database>? _dbFuture;
+  Future<Database>? _dbFuture;
   static const _uuid = Uuid();
 
-  // Simple fixed master key for local-only storage
-  static Uint8List? _masterKey;
-
-  static Uint8List get _defaultMasterKey {
-    _masterKey ??= Uint8List.fromList(List.generate(32, (i) => i * 7 + 13));
-    return _masterKey!;
-  }
+  // Fixed 32-byte master key for local-only storage
+  static final Uint8List _masterKey = Uint8List.fromList([
+    0x47, 0x68, 0x6f, 0x73, 0x74, 0x4b, 0x65, 0x79,
+    0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x32, 0x30,
+    0x32, 0x34, 0x47, 0x68, 0x6f, 0x73, 0x74, 0x4b,
+    0x65, 0x79, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74,
+  ]);
 
   bool get isUnlocked => true;
-
-  void setMasterKey(dynamic key) {
-    // No-op: always uses fixed key
-  }
+  void setMasterKey(dynamic key) {} // no-op
 
   Future<Database> get database async {
     _dbFuture ??= _initDatabase();
@@ -64,7 +62,6 @@ class VaultStore {
             icon_color INTEGER,
             icon_bg_color INTEGER,
             encrypted_data TEXT NOT NULL,
-            encrypted_key TEXT NOT NULL,
             iv TEXT NOT NULL,
             created_at INTEGER NOT NULL,
             updated_at INTEGER NOT NULL
@@ -76,13 +73,6 @@ class VaultStore {
     );
   }
 
-  Uint8List _generateVaultKey() {
-    final rng = Random.secure();
-    final key = Uint8List(32);
-    for (int i = 0; i < 32; i++) key[i] = rng.nextInt(256);
-    return key;
-  }
-
   Uint8List _generateIv() {
     final rng = Random.secure();
     final iv = Uint8List(12);
@@ -90,15 +80,15 @@ class VaultStore {
     return iv;
   }
 
-  Uint8List _encrypt(Uint8List plaintext, Uint8List key, Uint8List iv) {
+  Uint8List _encrypt(Uint8List plaintext, Uint8List iv) {
     final cipher = GCMBlockCipher(AESEngine());
-    cipher.init(true, AEADParameters(KeyParameter(key), 128, iv, Uint8List(0)));
+    cipher.init(true, AEADParameters(KeyParameter(_masterKey), 128, iv, Uint8List(0)));
     return cipher.process(plaintext);
   }
 
-  Uint8List _decrypt(Uint8List ciphertext, Uint8List key, Uint8List iv) {
+  Uint8List _decrypt(Uint8List ciphertext, Uint8List iv) {
     final cipher = GCMBlockCipher(AESEngine());
-    cipher.init(false, AEADParameters(KeyParameter(key), 128, iv, Uint8List(0)));
+    cipher.init(false, AEADParameters(KeyParameter(_masterKey), 128, iv, Uint8List(0)));
     return cipher.process(ciphertext);
   }
 
@@ -109,14 +99,8 @@ class VaultStore {
     final now = DateTime.now().millisecondsSinceEpoch;
     final payload = jsonEncode(item.fields);
     final plaintext = utf8.encode(payload);
-
-    final vaultKey = _generateVaultKey();
-    final dataIv = _generateIv();
-    final ciphertext = _encrypt(plaintext, vaultKey, dataIv);
-
-    final keyIv = _generateIv();
-    final wrappedKey = _encrypt(vaultKey, _defaultMasterKey, keyIv);
-
+    final iv = _generateIv();
+    final ciphertext = _encrypt(plaintext, iv);
     final id = item.id.isEmpty ? _uuid.v4() : item.id;
 
     await db.insert(_table, {
@@ -128,8 +112,7 @@ class VaultStore {
       'icon_color': item.iconColor.value,
       'icon_bg_color': item.iconBgColor.value,
       'encrypted_data': base64Encode(ciphertext),
-      'encrypted_key': base64Encode(wrappedKey),
-      'iv': base64Encode(dataIv),
+      'iv': base64Encode(iv),
       'created_at': now,
       'updated_at': now,
     });
@@ -143,13 +126,8 @@ class VaultStore {
     final now = DateTime.now().millisecondsSinceEpoch;
     final payload = jsonEncode(item.fields);
     final plaintext = utf8.encode(payload);
-
-    final vaultKey = _generateVaultKey();
-    final dataIv = _generateIv();
-    final ciphertext = _encrypt(plaintext, vaultKey, dataIv);
-
-    final keyIv = _generateIv();
-    final wrappedKey = _encrypt(vaultKey, _defaultMasterKey, keyIv);
+    final iv = _generateIv();
+    final ciphertext = _encrypt(plaintext, iv);
 
     await db.update(
       _table,
@@ -160,8 +138,7 @@ class VaultStore {
         'icon_color': item.iconColor.value,
         'icon_bg_color': item.iconBgColor.value,
         'encrypted_data': base64Encode(ciphertext),
-        'encrypted_key': base64Encode(wrappedKey),
-        'iv': base64Encode(dataIv),
+        'iv': base64Encode(iv),
         'updated_at': now,
       },
       where: 'id = ?',
@@ -198,12 +175,9 @@ class VaultStore {
     final items = <VaultItem>[];
     for (final row in rows) {
       try {
-        final wrappedKey = base64Decode(row['encrypted_key'] as String);
-        final dataIv = base64Decode(row['iv'] as String);
-        final vaultKey = _decrypt(wrappedKey, _defaultMasterKey, dataIv);
-
+        final iv = base64Decode(row['iv'] as String);
         final ciphertext = base64Decode(row['encrypted_data'] as String);
-        final plaintext = _decrypt(ciphertext, vaultKey, dataIv);
+        final plaintext = _decrypt(ciphertext, iv);
         final data = jsonDecode(utf8.decode(plaintext)) as Map<String, dynamic>;
         final fields = data.map((k, v) => MapEntry(k, v.toString()));
 
@@ -237,11 +211,9 @@ class VaultStore {
     final items = <VaultItem>[];
     for (final row in rows) {
       try {
-        final wrappedKey = base64Decode(row['encrypted_key'] as String);
-        final dataIv = base64Decode(row['iv'] as String);
-        final vaultKey = _decrypt(wrappedKey, _defaultMasterKey, dataIv);
+        final iv = base64Decode(row['iv'] as String);
         final ciphertext = base64Decode(row['encrypted_data'] as String);
-        final plaintext = _decrypt(ciphertext, vaultKey, dataIv);
+        final plaintext = _decrypt(ciphertext, iv);
         final data = jsonDecode(utf8.decode(plaintext)) as Map<String, dynamic>;
         final fields = data.map((k, v) => MapEntry(k, v.toString()));
 
