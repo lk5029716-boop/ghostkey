@@ -18,7 +18,7 @@ import 'screens/api_key_add_screen.dart';
 import 'screens/recovery_codes_add_screen.dart';
 import 'screens/secure_note_add_screen.dart';
 import 'screens/auth_screen.dart';
-import 'services/biometric_service.dart';
+import 'screens/security_setup_screen.dart';
 import 'services/preference_service.dart';
 import 'services/seed_phrase_storage.dart';
 import 'ui/settings/data_section_widget.dart';
@@ -2392,43 +2392,11 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _biometric = false;
-  bool _biometricSupported = false;
-  bool _biometricEnrolled = false;
-  bool _emergencyAlerts = true;
   bool _checkinReminders = true;
 
   @override
   void initState() {
     super.initState();
-    _biometric = BiometricService.instance.isEnabled;
-    // Probe hardware in the background so the toggle can show "not available"
-    // on devices without a fingerprint sensor or enrolled biometrics.
-    () async {
-      final supported = await BiometricService.instance.isDeviceSupported();
-      final enrolled = await BiometricService.instance.hasEnrolledBiometrics();
-      if (!mounted) return;
-      setState(() {
-        _biometricSupported = supported;
-        _biometricEnrolled = enrolled;
-      });
-    }();
-  }
-
-  Future<void> _setBiometric(bool v) async {
-    if (v && (!_biometricSupported || !_biometricEnrolled)) {
-      // Don't let the user toggle on when there's no hardware.
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'No biometric is enrolled on this device. Add one in Android Settings.'),
-        ),
-      );
-      return;
-    }
-    await BiometricService.instance.setEnabled(v);
-    if (!mounted) return;
-    setState(() => _biometric = v);
   }
 
   @override
@@ -2439,7 +2407,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final surface = kSurface;
     final surfaceContainer = kSurfaceContainer;
     final outlineVar = kOutlineVariant;
-    final error = kError;
 
     return Scaffold(
       backgroundColor: surface,
@@ -2481,13 +2448,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _sectionHeader('Security', primary),
           const SizedBox(height: 8),
           _card([
-            _switchRow(Icons.fingerprint, 'Biometric Lock', _biometric, _setBiometric),
-            _divider(outlineVar),
-            _row(Icons.vpn_key, 'Change Master Password', chevron: true),
-            _divider(outlineVar),
-            _row(Icons.vibration, 'Two-Factor Authentication (2FA)', trailing: Text('Enabled', style: TextStyle(color: primary, fontSize: 12, fontWeight: FontWeight.w500))),
-            _divider(outlineVar),
-            _row(Icons.verified_user, 'Security Audit', trailing: Icon(Icons.warning, color: error, size: 20)),
+            _row(Icons.security, 'Security', subtitle: 'PIN & biometric setup', chevron: true, onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SecuritySetupScreen()));
+            }),
           ]),
           const SizedBox(height: 24),
 
@@ -2496,10 +2459,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 8),
           _card([
             _row(Icons.alarm_on, "Dead Man's Switch Duration", trailing: Text('6 Months', style: TextStyle(fontSize: 14, color: onSurfaceVar))),
-            _divider(outlineVar),
-            _row(Icons.update, 'Check-in Frequency', trailing: Text('Monthly', style: TextStyle(fontSize: 14, color: onSurfaceVar))),
-            _divider(outlineVar),
-            _row(Icons.ios_share, 'Data Export (Encrypted)', trailing: Icon(Icons.download, color: onSurfaceVar, size: 20)),
           ]),
           const SizedBox(height: 24),
 
@@ -2529,8 +2488,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _sectionHeader('Notifications', primary),
           const SizedBox(height: 8),
           _card([
-            _switchRow(Icons.emergency, 'Emergency Alerts', _emergencyAlerts, (v) => setState(() => _emergencyAlerts = v)),
-            _divider(outlineVar),
             _switchRow(Icons.event_available, 'Check-in Reminders', _checkinReminders, (v) => setState(() => _checkinReminders = v)),
           ]),
           const SizedBox(height: 24),
@@ -2540,8 +2497,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 8),
           _card([
             _row(Icons.credit_card, 'Payment Methods', chevron: true),
-            _divider(outlineVar),
-            _row(Icons.person, 'Manage Account', chevron: true),
           ]),
           const SizedBox(height: 24),
 
@@ -2630,15 +2585,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Divider(height: 1, thickness: 1, color: color.withOpacity(0.1), indent: 56);
   }
 
-  Widget _row(IconData icon, String title, {Widget? trailing, bool chevron = false}) {
+  Widget _row(IconData icon, String title, {Widget? trailing, bool chevron = false, String? subtitle, VoidCallback? onTap}) {
     return InkWell(
-      onTap: () {},
+      onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(children: [
           _iconBadge(icon),
           const SizedBox(width: 16),
-          Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: Color(0xFF191C1D)))),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: Color(0xFF191C1D))),
+            if (subtitle != null) ...[
+              const SizedBox(height: 2),
+              Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF40493D))),
+            ],
+          ])),
           trailing ?? (chevron ? const Icon(Icons.chevron_right, color: Color(0xFF40493D)) : const SizedBox.shrink()),
         ]),
       ),
