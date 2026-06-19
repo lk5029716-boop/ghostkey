@@ -476,182 +476,302 @@ class _BackupCodesGridState extends State<_BackupCodesGrid> {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 2. SEEDS DETAIL SCREEN (Ledger Seed Phrase)
+// 2. SEEDS DETAIL SCREEN (Ledger Seed Phrase) — restored from original
 // ═══════════════════════════════════════════════════════════════
-class SeedsDetailScreen extends StatelessWidget {
+class SeedsDetailScreen extends StatefulWidget {
   final VaultItem item;
   const SeedsDetailScreen({super.key, required this.item});
 
   @override
+  State<SeedsDetailScreen> createState() => _SeedsDetailScreenState();
+}
+
+class _SeedsDetailScreenState extends State<SeedsDetailScreen> {
+  bool _revealed = false;
+  int _timer = 30;
+  Timer? _t;
+
+  static const Color kBackground = Color(0xFFF8F9FA);
+  static const Color kSurfaceContainerLowest = Color(0xFFFFFFFF);
+  static const Color kSurfaceContainerLow = Color(0xFFF3F4F5);
+  static const Color kSurfaceContainerHigh = Color(0xFFE7E8E9);
+  static const Color kSurfaceContainerHighest = Color(0xFFE1E3E4);
+  static const Color kPrimary = Color(0xFF0D631B);
+  static const Color kOnSurface = Color(0xFF191C1D);
+  static const Color kOnSurfaceVariant = Color(0xFF40493D);
+  static const Color kSecondaryContainer = Color(0xFFACF4A4);
+  static const Color kOnSecondaryContainer = Color(0xFF002203);
+  static const Color kError = Color(0xFFBA1A1A);
+  static const Color kWarning = Color(0xFFF59E0B);
+
+  List<String> get _words =>
+      (widget.item.fields['Seed Phrase'] ?? '').trim().split(RegExp(r'\s+'));
+
+  @override
+  void dispose() {
+    _t?.cancel();
+    super.dispose();
+  }
+
+  void _reveal() {
+    setState(() {
+      _revealed = true;
+      _timer = 30;
+    });
+    _t?.cancel();
+    _t = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) { timer.cancel(); return; }
+      setState(() => _timer--);
+      if (_timer <= 0) {
+        timer.cancel();
+        if (mounted) setState(() => _revealed = false);
+      }
+    });
+  }
+
+  double get _progress => _revealed ? (30 - _timer) / 30 : 0;
+
+  @override
   Widget build(BuildContext context) {
-    final f = item.fields;
-    final words = (f['Seed Phrase'] ?? '').split(' ');
+    final words = _words;
+    final title = widget.item.title;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: kBackground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF8F9FA),
+        backgroundColor: kBackground,
         elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFF191C1D)), onPressed: () => Navigator.pop(context)),
-        title: Text(item.title, style: const TextStyle(color: Color(0xFF191C1D))),
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: kOnSurfaceVariant, size: 24),
+          onPressed: () => Navigator.pop(context),
+          style: IconButton.styleFrom(
+            backgroundColor: kSurfaceContainerLow,
+            shape: const CircleBorder(),
+          ),
+        ),
         actions: [
-          IconButton(icon: const Icon(Icons.more_vert, color: Color(0xFF40493D)), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.more_vert, color: kOnSurfaceVariant, size: 24),
+            onPressed: () {},
+            style: IconButton.styleFrom(
+              backgroundColor: kSurfaceContainerLow,
+              shape: const CircleBorder(),
+            ),
+          ),
           const SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const SizedBox(height: 16),
-          Center(child: Column(children: [
-            Container(width: 72, height: 72, decoration: BoxDecoration(color: item.iconBgColor, shape: BoxShape.circle), child: Icon(item.icon, size: 36, color: item.iconColor)),
-            const SizedBox(height: 12),
-            Text(item.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: Color(0xFF191C1D))),
-            const SizedBox(height: 4), Text('${words.length} words', style: const TextStyle(fontSize: 14, color: Color(0xFF40493D))),
-          ])),
-          const SizedBox(height: 24),
+        child: Column(
+          children: [
+            const SizedBox(height: 24),
+            // Hero Icon & Title
+            Container(
+              width: 80, height: 80,
+              decoration: BoxDecoration(
+                color: kSecondaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.vpn_key, size: 48, color: kOnSecondaryContainer),
+            ),
+            const SizedBox(height: 16),
+            Text(title,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: kOnSurface, height: 32 / 24),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Text('${words.length} words',
+              style: TextStyle(fontSize: 14, color: kOnSurfaceVariant, height: 20 / 14),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
 
-          // Warning
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: const Color(0xFFF59E0B).withOpacity(0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.3))),
-            child: const Row(children: [
-              Icon(Icons.warning_amber_rounded, size: 20, color: Color(0xFFF59E0B)),
-              SizedBox(width: 10),
-              Expanded(child: Text('Never share your seed phrase. Anyone with these words can steal your crypto.', style: TextStyle(fontSize: 13, color: Color(0xFFF59E0B), fontWeight: FontWeight.w500))),
-            ]),
-          ),
-          const SizedBox(height: 16),
+            // Seed phrase grid with blur overlay + reveal button
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: kSurfaceContainerLowest,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: kSurfaceContainerHighest),
+              ),
+              child: Stack(
+                children: [
+                  // Grid of words (always rendered, hidden behind overlay when locked)
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: _revealed
+                        ? _buildWordGrid(words, 'revealed')
+                        : _buildWordGrid(words, 'blurred'),
+                  ),
+                  // Blur overlay with Reveal button
+                  if (!_revealed)
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: kSurfaceContainerLowest.withOpacity(0.85),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Center(
+                          child: ElevatedButton.icon(
+                            onPressed: _reveal,
+                            icon: const Icon(Icons.visibility, size: 20, color: kOnSecondaryContainer),
+                            label: const Text('Reveal',
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: kOnSecondaryContainer, letterSpacing: 0.1)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: kSecondaryContainer,
+                              foregroundColor: kOnSecondaryContainer,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9999)),
+                              elevation: 1,
+                              shadowColor: Colors.black26,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
 
-          // Seed phrase grid
-          _SeedPhraseGrid(words: words),
-          const SizedBox(height: 16),
-
-          // Derivation path & network
-          _RevealField(icon: Icons.route, label: 'Derivation Path', value: f['Derivation Path'] ?? '', isMono: true),
-          const SizedBox(height: 12),
-
-          // Info card
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFBFCABA).withOpacity(0.3))),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              if (f.containsKey('Network')) ...[
-                _InfoRow('Network', f['Network']!),
-                if (f.containsKey('Wallet')) const Divider(height: 20, color: Color(0xFFE1E3E4)),
+            // Warning
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.warning_amber_rounded, size: 16, color: kWarning),
+                const SizedBox(width: 8),
+                Text('Make sure no one is watching your screen.',
+                  style: TextStyle(fontSize: 12, color: kWarning, fontWeight: FontWeight.w500)),
               ],
-              if (f.containsKey('Wallet')) ...[
-                _InfoRow('Wallet', f['Wallet']!),
-                if (f.containsKey('Created')) const Divider(height: 20, color: Color(0xFFE1E3E4)),
-              ],
-              if (f.containsKey('Created'))
-                _InfoRow('Created', f['Created']!),
-            ]),
-          ),
-          const SizedBox(height: 32),
-        ]),
+            ),
+            const SizedBox(height: 24),
+
+            // Actions
+            Container(
+              decoration: BoxDecoration(
+                color: kSurfaceContainerLowest,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: kSurfaceContainerHighest),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: kSurfaceContainerLow,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                    ),
+                    child: const Text('Actions',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, letterSpacing: 0.5, color: kOnSurfaceVariant)),
+                  ),
+                  _actionTile(Icons.content_copy_outlined, 'Copy to clipboard', () {
+                    Clipboard.setData(ClipboardData(text: words.join(' ')));
+                    HapticFeedback.lightImpact();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Copied to clipboard'), duration: Duration(seconds: 2)),
+                    );
+                  }),
+                  const Divider(height: 1, thickness: 1, color: kSurfaceContainerHighest, indent: 56, endIndent: 16),
+                  _actionTile(Icons.upload_outlined, 'Export', () {}),
+                  const Divider(height: 1, thickness: 1, color: kSurfaceContainerHighest, indent: 56, endIndent: 16),
+                  _actionTile(Icons.edit_outlined, 'Edit', () {}),
+                  const Divider(height: 1, thickness: 1, color: kSurfaceContainerHighest, indent: 56, endIndent: 16),
+                  _actionTile(Icons.delete_outlined, 'Delete', () {
+                    Navigator.of(context).pop();
+                  }, isError: true),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Auto-hide timer with circular progress
+            AnimatedOpacity(
+              opacity: _revealed ? 1 : 0,
+              duration: const Duration(milliseconds: 300),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.timer_outlined, size: 16, color: kOnSurfaceVariant),
+                  const SizedBox(width: 8),
+                  Text('Auto-hide in $_timer s',
+                    style: TextStyle(fontSize: 12, color: kOnSurfaceVariant, fontWeight: FontWeight.w500)),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 32, height: 32,
+                    child: CustomPaint(
+                      painter: _CircularProgressPainter(
+                        progress: _progress,
+                        backgroundColor: kSurfaceContainerHigh,
+                        progressColor: kPrimary,
+                        strokeWidth: 3,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+          ],
+        ),
       ),
     );
   }
-}
 
-class _SeedPhraseGrid extends StatefulWidget {
-  final List<String> words;
-  const _SeedPhraseGrid({required this.words});
-
-  @override
-  State<_SeedPhraseGrid> createState() => _SeedPhraseGridState();
-}
-
-class _SeedPhraseGridState extends State<_SeedPhraseGrid> {
-  bool _revealed = false;
-  int _timer = 30;
-  Timer? _t;
-
-  @override
-  void dispose() { _t?.cancel(); super.dispose(); }
-
-  void _startTimer() {
-    _t?.cancel();
-    setState(() => _timer = 30);
-    _t = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) { t.cancel(); return; }
-      setState(() => _timer--);
-      if (_timer <= 0) { t.cancel(); if (mounted) setState(() => _revealed = false); }
-    });
+  Widget _buildWordGrid(List<String> words, String key) {
+    return GridView.count(
+      key: ValueKey(key),
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 4,
+      mainAxisSpacing: 16,
+      crossAxisSpacing: 16,
+      childAspectRatio: 1.4,
+      children: words.asMap().entries.map((entry) {
+        final i = entry.key;
+        final w = entry.value;
+        return Container(
+          decoration: BoxDecoration(
+            color: kSurfaceContainerLow,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: kSurfaceContainerHighest),
+          ),
+          child: Center(
+            child: Text(
+              _revealed ? w : '••',
+              style: TextStyle(
+                fontSize: _revealed ? 13 : 14,
+                fontWeight: FontWeight.w500,
+                color: kOnSurface,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        );
+      }).toList(),
+    );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _revealed ? const Color(0xFFF59E0B).withOpacity(0.3) : const Color(0xFFBFCABA).withOpacity(0.3)),
-      ),
-      child: Column(children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text('Seed Phrase', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _revealed ? const Color(0xFFF59E0B) : const Color(0xFF40493D))),
-          GestureDetector(
-            onTap: () {
-              if (!_revealed) {
-                setState(() => _revealed = true);
-                _startTimer();
-              } else {
-                _t?.cancel();
-                setState(() => _revealed = false);
-              }
-            },
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(_revealed ? Icons.visibility_off : Icons.visibility, size: 16, color: const Color(0xFF0D631B)),
-              const SizedBox(width: 4),
-              Text(_revealed ? 'Hide' : 'Reveal', style: const TextStyle(fontSize: 12, color: Color(0xFF0D631B), fontWeight: FontWeight.w500)),
-            ]),
-          ),
-        ]),
-        const SizedBox(height: 16),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 2.5,
-          ),
-          itemCount: widget.words.length,
-          itemBuilder: (context, index) {
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F5),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFE1E3E4)),
-              ),
-              child: Row(children: [
-                Text('${index + 1}.', style: const TextStyle(fontSize: 11, color: Color(0xFF40493D), fontWeight: FontWeight.w500)),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    _revealed ? widget.words[index] : '••••',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: _revealed ? const Color(0xFF191C1D) : const Color(0xFF40493D)),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ]),
-            );
-          },
+  Widget _actionTile(IconData icon, String label, VoidCallback onTap, {bool isError = false}) {
+    return InkWell(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Icon(icon, size: 24, color: isError ? kError : kOnSurfaceVariant),
+            const SizedBox(width: 16),
+            Expanded(child: Text(label,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: isError ? kError : kOnSurface))),
+            Icon(Icons.chevron_right, size: 20, color: isError ? kError : kOnSurfaceVariant),
+          ],
         ),
-        if (_revealed) ...[
-          const SizedBox(height: 12),
-          Row(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.timer_outlined, size: 14, color: Color(0xFFF59E0B)),
-            const SizedBox(width: 4),
-            Text('Auto-hide in $_timer s', style: const TextStyle(fontSize: 11, color: Color(0xFFF59E0B), fontWeight: FontWeight.w500)),
-          ]),
-        ],
-      ]),
+      ),
     );
   }
 }
