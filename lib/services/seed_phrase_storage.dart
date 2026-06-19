@@ -127,8 +127,7 @@ class SeedPhraseStorage {
   /// defense. For maximum security, avoid holding the seed as a String
   /// for longer than necessary.
   static void _zeroString(String s) {
-    // Force overwrite via code units (best effort in Dart)
-    final codes = s.codeUnits;
+    final codes = List<int>.from(s.codeUnits);
     for (int i = 0; i < codes.length; i++) {
       codes[i] = 0;
     }
