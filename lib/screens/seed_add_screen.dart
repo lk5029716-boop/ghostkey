@@ -5,10 +5,6 @@ import '../vault_data.dart';
 import '../store/vault_store.dart';
 import '../crypto/bip39.dart';
 
-// ═══════════════════════════════════════════════════════════════
-// SEED PHRASE ADD SCREEN
-// ═══════════════════════════════════════════════════════════════
-
 class SeedAddScreen extends StatefulWidget {
   const SeedAddScreen({super.key});
 
@@ -25,7 +21,9 @@ class _SeedAddScreenState extends State<SeedAddScreen> {
   static const _surfaceContainerLow = Color(0xFFF3F4F5);
   static const _error = Color(0xFFBA1A1A);
   static const _secondaryContainer = Color(0xFFACF4A4);
-  static const _onSecondaryContainer = Color(0xFF307231);
+
+  static const _networks = ['Ethereum', 'Bitcoin', 'Solana', 'Polygon', 'BSC', 'Avalanche', 'Arbitrum', 'Optimism', 'Other'];
+  static const _wallets = ['Ledger Nano X', 'Ledger Nano S', 'Trezor Model T', 'Trezor One', 'GridPlus', 'Keystone', 'Software', 'Other'];
 
   final _titleCtrl = TextEditingController();
   final _phraseCtrl = TextEditingController();
@@ -39,9 +37,6 @@ class _SeedAddScreenState extends State<SeedAddScreen> {
   bool _phraseValid = false;
   String? _errorMessage;
   bool _wordlistLoaded = false;
-
-  static const List<String> _networks = ['Ethereum', 'Bitcoin', 'Solana', 'Polygon', 'BSC', 'Avalanche', 'Arbitrum', 'Optimism', 'Other'];
-  static const List<String> _wallets = ['Ledger Nano X', 'Ledger Nano S', 'Trezor Model T', 'Trezor One', 'GridPlus', 'Keystone', 'Software', 'Other'];
 
   @override
   void initState() {
@@ -69,56 +64,40 @@ class _SeedAddScreenState extends State<SeedAddScreen> {
     super.dispose();
   }
 
+  static int _wordCount(String value) =>
+      value.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+
   void _onPhraseChanged(String value) {
-    final words = value.trim().toLowerCase().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
-    if (_wordlistLoaded && words.isNotEmpty) {
-      final allValid = words.every((w) => Bip39Validator.isValidWord(w));
-      final validCount = words.length == 12 || words.length == 24;
-      setState(() => _phraseValid = allValid && validCount);
-    } else {
-      setState(() => _phraseValid = false);
-    }
-    setState(() => _errorMessage = null);
+    final words = _wordCount(value);
+    final allValid = words > 0 && _wordlistLoaded && value.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).every((w) => Bip39Validator.isValidWord(w));
+    setState(() {
+      _phraseValid = allValid && (words == 12 || words == 24);
+      _errorMessage = null;
+    });
   }
 
   Future<void> _pastePhrase() async {
     final data = await Clipboard.getData('text/plain');
-    if (data?.text != null) {
-      _phraseCtrl.text = data!.text!.trim();
-      _onPhraseChanged(_phraseCtrl.text);
-      HapticFeedback.lightImpact();
-    }
+    if (data?.text == null) return;
+    _phraseCtrl.text = data!.text!.trim();
+    _onPhraseChanged(_phraseCtrl.text);
+    HapticFeedback.lightImpact();
   }
 
   Future<void> _save() async {
-    if (!_wordlistLoaded) {
-      _showError('Wordlist not loaded yet. Please wait.');
-      return;
-    }
+    if (!_wordlistLoaded) return _showError('Wordlist not loaded yet. Please wait.');
 
     final title = _titleCtrl.text.trim();
-    if (title.isEmpty) {
-      _showError('Title is required');
-      return;
-    }
+    if (title.isEmpty) return _showError('Title is required');
 
     final phrase = _phraseCtrl.text.trim();
-    if (phrase.isEmpty) {
-      _showError('Seed phrase is required');
-      return;
-    }
+    if (phrase.isEmpty) return _showError('Seed phrase is required');
 
     final words = phrase.toLowerCase().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
-    if (words.length != 12 && words.length != 24) {
-      _showError('Seed phrase must be 12 or 24 words (got ${words.length})');
-      return;
-    }
+    if (words.length != 12 && words.length != 24) return _showError('Seed phrase must be 12 or 24 words (got ${words.length})');
 
     final validation = Bip39Validator.validate(words);
-    if (!validation.isValid) {
-      _showError(validation.error ?? 'Invalid seed phrase (checksum failed)');
-      return;
-    }
+    if (!validation.isValid) return _showError(validation.error ?? 'Invalid seed phrase (checksum failed)');
 
     setState(() => _saving = true);
     try {
@@ -145,16 +124,15 @@ class _SeedAddScreenState extends State<SeedAddScreen> {
         fields: fields,
       ));
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Seed phrase saved securely'),
-            backgroundColor: _primary,
-            duration: Duration(seconds: 2),
-          ),
-        );
-        Navigator.of(context).pop(true);
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Seed phrase saved securely'),
+          backgroundColor: _primary,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      Navigator.of(context).pop(true);
     } catch (e) {
       _showError('Failed to save: $e');
     } finally {
@@ -229,13 +207,15 @@ class _SeedAddScreenState extends State<SeedAddScreen> {
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           ),
-          style: const TextStyle(fontSize: 14, color: _onSurface, fontFamily: maxLines > 1 ? null : 'monospace'),
+          style: TextStyle(fontSize: 14, color: _onSurface, fontFamily: maxLines > 1 ? null : 'monospace'),
         ),
       ],
     );
   }
 
   Widget _phraseField() {
+    final count = _wordCount(_phraseCtrl.text);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -282,15 +262,13 @@ class _SeedAddScreenState extends State<SeedAddScreen> {
             const SizedBox(width: 6),
             Expanded(child: Text(_errorMessage!, style: const TextStyle(fontSize: 12, color: _error))),
           ]),
-        ] else if (_phraseCtrl.text.isNotEmpty && _wordlistLoaded) ...[
+        ] else if (count > 0 && _wordlistLoaded) ...[
           const SizedBox(height: 6),
           Row(children: [
             Icon(_phraseValid ? Icons.check_circle : Icons.warning, size: 14, color: _phraseValid ? _primary : _error),
             const SizedBox(width: 6),
             Text(
-              _phraseValid
-                  ? 'Valid ${_phraseCtrl.text.trim().split(RegExp(r"\\s+")).where((w) => w.isNotEmpty).length}-word phrase ✓'
-                  : 'Invalid phrase (check word count or spelling)',
+              _phraseValid ? '$count-word phrase ✓' : 'Invalid phrase (check word count or spelling)',
               style: TextStyle(fontSize: 12, color: _phraseValid ? _primary : _error, fontWeight: FontWeight.w500),
             ),
           ]),
@@ -311,7 +289,7 @@ class _SeedAddScreenState extends State<SeedAddScreen> {
             borderRadius: BorderRadius.circular(10),
           ),
           child: DropdownButtonFormField<String>(
-            value: ctrl.text.isNotEmpty ? ctrl.text : null,
+            value: ctrl.text.isEmpty ? null : ctrl.text,
             isExpanded: true,
             decoration: InputDecoration(
               hintText: hint,
@@ -337,11 +315,10 @@ class _SeedAddScreenState extends State<SeedAddScreen> {
       child: OutlinedButton.icon(
         onPressed: _wordlistLoaded && !_saving
             ? () {
-                // Generate 24 random BIP39 words from the loaded wordlist
                 final wordlist = Bip39Validator.words;
-                if (wordlist == null || wordlist.length != 2048) return;
+                if (wordlist == null || wordlist.isEmpty) return;
                 final rng = math.Random.secure();
-                final selected = List.generate(24, (_) => wordlist[rng.nextInt(2048)]);
+                final selected = List.generate(24, (_) => wordlist[rng.nextInt(wordlist.length)]);
                 final phrase = selected.join(' ');
                 _phraseCtrl.text = phrase;
                 _onPhraseChanged(phrase);
