@@ -80,16 +80,8 @@ void main() async {
 
 /// Seed demo vault items on first launch only.
 Future<void> _seedDemoDataIfNeeded() async {
-  if (await VaultStore.instance.totalCount > 0) return;
-
-  for (final item in kVaultItems) {
-    try {
-      await VaultStore.instance.addItem(item);
-    } catch (e) {
-      debugPrint('Failed to seed demo item ${item.title}: $e');
-    }
-  }
-  debugPrint('Seeded ${kVaultItems.length} demo vault items');
+  // Disabled — user wants real data only, not demo
+  return;
 }
 
 class GhostKeyApp extends StatefulWidget {
@@ -710,7 +702,7 @@ class _VaultPageState extends State<VaultPage> {
         id: 'code_${c.hashCode}',
         title: c.issuer.isNotEmpty ? c.issuer : c.account,
         subtitle: c.account.isNotEmpty ? c.account : 'TOTP',
-        category: VaultCategory.codes,
+        category: VaultCategory.totp,
         icon: Icons.security,
         iconColor: kPrimary,
         iconBgColor: const Color(0xFFC8E6C9),
