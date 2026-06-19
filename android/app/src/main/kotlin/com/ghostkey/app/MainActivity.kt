@@ -25,8 +25,13 @@ class MainActivity : FlutterFragmentActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "setSecure" -> {
-                    val secure = call.argument<Boolean>(true)
-                    if (secure) {
+                    val args = call.arguments
+                    val secure = when (args) {
+                        is Boolean -> args
+                        is Map<*, *> -> args["secure"] as? Boolean
+                        else -> null
+                    }
+                    if (secure == true) {
                         window.setFlags(
                             WindowManager.LayoutParams.FLAG_SECURE,
                             WindowManager.LayoutParams.FLAG_SECURE
