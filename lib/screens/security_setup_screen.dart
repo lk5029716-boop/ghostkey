@@ -166,7 +166,6 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
   Widget build(BuildContext context) {
     const primary = Color(0xFF0D631B);
     const onSurface = Color(0xFF191C1D);
-    const onSurfaceVar = Color(0xFF40493D);
     const surface = Color(0xFFF8F9FA);
     const outlineVar = Color(0xFFBFCABA);
     const cardBg = Colors.white;
@@ -211,8 +210,7 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
             _actionRow(
               icon: Icons.refresh,
               title: 'Change PIN',
-              enabled: _pinEnabled,
-              onTap: _changePin,
+              onTap: _pinEnabled ? _changePin : null,
             ),
           ]),
           const SizedBox(height: 24),

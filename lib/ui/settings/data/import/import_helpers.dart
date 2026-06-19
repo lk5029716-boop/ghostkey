@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// M3 progress dialog for long-running imports.
-/// Show with [showGhostKeyProgress], dismiss with [Navigator.pop].
+/// Shows a spinning indicator + message.
 Future<void> showGhostKeyProgress(BuildContext context, String message) async {
   await showDialog(
     context: context,
@@ -32,14 +32,14 @@ Future<void> hideGhostKeyProgress(BuildContext context) async {
   }
 }
 
-/// M3 success dialog with an OK button.
+/// M3 success dialog with count of imported codes.
 Future<void> showGhostKeySuccess(BuildContext context, int count) async {
   await showDialog(
     context: context,
     builder: (ctx) => AlertDialog(
-      icon: Icon(
+      icon: const Icon(
         Icons.check_circle_outline,
-        color: Theme.of(ctx).colorScheme.primary,
+        color: Color(0xFF0D631B),
         size: 48,
       ),
       title: const Text('Import complete'),
@@ -48,6 +48,7 @@ Future<void> showGhostKeySuccess(BuildContext context, int count) async {
             ? '1 code added to your vault.'
             : '$count codes added to your vault.',
         textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 16),
       ),
       actions: [
         TextButton(
@@ -68,9 +69,9 @@ Future<void> showGhostKeyError(
   await showDialog(
     context: context,
     builder: (ctx) => AlertDialog(
-      icon: Icon(
+      icon: const Icon(
         Icons.error_outline,
-        color: Theme.of(ctx).colorScheme.error,
+        color: Color(0xFFBA1A1A),
         size: 48,
       ),
       title: Text(title),

@@ -39,7 +39,7 @@ class ImportFromAnotherAppScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Intro card explaining what this screen does.
+              // Intro card
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -64,7 +64,7 @@ class ImportFromAnotherAppScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              // Sources card.
+              // Sources card
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -163,11 +163,7 @@ class ImportFromAnotherAppScreen extends StatelessWidget {
   }
 
   void _import(BuildContext context, ImportType type) {
-    // Pop back to settings first so the import flow's dialog/screen
-    // shows over the settings page (matches what users expect).
     Navigator.of(context).pop();
-    // Defer the import trigger to the next frame so the pop animation
-    // has time to start before the file picker dialog opens.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ImportService().initiateImport(context, type);
     });
