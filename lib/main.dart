@@ -70,15 +70,6 @@ void main() async {
       VaultStore.instance.database, // create vault DB if not exists
     ]);
 
-    // Unlock vault with master key (stored in secure storage)
-    // On first launch, generate a new master key
-    var masterKey = await SeedPhraseStorage.readMasterKey();
-    if (masterKey == null) {
-      masterKey = SeedPhraseStorage.generateMasterKey();
-      await SeedPhraseStorage.storeMasterKey(masterKey);
-    }
-    VaultStore.instance.setMasterKey(masterKey);
-
     // Seed demo data if vault is empty
     await _seedDemoDataIfNeeded();
   } catch (e, st) {
