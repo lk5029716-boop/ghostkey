@@ -1187,3 +1187,47 @@ class _TwoFactorDetailScreenState extends State<TwoFactorDetailScreen> {
     );
   }
 }
+
+// ═══════════════════════════════════════════════════════════════
+// CIRCULAR PROGRESS PAINTER (for seed phrase auto-hide timer)
+// ═══════════════════════════════════════════════════════════════
+class _CircularProgressPainter extends CustomPainter {
+  final double progress;
+  final Color backgroundColor;
+  final Color progressColor;
+  final double strokeWidth;
+
+  _CircularProgressPainter({
+    required this.progress,
+    required this.backgroundColor,
+    required this.progressColor,
+    required this.strokeWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - strokeWidth / 2;
+
+    canvas.drawCircle(center, radius, Paint()
+      ..color = backgroundColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round);
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -3.14159 / 2,
+      2 * 3.14159 * progress,
+      false,
+      Paint()
+        ..color = progressColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldReaint(covariant _CircularProgressPainter old) => old.progress != progress;
+}
