@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// SECURITY SETUP SCREEN
+// SECURITY SETUP SCREEN — GhostKey themed
 // PIN setup, lockout config, biometric, screenshot control
 // ═══════════════════════════════════════════════════════════════
 import 'package:flutter/material.dart';
@@ -66,6 +66,19 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
     await p.setInt(key, v);
   }
 
+  // Toggle FLAG_SECURE on the main window to block/allow screenshots
+  void _setScreenshotAllowed(bool allow) {
+    if (allow) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      // Clear the secure flag by setting a new window flag via MethodChannel
+      const channel = MethodChannel('ghostkey/window');
+      channel.invokeMethod('setSecure', false).catchError((_) {});
+    } else {
+      const channel = MethodChannel('ghostkey/window');
+      channel.invokeMethod('setSecure', true).catchError((_) {});
+    }
+  }
+
   Future<void> _setBiometric(bool v) async {
     if (v && (!_biometricSupported || !_biometricEnrolled)) {
       if (!mounted) return;
@@ -100,12 +113,18 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
   void _showAttemptsPicker() {
     showModalBottomSheet(
       context: context,
+      backgroundColor: const Color(0xFFF8F9FA),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (_) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [3, 5, 10].map((v) {
           return ListTile(
-            title: Text('$v attempts'),
-            trailing: _maxAttempts == v ? const Icon(Icons.check, color: Colors.red) : null,
+            title: Text('$v attempts',
+                style: const TextStyle(fontSize: 16, color: Color(0xFF191C1D))),
+            trailing: _maxAttempts == v
+                ? const Icon(Icons.check, color: Color(0xFF0D631B))
+                : null,
             onTap: () {
               setState(() => _maxAttempts = v);
               _saveInt(_kMaxAttempts, v);
@@ -120,12 +139,18 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
   void _showLockoutPicker() {
     showModalBottomSheet(
       context: context,
+      backgroundColor: const Color(0xFFF8F9FA),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (_) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [1, 5, 15].map((m) {
           return ListTile(
-            title: Text('$m ${m == 1 ? 'minute' : 'minutes'}'),
-            trailing: _lockoutMinutes == m ? const Icon(Icons.check, color: Colors.red) : null,
+            title: Text('$m ${m == 1 ? 'minute' : 'minutes'}',
+                style: const TextStyle(fontSize: 16, color: Color(0xFF191C1D))),
+            trailing: _lockoutMinutes == m
+                ? const Icon(Icons.check, color: Color(0xFF0D631B))
+                : null,
             onTap: () {
               setState(() => _lockoutMinutes = m);
               _saveInt(_kLockoutTime, m);
@@ -139,11 +164,12 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const red = Color(0xFFE53935);
+    const primary = Color(0xFF0D631B);
     const onSurface = Color(0xFF191C1D);
-    const onSurfaceVar = Color(0xFF757575);
-    const surface = Color(0xFFFFFFFF);
-    const divider = Color(0xFFE0E0E0);
+    const onSurfaceVar = Color(0xFF40493D);
+    const surface = Color(0xFFF8F9FA);
+    const outlineVar = Color(0xFFBFCABA);
+    const cardBg = Colors.white;
 
     return Scaffold(
       backgroundColor: surface,
@@ -155,81 +181,98 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text('Security',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: onSurface)),
+            style: TextStyle(
+                fontSize: 18, fontWeight: FontWeight.w700, color: primary)),
         centerTitle: false,
       ),
       body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
+          const SizedBox(height: 8),
+
           // ── Section: Settings ──────────────────────────────────
-          _sectionHeader('Settings', red),
-          _toggleRow(
-            icon: Icons.grid_view_rounded,
-            iconColor: red,
-            title: 'PIN code',
-            value: _pinEnabled,
-            onChanged: (v) {
-              setState(() => _pinEnabled = v);
-              _saveBool(_kPinEnabled, v);
-              if (v && !_pinEnabled) {
-                // First time enabling — prompt to set up PIN
-                _changePin();
-              }
-            },
-          ),
-          _divider(divider),
-          _actionRow(
-            icon: Icons.refresh,
-            iconColor: red,
-            title: 'Change PIN',
-            onTap: _pinEnabled ? _changePin : null,
-          ),
+          _sectionHeader('Settings', primary),
+          const SizedBox(height: 8),
+          _card(cardBg, outlineVar, [
+            _toggleRow(
+              icon: Icons.grid_view_rounded,
+              title: 'PIN code',
+              value: _pinEnabled,
+              activeColor: primary,
+              onChanged: (v) {
+                setState(() => _pinEnabled = v);
+                _saveBool(_kPinEnabled, v);
+                if (v) {
+                  _changePin();
+                }
+              },
+            ),
+            _divider(outlineVar),
+            _actionRow(
+              icon: Icons.refresh,
+              title: 'Change PIN',
+              enabled: _pinEnabled,
+              onTap: _changePin,
+            ),
+          ]),
+          const SizedBox(height: 24),
 
           // ── Section: Lockout settings ─────────────────────────
-          _sectionHeader('Lockout settings', red),
-          _valueRow(
-            icon: Icons.remove_circle_outline,
-            iconColor: red,
-            title: 'Max failed attempts',
-            value: '$_maxAttempts',
-            description:
-                'Select the maximum number of unsuccessful attempts to enter the passcode before locking the application (lockout time can be changed below).',
-            onTap: _showAttemptsPicker,
-          ),
-          _divider(divider),
-          _valueRow(
-            icon: Icons.timer_outlined,
-            iconColor: red,
-            title: 'Lockout time',
-            value: '$_lockoutMinutes ${_lockoutMinutes == 1 ? 'minute' : 'minutes'}',
-            description:
-                'Select the time for which the app will be locked.',
-            onTap: _showLockoutPicker,
-          ),
+          _sectionHeader('Lockout settings', primary),
+          const SizedBox(height: 8),
+          _card(cardBg, outlineVar, [
+            _valueRow(
+              icon: Icons.remove_circle_outline,
+              title: 'Max failed attempts',
+              value: '$_maxAttempts',
+              description:
+                  'Select the maximum number of unsuccessful attempts to enter the passcode before locking the application (lockout time can be changed below).',
+              onTap: _showAttemptsPicker,
+            ),
+            _divider(outlineVar),
+            _valueRow(
+              icon: Icons.timer_outlined,
+              title: 'Lockout time',
+              value:
+                  '$_lockoutMinutes ${_lockoutMinutes == 1 ? 'minute' : 'minutes'}',
+              description: 'Select the time for which the app will be locked.',
+              onTap: _showLockoutPicker,
+            ),
+          ]),
+          const SizedBox(height: 24),
 
           // ── Section: Biometrics ────────────────────────────────
-          _sectionHeader('Biometrics', red),
-          _toggleRow(
-            icon: Icons.fingerprint,
-            iconColor: red,
-            title: 'Biometric Lock',
-            value: _biometricEnabled,
-            onChanged: (_biometricSupported && _biometricEnrolled) ? _setBiometric : null,
-          ),
+          _sectionHeader('Biometrics', primary),
+          const SizedBox(height: 8),
+          _card(cardBg, outlineVar, [
+            _toggleRow(
+              icon: Icons.fingerprint,
+              title: 'Biometric Lock',
+              value: _biometricEnabled,
+              activeColor: primary,
+              onChanged:
+                  (_biometricSupported && _biometricEnrolled) ? _setBiometric : null,
+            ),
+          ]),
+          const SizedBox(height: 24),
 
-          // ── Allow screenshots ──────────────────────────────────
-          _divider(divider),
-          _toggleRow(
-            icon: Icons.screenshot_monitor,
-            iconColor: red,
-            title: 'Allow screenshots',
-            subtitle: 'Allow screenshots of the app for 5 minutes.',
-            value: _allowScreenshots,
-            onChanged: (v) {
-              setState(() => _allowScreenshots = v);
-              _saveBool(_kAllowScreenshots, v);
-            },
-          ),
-
+          // ── Section: Screenshots ───────────────────────────────
+          _sectionHeader('Screenshots', primary),
+          const SizedBox(height: 8),
+          _card(cardBg, outlineVar, [
+            _toggleRow(
+              icon: Icons.screenshot_monitor,
+              title: 'Allow screenshots',
+              subtitle: 'Allow screenshots of the app for 5 minutes.',
+              value: _allowScreenshots,
+              activeColor: primary,
+              onChanged: (v) {
+                setState(() => _allowScreenshots = v);
+                _saveBool(_kAllowScreenshots, v);
+                _setScreenshotAllowed(v);
+              },
+            ),
+          ]),
           const SizedBox(height: 32),
         ],
       ),
@@ -240,90 +283,115 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
 
   Widget _sectionHeader(String title, Color color) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+      padding: const EdgeInsets.only(left: 4),
       child: Text(title,
           style: TextStyle(
-              fontSize: 14, fontWeight: FontWeight.w700, color: color)),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: color,
+              letterSpacing: 0.1)),
     );
   }
 
   Widget _divider(Color color) {
-    return Divider(height: 1, color: color, indent: 56);
+    return Divider(height: 1, thickness: 1, color: color.withOpacity(0.1), indent: 56);
   }
 
-  Widget _iconContainer(IconData icon, Color color) {
+  Widget _card(Color bg, Color outline, List<Widget> children) {
     return Container(
-      width: 32,
-      height: 32,
-      alignment: Alignment.center,
-      child: Icon(icon, color: color, size: 22),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: outline.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 4,
+              offset: const Offset(0, 1)),
+        ],
+      ),
+      child: Column(children: children),
+    );
+  }
+
+  Widget _iconBadge(IconData icon, {Color? color}) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: const Color(0xFFACF4A4).withOpacity(0.35),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(icon, color: color ?? const Color(0xFF0D631B), size: 22),
     );
   }
 
   Widget _toggleRow({
     required IconData icon,
-    required Color iconColor,
     required String title,
     String? subtitle,
     required bool value,
+    required Color activeColor,
     ValueChanged<bool>? onChanged,
   }) {
     final disabled = onChanged == null;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(children: [
-        _iconContainer(icon, disabled ? Colors.grey : iconColor),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title,
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w400,
-                      color: disabled ? Colors.grey : const Color(0xFF191C1D))),
-              if (subtitle != null) ...[
-                const SizedBox(height: 2),
-                Text(subtitle,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+    return InkWell(
+      onTap: disabled ? null : () => onChanged(!value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(children: [
+          _iconBadge(icon, color: disabled ? Colors.grey : null),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w400,
+                        color: disabled ? Colors.grey : const Color(0xFF191C1D))),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
-        Switch(
-          value: value,
-          onChanged: onChanged,
-          activeColor: const Color(0xFFE53935),
-          activeTrackColor: const Color(0xFFE53935).withOpacity(0.3),
-        ),
-      ]),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: activeColor,
+            activeTrackColor: activeColor.withOpacity(0.3),
+          ),
+        ]),
+      ),
     );
   }
 
   Widget _actionRow({
     required IconData icon,
-    required Color iconColor,
     required String title,
-    VoidCallback? onTap,
+    required VoidCallback? onTap,
   }) {
-    final disabled = onTap == null;
+    final enabled = onTap != null;
     return InkWell(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(children: [
-          _iconContainer(icon, disabled ? Colors.grey : iconColor),
+          _iconBadge(icon, color: enabled ? null : Colors.grey),
           const SizedBox(width: 16),
           Expanded(
             child: Text(title,
                 style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w400,
-                    color: disabled ? Colors.grey : const Color(0xFF191C1D))),
+                    color: enabled ? const Color(0xFF191C1D) : Colors.grey)),
           ),
           Icon(Icons.chevron_right,
-              color: disabled ? Colors.grey[300] : const Color(0xFF40493D)),
+              color: enabled ? const Color(0xFF40493D) : Colors.grey[300]),
         ]),
       ),
     );
@@ -331,7 +399,6 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
 
   Widget _valueRow({
     required IconData icon,
-    required Color iconColor,
     required String title,
     required String value,
     required String description,
@@ -345,7 +412,7 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
-              _iconContainer(icon, iconColor),
+              _iconBadge(icon),
               const SizedBox(width: 16),
               Expanded(
                 child: Text(title,
@@ -355,15 +422,16 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
                         color: Color(0xFF191C1D))),
               ),
               Text(value,
-                  style: const TextStyle(fontSize: 14, color: Color(0xFF757575))),
+                  style: const TextStyle(fontSize: 14, color: Color(0xFF40493D))),
               const SizedBox(width: 4),
               const Icon(Icons.chevron_right, color: Color(0xFF40493D)),
             ]),
             const SizedBox(height: 6),
             Padding(
-              padding: const EdgeInsets.only(left: 48),
+              padding: const EdgeInsets.only(left: 56),
               child: Text(description,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[500], height: 1.4)),
+                  style: TextStyle(
+                      fontSize: 12, color: Colors.grey[500], height: 1.4)),
             ),
           ],
         ),
