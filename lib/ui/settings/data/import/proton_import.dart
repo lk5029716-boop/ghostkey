@@ -99,6 +99,71 @@ List<Code> parseProtonExport(Map<String, dynamic> decoded) {
   return codes;
 }
 
+List<Code> _parseProtonEntries(
+  Map<String, dynamic> decoded,
+  void Function(int current, int total) onProgress,
+) {
+  if (isEncryptedProtonExport(decoded)) {
+    throw const FormatException('Password protected Proton export');
+  }
+  final entries = decoded['entries'];
+  if (entries is! List) throw const FormatException('Invalid Proton export');
+
+  final total = entries.length;
+  final codes = <Code>[];
+  for (var i = 0; i < entries.length; i++) {
+    final entry = entries[i];
+    if (entry is! Map) continue;
+    try {
+      final entryMap = Map<String, dynamic>.from(entry);
+      final content = entryMap['content'];
+      if (content is! Map) continue;
+      final contentMap = Map<String, dynamic>.from(content);
+      final type = contentMap['entry_type'] as String?;
+
+      final Code code;
+      switch (type) {
+        case 'Steam':
+          final steamUri = contentMap['uri'] as String?;
+          if (steamUri == null || !steamUri.startsWith('steam://')) continue;
+          final name = (contentMap['name'] as String?)?.trim();
+          code = Code.fromAccountAndSecret(
+            Type.steam,
+            '',
+            (name == null || name.isEmpty) ? 'Steam' : name,
+            steamUri.substring('steam://'.length),
+            null,
+            Code.steamDigits,
+          );
+          break;
+        case 'Totp':
+          final otpUri = contentMap['uri'] as String?;
+          if (otpUri == null || !otpUri.startsWith('otpauth://')) continue;
+          final parsed = Code.fromOTPAuthUrl(otpUri);
+          final encI = Uri.encodeComponent(parsed.issuer);
+          final encA = Uri.encodeComponent(parsed.account);
+          final url =
+              'otpauth://totp/$encI:$encA?secret=${parsed.secret}&issuer=$encI&algorithm=${parsed.algorithm.name.toUpperCase()}&digits=${parsed.digits}&period=${parsed.period}';
+          code = Code.fromOTPAuthUrl(url);
+          break;
+        default:
+          _logger.warning('Unsupported Proton entry type: $type');
+          continue;
+      }
+
+      final note = entryMap['note'] as String?;
+      final finalCode = (note != null && note.isNotEmpty)
+          ? code.copyWith(display: code.display.copyWith(note: note))
+          : code;
+      codes.add(finalCode);
+    } catch (e, s) {
+      _logger.warning('Failed to parse Proton entry', e, s);
+    }
+    onProgress(i + 1, total);
+  }
+  return codes;
+}
+
 /// Decrypts an encrypted Proton export. Returns the inner JSON string.
 String decryptProtonExport(
   Map<String, dynamic> decoded, {
@@ -234,10 +299,22 @@ Future<void> _pickProtonFile(BuildContext context) async {
       }
     }
 
-    final codes = parseProtonExport(decoded);
     if (!context.mounted) return;
     await hideGhostKeyProgress(context);
-    await showImportProgress(context: context, codes: codes);
+    try {
+      await showImportProgressWithParsing(
+        context: context,
+        parser: (onProgress) => _parseProtonEntries(decoded, onProgress),
+      );
+    } catch (e, s) {
+      _logger.severe('Proton import failed', e, s);
+      if (!context.mounted) return;
+      await showGhostKeyError(
+        context,
+        'Import failed',
+        'Could not import Proton export.\nError: $e',
+      );
+    }
   } catch (e, s) {
     _logger.severe('Proton import failed', e, s);
     if (!context.mounted) return;

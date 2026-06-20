@@ -49,17 +49,14 @@ Future<void> _pickAndOTPFile(BuildContext context) async {
   }
 
   if (!context.mounted) return;
-  await showGhostKeyProgress(context, 'Parsing…');
-
   try {
-    final codes = await _parseAndOTPCodes(bytes, password);
-    if (!context.mounted) return;
-    await hideGhostKeyProgress(context);
-    await showImportProgress(context: context, codes: codes);
+    await showImportProgressWithParsing(
+      context: context,
+      parser: (onProgress) => _parseAndOTPCodes(bytes, password, onProgress),
+    );
   } catch (e, s) {
     _logger.severe('andOTP import failed', e, s);
     if (!context.mounted) return;
-    await hideGhostKeyProgress(context);
     final msg = e.toString();
     await showGhostKeyError(
       context,
@@ -80,7 +77,11 @@ bool _looksLikeJson(Uint8List bytes) {
   return false;
 }
 
-Future<List<Code>> _parseAndOTPCodes(Uint8List bytes, String? password) async {
+Future<List<Code>> _parseAndOTPCodes(
+  Uint8List bytes,
+  String? password,
+  void Function(int current, int total) onProgress,
+) async {
   final isPlain = _looksLikeJson(bytes);
 
   late List<dynamic> entries;
@@ -95,8 +96,10 @@ Future<List<Code>> _parseAndOTPCodes(Uint8List bytes, String? password) async {
     entries = jsonDecode(jsonString) as List<dynamic>;
   }
 
+  final total = entries.length;
   final codes = <Code>[];
-  for (final item in entries) {
+  for (var i = 0; i < entries.length; i++) {
+    final item = entries[i];
     try {
       final type = (item['type'] as String).toUpperCase();
       if (type != 'TOTP' && type != 'HOTP' && type != 'STEAM') {
@@ -134,6 +137,7 @@ Future<List<Code>> _parseAndOTPCodes(Uint8List bytes, String? password) async {
     } catch (e, s) {
       _logger.warning('Failed to parse andOTP entry', e, s);
     }
+    onProgress(i + 1, total);
   }
   return codes;
 }

@@ -71,21 +71,24 @@ Future<void> _pickEnteFile(BuildContext context) async {
       ),
     );
 
-    final lines = decrypted.split('\n');
-    final codes = <Code>[];
-    for (final line in lines) {
-      final trimmed = line.trim();
-      if (trimmed.isEmpty) continue;
-      try {
-        codes.add(Code.fromOTPAuthUrl(trimmed));
-      } catch (e) {
-        _logger.warning('Could not parse code: $e');
-      }
-    }
-
     if (!context.mounted) return;
     await hideGhostKeyProgress(context);
-    await showImportProgress(context: context, codes: codes);
+
+    final lines = decrypted.split('\n').where((l) => l.trim().isNotEmpty).toList();
+    try {
+      await showImportProgressWithParsing(
+        context: context,
+        parser: (onProgress) => _parseEnteLines(lines, onProgress),
+      );
+    } catch (e, s) {
+      _logger.severe('Encrypted Ente import failed', e, s);
+      if (!context.mounted) return;
+      await showGhostKeyError(
+        context,
+        'Import failed',
+        'Could not import Ente export.\nError: $e',
+      );
+    }
   } on SecretBoxMacException {
     if (!context.mounted) return;
     await hideGhostKeyProgress(context);
@@ -104,6 +107,23 @@ Future<void> _pickEnteFile(BuildContext context) async {
       'Could not decrypt Ente export.\nError: $e',
     );
   }
+}
+
+List<Code> _parseEnteLines(
+  List<String> lines,
+  void Function(int current, int total) onProgress,
+) {
+  final total = lines.length;
+  final codes = <Code>[];
+  for (var i = 0; i < lines.length; i++) {
+    try {
+      codes.add(Code.fromOTPAuthUrl(lines[i].trim()));
+    } catch (e) {
+      _logger.warning('Could not parse code: $e');
+    }
+    onProgress(i + 1, total);
+  }
+  return codes;
 }
 
 class _EnteDecryptParams {

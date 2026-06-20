@@ -40,18 +40,15 @@ Future<void> _pickRaivoFile(BuildContext context) async {
   }
 
   if (!context.mounted) return;
-  await showGhostKeyProgress(context, 'Parsing…');
-
+  final jsonString = await readPickedImportFileAsString(path);
   try {
-    final jsonString = await readPickedImportFileAsString(path);
-    final codes = _parseRaivoCodes(jsonString);
-    if (!context.mounted) return;
-    await hideGhostKeyProgress(context);
-    await showImportProgress(context: context, codes: codes);
+    await showImportProgressWithParsing(
+      context: context,
+      parser: (onProgress) => _parseRaivoCodes(jsonString, onProgress),
+    );
   } catch (e, s) {
     _logger.severe('Raivo import failed', e, s);
     if (!context.mounted) return;
-    await hideGhostKeyProgress(context);
     await showGhostKeyError(
       context,
       'Import failed',
@@ -60,11 +57,16 @@ Future<void> _pickRaivoFile(BuildContext context) async {
   }
 }
 
-List<Code> _parseRaivoCodes(String jsonString) {
+List<Code> _parseRaivoCodes(
+  String jsonString,
+  void Function(int current, int total) onProgress,
+) {
   final items = jsonDecode(jsonString) as List<dynamic>;
 
+  final total = items.length;
   final codes = <Code>[];
-  for (final item in items) {
+  for (var i = 0; i < items.length; i++) {
+    final item = items[i];
     try {
       final kind = (item['kind'] as String).toLowerCase();
       final algorithm = item['algorithm']?.toString() ?? 'SHA1';
@@ -89,6 +91,7 @@ List<Code> _parseRaivoCodes(String jsonString) {
     } catch (e, s) {
       _logger.warning('Failed to parse Raivo entry', e, s);
     }
+    onProgress(i + 1, total);
   }
   return codes;
 }

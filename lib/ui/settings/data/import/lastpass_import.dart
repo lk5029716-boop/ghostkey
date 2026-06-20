@@ -31,18 +31,15 @@ Future<void> _pickLastpassFile(BuildContext context) async {
   final path = result.files.single.path!;
 
   if (!context.mounted) return;
-  await showGhostKeyProgress(context, 'Parsing…');
-
+  final jsonString = await readPickedImportFileAsString(path);
   try {
-    final jsonString = await readPickedImportFileAsString(path);
-    final codes = _parseLastpassCodes(jsonString);
-    if (!context.mounted) return;
-    await hideGhostKeyProgress(context);
-    await showImportProgress(context: context, codes: codes);
+    await showImportProgressWithParsing(
+      context: context,
+      parser: (onProgress) => _parseLastpassCodes(jsonString, onProgress),
+    );
   } catch (e, s) {
     _logger.severe('LastPass import failed', e, s);
     if (!context.mounted) return;
-    await hideGhostKeyProgress(context);
     await showGhostKeyError(
       context,
       'Import failed',
@@ -51,12 +48,17 @@ Future<void> _pickLastpassFile(BuildContext context) async {
   }
 }
 
-List<Code> _parseLastpassCodes(String jsonString) {
+List<Code> _parseLastpassCodes(
+  String jsonString,
+  void Function(int current, int total) onProgress,
+) {
   final data = json.decode(jsonString) as Map<String, dynamic>;
   final accounts = data['accounts'] as List<dynamic>? ?? [];
 
+  final total = accounts.length;
   final codes = <Code>[];
-  for (final item in accounts) {
+  for (var i = 0; i < accounts.length; i++) {
+    final item = accounts[i];
     try {
       final algorithm = item['algorithm']?.toString() ?? 'SHA1';
       final timer = item['timeStep'] ?? 30;
@@ -71,6 +73,7 @@ List<Code> _parseLastpassCodes(String jsonString) {
     } catch (e, s) {
       _logger.warning('Failed to parse LastPass entry', e, s);
     }
+    onProgress(i + 1, total);
   }
   return codes;
 }

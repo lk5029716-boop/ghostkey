@@ -5,6 +5,7 @@ import '../../../../qr_scanner_screen.dart';
 import '../../../../store/code_store.dart';
 import 'google_auth_qr_parser.dart';
 import 'import_helpers.dart';
+import 'import_progress.dart';
 
 final _logger = Logger('GoogleAuthImport');
 
@@ -33,24 +34,30 @@ Future<void> showGoogleAuthInstruction(BuildContext context) async {
   }
 
   if (!context.mounted) return;
-  await showGhostKeyProgress(context, 'Importing…');
-
   try {
-    final codes = parseGoogleAuth(code);
-    for (final c in codes) {
-      await CodeStore.instance.addCode(c);
-    }
-    if (!context.mounted) return;
-    await hideGhostKeyProgress(context);
-    await showGhostKeySuccess(context, codes.length);
+    await showImportProgressWithParsing(
+      context: context,
+      parser: (onProgress) => _parseGoogleAuthCodes(code, onProgress),
+    );
   } catch (e, s) {
     _logger.severe('Google Auth QR import failed', e, s);
     if (!context.mounted) return;
-    await hideGhostKeyProgress(context);
     await showGhostKeyError(
       context,
       'Import failed',
       'Could not parse the Google Authenticator QR.\nError: $e',
     );
   }
+}
+
+List<Code> _parseGoogleAuthCodes(
+  String qrCodeData,
+  void Function(int current, int total) onProgress,
+) {
+  final codes = parseGoogleAuth(qrCodeData);
+  // Report progress for each parsed code so the dialog shows movement
+  for (var i = 0; i < codes.length; i++) {
+    onProgress(i + 1, codes.length);
+  }
+  return codes;
 }

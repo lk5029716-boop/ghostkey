@@ -48,17 +48,14 @@ Future<void> _pickAegisFile(BuildContext context) async {
   }
 
   if (!context.mounted) return;
-  await showGhostKeyProgress(context, 'Parsing…');
-
   try {
-    final codes = await _parseAegisCodes(decoded, password);
-    if (!context.mounted) return;
-    await hideGhostKeyProgress(context);
-    await showImportProgress(context: context, codes: codes);
+    await showImportProgressWithParsing(
+      context: context,
+      parser: (onProgress) => _parseAegisCodes(decoded, password, onProgress),
+    );
   } catch (e, s) {
     _logger.severe('Aegis import failed', e, s);
     if (!context.mounted) return;
-    await hideGhostKeyProgress(context);
     final msg = e.toString();
     await showGhostKeyError(
       context,
@@ -70,7 +67,11 @@ Future<void> _pickAegisFile(BuildContext context) async {
   }
 }
 
-Future<List<Code>> _parseAegisCodes(dynamic decoded, String? password) async {
+Future<List<Code>> _parseAegisCodes(
+  dynamic decoded,
+  String? password,
+  void Function(int current, int total) onProgress,
+) async {
   final isEncrypted = decoded['header']?['slots'] != null;
 
   Map? aegisDb;
@@ -91,8 +92,11 @@ Future<List<Code>> _parseAegisCodes(dynamic decoded, String? password) async {
     }
   }
 
+  final entries = aegisDb?['entries'] ?? [];
+  final total = entries.length;
   final codes = <Code>[];
-  for (final item in aegisDb?['entries'] ?? []) {
+  for (var i = 0; i < entries.length; i++) {
+    final item = entries[i];
     try {
       final kind = (item['type'] as String).toLowerCase();
       final account = Uri.encodeComponent(item['name'] ?? '');
@@ -132,6 +136,7 @@ Future<List<Code>> _parseAegisCodes(dynamic decoded, String? password) async {
     } catch (e, s) {
       _logger.warning('Failed to parse Aegis entry', e, s);
     }
+    onProgress(i + 1, total);
   }
   return codes;
 }

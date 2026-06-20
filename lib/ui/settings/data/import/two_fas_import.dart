@@ -58,17 +58,14 @@ Future<void> _pick2FasFile(BuildContext context) async {
   }
 
   if (!context.mounted) return;
-  await showGhostKeyProgress(context, 'Parsing…');
-
   try {
-    final codes = await _parse2FasCodes(decoded, password);
-    if (!context.mounted) return;
-    await hideGhostKeyProgress(context);
-    await showImportProgress(context: context, codes: codes);
+    await showImportProgressWithParsing(
+      context: context,
+      parser: (onProgress) => _parse2FasCodes(decoded, password, onProgress),
+    );
   } catch (e, s) {
     _logger.severe('2FAS import failed', e, s);
     if (!context.mounted) return;
-    await hideGhostKeyProgress(context);
     final msg = e.toString();
     await showGhostKeyError(
       context,
@@ -81,7 +78,11 @@ Future<void> _pick2FasFile(BuildContext context) async {
 }
 
 /// Parse 2FAS JSON and return a list of Code objects (not yet saved).
-Future<List<Code>> _parse2FasCodes(dynamic decoded, String? password) async {
+Future<List<Code>> _parse2FasCodes(
+  dynamic decoded,
+  String? password,
+  void Function(int current, int total) onProgress,
+) async {
   final isEncrypted = decoded['reference'] != null;
 
   late List<dynamic> services;
@@ -100,8 +101,10 @@ Future<List<Code>> _parse2FasCodes(dynamic decoded, String? password) async {
     groupIdToName[g['id']] = g['name'];
   }
 
+  final total = services.length;
   final codes = <Code>[];
-  for (final item in services) {
+  for (var i = 0; i < services.length; i++) {
+    final item = services[i];
     try {
       final kind = (item['otp']['tokenType'] as String).toLowerCase();
       var issuer = item['otp']['issuer']?.toString() ?? '';
@@ -137,6 +140,7 @@ Future<List<Code>> _parse2FasCodes(dynamic decoded, String? password) async {
     } catch (e, s) {
       _logger.warning('Failed to parse 2FAS entry', e, s);
     }
+    onProgress(i + 1, total);
   }
   return codes;
 }

@@ -30,18 +30,15 @@ Future<void> _pickImportFile(BuildContext context) async {
   final path = result.files.single.path!;
 
   if (!context.mounted) return;
-  await showGhostKeyProgress(context, 'Parsing…');
-
+  final contents = await File(path).readAsString();
   try {
-    final contents = await File(path).readAsString();
-    final codes = _parsePlainTextCodes(contents);
-    if (!context.mounted) return;
-    await hideGhostKeyProgress(context);
-    await showImportProgress(context: context, codes: codes);
+    await showImportProgressWithParsing(
+      context: context,
+      parser: (onProgress) => _parsePlainTextCodes(contents, onProgress),
+    );
   } catch (e, s) {
     _logger.severe('Plain text import failed', e, s);
     if (!context.mounted) return;
-    await hideGhostKeyProgress(context);
     await showGhostKeyError(
       context,
       'Import failed',
@@ -50,7 +47,10 @@ Future<void> _pickImportFile(BuildContext context) async {
   }
 }
 
-List<Code> _parsePlainTextCodes(String contents) {
+List<Code> _parsePlainTextCodes(
+  String contents,
+  void Function(int current, int total) onProgress,
+) {
   final codes = <Code>[];
 
   if (contents.trim().startsWith('otpauth://')) {
@@ -58,7 +58,9 @@ List<Code> _parsePlainTextCodes(String contents) {
     if (split.length == 1) {
       split = const LineSplitter().convert(contents);
     }
-    for (final c in split) {
+    final total = split.length;
+    for (var i = 0; i < split.length; i++) {
+      final c = split[i];
       final trimmed = c.trim();
       if (trimmed.isEmpty) continue;
       try {
@@ -66,16 +68,20 @@ List<Code> _parsePlainTextCodes(String contents) {
       } catch (e) {
         _logger.warning('Could not parse code: $e');
       }
+      onProgress(i + 1, total);
     }
   } else {
     final decoded = jsonDecode(contents);
     final items = (decoded as Map)['items'] as List? ?? [];
-    for (final item in items) {
+    final total = items.length;
+    for (var i = 0; i < items.length; i++) {
+      final item = items[i];
       try {
         codes.add(Code.fromExportJson(item as Map));
       } catch (e) {
         _logger.warning('Could not parse code: $e');
       }
+      onProgress(i + 1, total);
     }
   }
   return codes;

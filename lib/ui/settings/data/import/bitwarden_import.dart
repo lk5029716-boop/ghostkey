@@ -32,18 +32,15 @@ Future<void> _pickBitwardenFile(BuildContext context) async {
   final path = result.files.single.path!;
 
   if (!context.mounted) return;
-  await showGhostKeyProgress(context, 'Parsing…');
-
+  final jsonString = await readPickedImportFileAsString(path);
   try {
-    final jsonString = await readPickedImportFileAsString(path);
-    final codes = _parseBitwardenCodes(jsonString);
-    if (!context.mounted) return;
-    await hideGhostKeyProgress(context);
-    await showImportProgress(context: context, codes: codes);
+    await showImportProgressWithParsing(
+      context: context,
+      parser: (onProgress) => _parseBitwardenCodes(jsonString, onProgress),
+    );
   } catch (e, s) {
     _logger.severe('Bitwarden import failed', e, s);
     if (!context.mounted) return;
-    await hideGhostKeyProgress(context);
     await showGhostKeyError(
       context,
       'Import failed',
@@ -52,7 +49,10 @@ Future<void> _pickBitwardenFile(BuildContext context) async {
   }
 }
 
-List<Code> _parseBitwardenCodes(String jsonString) {
+List<Code> _parseBitwardenCodes(
+  String jsonString,
+  void Function(int current, int total) onProgress,
+) {
   final data = jsonDecode(jsonString);
   final items = data['items'] as List<dynamic>? ?? [];
 
@@ -65,6 +65,8 @@ List<Code> _parseBitwardenCodes(String jsonString) {
     _logger.fine('Bitwarden folders not parseable: $e');
   }
 
+  final total = items.length;
+  var parsed = 0;
   final codes = <Code>[];
   for (final item in items) {
     final login = item['login'];
@@ -110,6 +112,8 @@ List<Code> _parseBitwardenCodes(String jsonString) {
     } catch (e, s) {
       _logger.warning('Failed to parse Bitwarden item', e, s);
     }
+    parsed++;
+    onProgress(parsed, total);
   }
   return codes;
 }
