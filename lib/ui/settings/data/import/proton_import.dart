@@ -99,10 +99,10 @@ List<Code> parseProtonExport(Map<String, dynamic> decoded) {
   return codes;
 }
 
-List<Code> _parseProtonEntries(
+Future<List<Code>> _parseProtonEntries(
   Map<String, dynamic> decoded,
   void Function(int current, int total) onProgress,
-) {
+) async {
   if (isEncryptedProtonExport(decoded)) {
     throw const FormatException('Password protected Proton export');
   }

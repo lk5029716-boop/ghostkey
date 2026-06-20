@@ -49,10 +49,10 @@ Future<void> _pickBitwardenFile(BuildContext context) async {
   }
 }
 
-List<Code> _parseBitwardenCodes(
+Future<List<Code>> _parseBitwardenCodes(
   String jsonString,
   void Function(int current, int total) onProgress,
-) {
+) async {
   final data = jsonDecode(jsonString);
   final items = data['items'] as List<dynamic>? ?? [];
 

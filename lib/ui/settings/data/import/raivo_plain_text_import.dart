@@ -57,10 +57,10 @@ Future<void> _pickRaivoFile(BuildContext context) async {
   }
 }
 
-List<Code> _parseRaivoCodes(
+Future<List<Code>> _parseRaivoCodes(
   String jsonString,
   void Function(int current, int total) onProgress,
-) {
+) async {
   final items = jsonDecode(jsonString) as List<dynamic>;
 
   final total = items.length;

@@ -47,10 +47,10 @@ Future<void> _pickImportFile(BuildContext context) async {
   }
 }
 
-List<Code> _parsePlainTextCodes(
+Future<List<Code>> _parsePlainTextCodes(
   String contents,
   void Function(int current, int total) onProgress,
-) {
+) async {
   final codes = <Code>[];
 
   if (contents.trim().startsWith('otpauth://')) {

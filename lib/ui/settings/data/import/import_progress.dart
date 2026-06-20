@@ -34,7 +34,6 @@ Future<void> showImportProgressStream({
   }
 
   final completer = Completer<int>();
-  late StreamSubscription<ImportProgressEvent> sub;
 
   // Show progress dialog
   showDialog(
@@ -72,11 +71,9 @@ Future<void> showImportProgressWithParsing({
   required Future<List<Code>> Function(void Function(int current, int total) onParseProgress) parser,
 }) async {
   final controller = StreamController<ImportProgressEvent>();
-  int parseTotal = 0;
 
   // Start parsing in background
   final parseFuture = parser((current, total) {
-    parseTotal = total;
     controller.add(ImportProgressEvent(
       current: current,
       total: total,
@@ -117,7 +114,7 @@ Future<void> showImportProgressWithParsing({
   controller.add(ImportProgressEvent(
     current: 0,
     total: codes.length,
-    phase: ImportPhase.parsing,
+    phase: ImportPhase.saving,
   ));
 
   int saved = 0;

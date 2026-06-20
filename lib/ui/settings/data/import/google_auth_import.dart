@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 
+import '../../../../models/code.dart';
 import '../../../../qr_scanner_screen.dart';
-import '../../../../store/code_store.dart';
 import 'google_auth_qr_parser.dart';
 import 'import_helpers.dart';
 import 'import_progress.dart';
@@ -50,10 +50,10 @@ Future<void> showGoogleAuthInstruction(BuildContext context) async {
   }
 }
 
-List<Code> _parseGoogleAuthCodes(
+Future<List<Code>> _parseGoogleAuthCodes(
   String qrCodeData,
   void Function(int current, int total) onProgress,
-) {
+) async {
   final codes = parseGoogleAuth(qrCodeData);
   // Report progress for each parsed code so the dialog shows movement
   for (var i = 0; i < codes.length; i++) {

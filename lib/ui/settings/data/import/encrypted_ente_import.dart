@@ -109,10 +109,10 @@ Future<void> _pickEnteFile(BuildContext context) async {
   }
 }
 
-List<Code> _parseEnteLines(
+Future<List<Code>> _parseEnteLines(
   List<String> lines,
   void Function(int current, int total) onProgress,
-) {
+) async {
   final total = lines.length;
   final codes = <Code>[];
   for (var i = 0; i < lines.length; i++) {

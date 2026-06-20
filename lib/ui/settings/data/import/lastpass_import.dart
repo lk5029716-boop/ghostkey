@@ -48,10 +48,10 @@ Future<void> _pickLastpassFile(BuildContext context) async {
   }
 }
 
-List<Code> _parseLastpassCodes(
+Future<List<Code>> _parseLastpassCodes(
   String jsonString,
   void Function(int current, int total) onProgress,
-) {
+) async {
   final data = json.decode(jsonString) as Map<String, dynamic>;
   final accounts = data['accounts'] as List<dynamic>? ?? [];
 
