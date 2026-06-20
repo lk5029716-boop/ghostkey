@@ -60,6 +60,8 @@ Future<void> showImportProgressStream({
 
   if (!context.mounted) return;
   Navigator.of(context, rootNavigator: true).pop();
+  // Frame boundary: let the popped route fully deactivate before showing a new dialog.
+  await Future<void>.delayed(Duration.zero);
   await showGhostKeySuccess(context, saved);
 }
 
@@ -106,6 +108,8 @@ Future<void> showImportProgressWithParsing({
   if (codes.isEmpty) {
     await controller.close();
     Navigator.of(context, rootNavigator: true).pop();
+    // Frame boundary: let the popped route fully deactivate before showing a new dialog.
+    await Future<void>.delayed(Duration.zero);
     await showGhostKeySuccess(context, 0);
     return;
   }
@@ -136,6 +140,8 @@ Future<void> showImportProgressWithParsing({
 
   if (!context.mounted) return;
   Navigator.of(context, rootNavigator: true).pop();
+  // Frame boundary: let the popped route fully deactivate before showing a new dialog.
+  await Future<void>.delayed(Duration.zero);
   await showGhostKeySuccess(context, saved);
 }
 
@@ -183,6 +189,9 @@ Future<void> showImportProgress({
 
   if (!context.mounted) return;
   await hideGhostKeyProgress(context);
+  // Frame boundary: let the popped route fully deactivate before showing a new dialog.
+  await Future<void>.delayed(Duration.zero);
+  if (!context.mounted) return;
   await showGhostKeySuccess(context, saved);
 }
 
@@ -207,6 +216,8 @@ class _ImportProgressDialogState extends State<_ImportProgressDialog> {
   int _current = 0;
   int _total = 0;
   ImportPhase _phase = ImportPhase.parsing;
+  StreamSubscription<ImportProgressEvent>? _sub;
+  StreamSubscription<int>? _legacySub;
 
   @override
   void initState() {
@@ -214,12 +225,12 @@ class _ImportProgressDialogState extends State<_ImportProgressDialog> {
     _total = widget.total;
 
     // Legacy stream (raw int stream for old API)
-    widget.legacyStream?.listen((value) {
+    _legacySub = widget.legacyStream?.listen((value) {
       if (mounted) setState(() => _current = value);
     });
 
     // New event stream
-    widget.stream.listen((event) {
+    _sub = widget.stream.listen((event) {
       if (mounted) {
         setState(() {
           _current = event.current;
@@ -231,6 +242,13 @@ class _ImportProgressDialogState extends State<_ImportProgressDialog> {
         widget.onDone(event.current);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    _legacySub?.cancel();
+    super.dispose();
   }
 
   @override

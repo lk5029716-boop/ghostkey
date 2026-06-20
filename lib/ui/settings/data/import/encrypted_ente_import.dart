@@ -73,6 +73,8 @@ Future<void> _pickEnteFile(BuildContext context) async {
 
     if (!context.mounted) return;
     await hideGhostKeyProgress(context);
+    // Frame boundary: let the decrypt dialog fully deactivate before showing a new dialog.
+    await Future<void>.delayed(Duration.zero);
 
     final lines = decrypted.split('\n').where((l) => l.trim().isNotEmpty).toList();
     try {
