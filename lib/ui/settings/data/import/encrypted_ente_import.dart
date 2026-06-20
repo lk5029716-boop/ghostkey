@@ -145,6 +145,9 @@ String _decryptEnteInIsolate(_EnteDecryptParams params) {
   // (memLimit ≈ 67 MB, opsLimit ≈ 2). Argon2id in pointycastle uses
   // (iterations=timeCost, memory=memoryCost).
   final salt = base64Decode(params.kdfParams.salt);
+  // Ente's export stores memLimit in bytes (libsodium convention), but
+  // pointycastle's Argon2Parameters.memory expects 1024-byte blocks.
+  final memoryBlocks = params.kdfParams.memLimit ~/ 1024;
   final generator = Argon2BytesGenerator()
     ..init(
       Argon2Parameters(
@@ -152,7 +155,7 @@ String _decryptEnteInIsolate(_EnteDecryptParams params) {
         Uint8List.fromList(salt),
         desiredKeyLength: 32,
         iterations: params.kdfParams.opsLimit,
-        memory: params.kdfParams.memLimit,
+        memory: memoryBlocks,
         lanes: 1,
         version: Argon2Parameters.ARGON2_VERSION_13,
       ),
