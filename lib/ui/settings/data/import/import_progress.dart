@@ -33,24 +33,6 @@ Future<void> showImportProgressStream({
     return;
   }
 
-  final completer = Completer<int>();
-
-  // Show progress dialog
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (ctx) => PopScope(
-      canPop: false,
-      child: _ImportProgressDialog(
-        total: total,
-        stream: stream,
-        onDone: (saved) {
-          if (!completer.isCompleted) completer.complete(saved);
-        },
-      ),
-    ),
-  );
-
   int saved = 0;
   await for (final event in stream) {
     if (event.phase == ImportPhase.saving) {
@@ -59,23 +41,34 @@ Future<void> showImportProgressStream({
   }
 
   if (!context.mounted) return;
-  Navigator.of(context, rootNavigator: true).pop();
-  // Frame boundary: let the popped route fully deactivate before showing a new dialog.
-  await Future<void>.delayed(Duration.zero);
+  // Show success as a simple AlertDialog (no nested route transition)
   await showGhostKeySuccess(context, saved);
 }
 
 /// Shows a progress dialog that updates as codes are imported.
 /// First parses with live "Parsing X of Y entries…" then saves with
 /// "X of Y codes imported".
+/// The dialog handles its own transition to success — no pop→push race.
 Future<void> showImportProgressWithParsing({
   required BuildContext context,
   required Future<List<Code>> Function(void Function(int current, int total) onParseProgress) parser,
 }) async {
   final controller = StreamController<ImportProgressEvent>();
 
+  // Show progress dialog — the dialog manages its own lifecycle
+  unawaited(showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => PopScope(
+      canPop: false,
+      child: _ImportProgressDialog(
+        stream: controller.stream,
+      ),
+    ),
+  ));
+
   // Start parsing in background
-  final parseFuture = parser((current, total) {
+  final codes = await parser((current, total) {
     controller.add(ImportProgressEvent(
       current: current,
       total: total,
@@ -83,34 +76,10 @@ Future<void> showImportProgressWithParsing({
     ));
   });
 
-  // Show progress dialog
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (ctx) => PopScope(
-      canPop: false,
-      child: _ImportProgressDialog(
-        total: 0, // will be updated
-        stream: controller.stream,
-        onDone: (_) {},
-      ),
-    ),
-  );
-
-  // Wait for parsing to complete
-  final codes = await parseFuture;
-
-  if (!context.mounted) {
-    await controller.close();
-    return;
-  }
-
   if (codes.isEmpty) {
     await controller.close();
-    Navigator.of(context, rootNavigator: true).pop();
-    // Frame boundary: let the popped route fully deactivate before showing a new dialog.
-    await Future<void>.delayed(Duration.zero);
-    await showGhostKeySuccess(context, 0);
+    // The dialog sees the stream close without any saving events and shows
+    // "0 codes added" with OK button.
     return;
   }
 
@@ -137,12 +106,7 @@ Future<void> showImportProgressWithParsing({
   }
 
   await controller.close();
-
-  if (!context.mounted) return;
-  Navigator.of(context, rootNavigator: true).pop();
-  // Frame boundary: let the popped route fully deactivate before showing a new dialog.
-  await Future<void>.delayed(Duration.zero);
-  await showGhostKeySuccess(context, saved);
+  // Dialog shows success with OK button — no pop→push needed.
 }
 
 /// Legacy API: shows a progress dialog that updates as codes are saved.
@@ -159,22 +123,18 @@ Future<void> showImportProgress({
   final controller = StreamController<int>();
   int saved = 0;
 
-  // Show progress dialog
-  showDialog(
+  unawaited(showDialog(
     context: context,
     barrierDismissible: false,
-    builder: (ctx) => PopScope(
+    builder: (_) => PopScope(
       canPop: false,
       child: _ImportProgressDialog(
-        total: codes.length,
-        stream: Stream.fromIterable([]), // placeholder, not used in legacy mode
-        onDone: (_) {},
+        stream: Stream.fromIterable([]), // placeholder
         legacyStream: controller.stream,
       ),
     ),
-  );
+  ));
 
-  // Save codes one by one, reporting progress
   for (final code in codes) {
     try {
       await CodeStore.instance.addCode(code);
@@ -186,25 +146,19 @@ Future<void> showImportProgress({
   }
 
   await controller.close();
-
-  if (!context.mounted) return;
-  await hideGhostKeyProgress(context);
-  // Frame boundary: let the popped route fully deactivate before showing a new dialog.
-  await Future<void>.delayed(Duration.zero);
-  if (!context.mounted) return;
-  await showGhostKeySuccess(context, saved);
+  // Dialog shows success with OK button
 }
 
+/// Single dialog widget that handles the full lifecycle:
+/// 1. Shows progress bar + label during parsing/saving
+/// 2. Auto-transitions to success/tick when the stream ends
+/// 3. OK button dismisses itself — no external pop→push needed
 class _ImportProgressDialog extends StatefulWidget {
-  final int total;
   final Stream<ImportProgressEvent> stream;
-  final void Function(int saved) onDone;
   final Stream<int>? legacyStream;
 
   const _ImportProgressDialog({
-    required this.total,
     required this.stream,
-    required this.onDone,
     this.legacyStream,
   });
 
@@ -214,34 +168,41 @@ class _ImportProgressDialog extends StatefulWidget {
 
 class _ImportProgressDialogState extends State<_ImportProgressDialog> {
   int _current = 0;
-  int _total = 0;
+  int _total = 1; // avoid div-by-zero
   ImportPhase _phase = ImportPhase.parsing;
+  bool _done = false;
   StreamSubscription<ImportProgressEvent>? _sub;
   StreamSubscription<int>? _legacySub;
 
   @override
   void initState() {
     super.initState();
-    _total = widget.total;
 
     // Legacy stream (raw int stream for old API)
-    _legacySub = widget.legacyStream?.listen((value) {
-      if (mounted) setState(() => _current = value);
-    });
+    _legacySub = widget.legacyStream?.listen(
+      (value) {
+        if (mounted) setState(() => _current = value);
+      },
+      onDone: () {
+        if (mounted) setState(() => _done = true);
+      },
+    );
 
     // New event stream
-    _sub = widget.stream.listen((event) {
-      if (mounted) {
-        setState(() {
-          _current = event.current;
-          _total = event.total;
-          _phase = event.phase;
-        });
-      }
-      if (event.phase == ImportPhase.saving && event.current == event.total) {
-        widget.onDone(event.current);
-      }
-    });
+    _sub = widget.stream.listen(
+      (event) {
+        if (mounted) {
+          setState(() {
+            _current = event.current;
+            _total = event.total;
+            _phase = event.phase;
+          });
+        }
+      },
+      onDone: () {
+        if (mounted) setState(() => _done = true);
+      },
+    );
   }
 
   @override
@@ -253,6 +214,33 @@ class _ImportProgressDialogState extends State<_ImportProgressDialog> {
 
   @override
   Widget build(BuildContext context) {
+    // Done state: show success + OK button
+    if (_done) {
+      final count = _phase == ImportPhase.saving ? _current : 0;
+      return AlertDialog(
+        icon: const Icon(
+          Icons.check_circle_outline,
+          color: Color(0xFF0D631B),
+          size: 48,
+        ),
+        title: const Text('Import complete'),
+        content: Text(
+          count == 1
+              ? '1 code added to your vault.'
+              : '$count codes added to your vault.',
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      );
+    }
+
+    // Progress state
     final progress = _total > 0 ? _current / _total : 0.0;
     final label = _phase == ImportPhase.parsing
         ? '$_current of $_total entries parsed'

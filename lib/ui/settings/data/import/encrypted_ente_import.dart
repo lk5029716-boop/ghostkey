@@ -58,63 +58,36 @@ Future<void> _pickEnteFile(BuildContext context) async {
   if (password == null || password.isEmpty) return;
 
   if (!context.mounted) return;
-  await showGhostKeyProgress(context, 'Decrypting…');
-
-  try {
-    final decrypted = await compute(
-      _decryptEnteInIsolate,
-      _EnteDecryptParams(
-        kdfParams: export.kdfParams,
-        encryptedDataB64: export.encryptedData,
-        encryptionNonceB64: export.encryptionNonce,
-        password: password,
-      ),
-    );
-
-    if (!context.mounted) return;
-    await hideGhostKeyProgress(context);
-    // Frame boundary: let the decrypt dialog fully deactivate before showing a new dialog.
-    await Future<void>.delayed(Duration.zero);
-
-    final lines = decrypted.split('\n').where((l) => l.trim().isNotEmpty).toList();
-    try {
-      await showImportProgressWithParsing(
-        context: context,
-        parser: (onProgress) => _parseEnteLines(lines, onProgress),
-      );
-    } catch (e, s) {
-      _logger.severe('Encrypted Ente import failed', e, s);
-      if (!context.mounted) return;
-      await showGhostKeyError(
-        context,
-        'Import failed',
-        'Could not import Ente export.\nError: $e',
-      );
-    }
-  } on SecretBoxMacException {
-    if (!context.mounted) return;
-    await hideGhostKeyProgress(context);
-    await showGhostKeyError(
-      context,
-      'Wrong password',
-      'The password you entered did not decrypt this backup. Please try again.',
-    );
-  } catch (e, s) {
-    _logger.severe('Encrypted Ente import failed', e, s);
-    if (!context.mounted) return;
-    await hideGhostKeyProgress(context);
-    await showGhostKeyError(
-      context,
-      'Import failed',
-      'Could not decrypt Ente export.\nError: $e',
-    );
-  }
+  // Single dialog for decrypt + parse + save — no pop→push crash
+  await showImportProgressWithParsing(
+    context: context,
+    parser: (onProgress) => _decryptAndParseEnte(
+      export, password, onProgress,
+    ),
+  );
 }
 
-Future<List<Code>> _parseEnteLines(
-  List<String> lines,
+/// Decrypts the Ente export in an isolate, then parses the lines.
+/// The [onProgress] callback updates the single dialog throughout.
+Future<List<Code>> _decryptAndParseEnte(
+  EnteAuthExport export,
+  String password,
   void Function(int current, int total) onProgress,
 ) async {
+  // Report initial progress (0/1) so user sees something during decrypt
+  onProgress(0, 1);
+
+  final decrypted = await compute(
+    _decryptEnteInIsolate,
+    _EnteDecryptParams(
+      kdfParams: export.kdfParams,
+      encryptedDataB64: export.encryptedData,
+      encryptionNonceB64: export.encryptionNonce,
+      password: password,
+    ),
+  );
+
+  final lines = decrypted.split('\n').where((l) => l.trim().isNotEmpty).toList();
   final total = lines.length;
   final codes = <Code>[];
   for (var i = 0; i < lines.length; i++) {
@@ -143,9 +116,6 @@ class _EnteDecryptParams {
 
 String _decryptEnteInIsolate(_EnteDecryptParams params) {
   // 1. Derive 32-byte key from password via Argon2id.
-  // Ente's KDFParams uses libsodium's "interactive" preset
-  // (memLimit ≈ 67 MB, opsLimit ≈ 2). Argon2id in pointycastle uses
-  // (iterations=timeCost, memory=memoryCost).
   final salt = base64Decode(params.kdfParams.salt);
   // Ente's export stores memLimit in bytes (libsodium convention), but
   // pointycastle's Argon2Parameters.memory expects 1024-byte blocks.
@@ -166,7 +136,7 @@ String _decryptEnteInIsolate(_EnteDecryptParams params) {
     Uint8List.fromList(utf8.encode(params.password)),
   );
 
-  // 2. Decrypt via XSalsa20-Poly1305 secretbox.
+  // 2. Decrypt via XChaCha20-Poly1305 secretbox.
   final ciphertext = base64Decode(params.encryptedDataB64);
   final nonce = base64Decode(params.encryptionNonceB64);
   final plaintext = secretBoxOpenEasy(
