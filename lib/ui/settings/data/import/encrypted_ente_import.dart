@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:pointycastle/export.dart';
 
+import 'package:flutter/scheduler.dart';
+
 import '../../../../models/code.dart';
 import '../../../../models/export/ente.dart';
 import 'import_helpers.dart';
@@ -58,7 +60,10 @@ Future<void> _pickEnteFile(BuildContext context) async {
   if (password == null || password.isEmpty) return;
 
   if (!context.mounted) return;
-  // Single dialog for decrypt + parse + save — no pop→push crash
+  // Wait for the frame to finish processing before pushing a new dialog.
+  // This guarantees the password dialog's route removal is fully processed.
+  await SchedulerBinding.instance.endOfFrame;
+  if (!context.mounted) return;
   await showImportProgressWithParsing(
     context: context,
     parser: (onProgress) => _decryptAndParseEnte(
