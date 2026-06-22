@@ -128,29 +128,37 @@ Future<void> showImportProgressWithParsing({
     ),
   );
 
-  // Parse
-  final codes = await parser((current, total) {
-    controller.add(ImportProgressEvent(current: current, total: total, phase: ImportPhase.parsing));
-  });
+  try {
+    // Parse
+    final codes = await parser((current, total) {
+      controller.add(ImportProgressEvent(current: current, total: total, phase: ImportPhase.parsing));
+    });
 
-  if (codes.isEmpty) {
+    if (codes.isEmpty) {
+      await controller.close();
+      return;
+    }
+
+    // Switch to saving
+    controller.add(ImportProgressEvent(current: 0, total: codes.length, phase: ImportPhase.saving));
+
+    int saved = 0;
+    for (final code in codes) {
+      try {
+        await CodeStore.instance.addCode(code);
+        saved++;
+        controller.add(ImportProgressEvent(current: saved, total: codes.length, phase: ImportPhase.saving));
+      } catch (_) {}
+    }
+
     await controller.close();
-    return;
+  } catch (_) {
+    await controller.close();
+    if (context.mounted && Navigator.of(context, rootNavigator: true).canPop()) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+    rethrow;
   }
-
-  // Switch to saving
-  controller.add(ImportProgressEvent(current: 0, total: codes.length, phase: ImportPhase.saving));
-
-  int saved = 0;
-  for (final code in codes) {
-    try {
-      await CodeStore.instance.addCode(code);
-      saved++;
-      controller.add(ImportProgressEvent(current: saved, total: codes.length, phase: ImportPhase.saving));
-    } catch (_) {}
-  }
-
-  await controller.close();
 }
 
 /// Legacy API: shows a progress dialog that updates as codes are saved.

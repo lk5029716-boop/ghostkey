@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 /// M3 progress dialog for long-running imports.
 /// Shows a spinning indicator + message.
 Future<void> showGhostKeyProgress(BuildContext context, String message) async {
-  await showDialog(
+  // Do not await the dialog here. `showDialog` completes only after the
+  // route is popped, so awaiting it before starting the import deadlocks the
+  // caller behind its own non-dismissible progress dialog.
+  unawaited(showDialog<void>(
     context: context,
     barrierDismissible: false,
     builder: (ctx) => PopScope(
@@ -23,7 +28,11 @@ Future<void> showGhostKeyProgress(BuildContext context, String message) async {
         ),
       ),
     ),
-  );
+  ));
+
+  // Yield once so callers that immediately do async work or later pop the
+  // dialog give Flutter a chance to push the progress route first.
+  await Future<void>.delayed(Duration.zero);
 }
 
 Future<void> hideGhostKeyProgress(BuildContext context) async {
