@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../../../../models/code.dart';
 import '../../../../store/code_store.dart';
@@ -55,7 +56,7 @@ Future<void> showImportProgressWithParsing({
 }) async {
   final controller = StreamController<ImportProgressEvent>();
 
-  showDialog(
+  unawaited(showDialog<void>(
     context: context,
     barrierDismissible: false,
     builder: (_) => PopScope(
@@ -79,7 +80,7 @@ Future<void> showImportProgressWithParsing({
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () => Navigator.of(ctx).pop(),
                   child: const Text('OK'),
                 ),
               ],
@@ -126,7 +127,13 @@ Future<void> showImportProgressWithParsing({
         },
       ),
     ),
-  );
+  ));
+
+  // Ensure the progress dialog has entered the tree before parser callbacks
+  // start driving the StreamBuilder. Fast imports can otherwise close/update
+  // the stream during route insertion/deactivation and trigger Flutter's
+  // `_dependents.isEmpty` assertion in framework.dart.
+  await SchedulerBinding.instance.endOfFrame;
 
   try {
     // Parse
@@ -175,7 +182,7 @@ Future<void> showImportProgress({
   final controller = StreamController<int>();
   int saved = 0;
 
-  showDialog(
+  unawaited(showDialog<void>(
     context: context,
     barrierDismissible: false,
     builder: (_) => PopScope(
@@ -195,7 +202,7 @@ Future<void> showImportProgress({
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () => Navigator.of(ctx).pop(),
                   child: const Text('OK'),
                 ),
               ],
@@ -224,7 +231,9 @@ Future<void> showImportProgress({
         },
       ),
     ),
-  );
+  ));
+
+  await SchedulerBinding.instance.endOfFrame;
 
   for (final code in codes) {
     try {
