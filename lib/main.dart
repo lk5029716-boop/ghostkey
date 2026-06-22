@@ -54,6 +54,171 @@ const Color kOnSurfaceVariant = Color(0xFF40493D);
 const Color kError = Color(0xFFBA1A1A);
 const Color kWarning = Color(0xFFF59E0B);
 
+const Color kPrimaryDeep = Color(0xFF083C12);
+const Color kPrimarySoft = Color(0xFFE8F8E6);
+const Color kAccentBlue = Color(0xFF2563EB);
+const Color kAccentPurple = Color(0xFF7C3AED);
+const Color kAccentTeal = Color(0xFF0F766E);
+const Color kSurfaceGlass = Color(0xEEFFFFFF);
+
+const List<BoxShadow> kSoftShadow = [
+  BoxShadow(color: Color(0x12000000), blurRadius: 24, offset: Offset(0, 10)),
+  BoxShadow(color: Color(0x08FFFFFF), blurRadius: 2, offset: Offset(0, 1)),
+];
+
+ThemeData _ghostKeyTheme() {
+  final base = ThemeData(
+    brightness: Brightness.light,
+    scaffoldBackgroundColor: kSurface,
+    colorScheme: const ColorScheme.light(
+      primary: kPrimary,
+      onPrimary: kOnPrimary,
+      secondary: kSecondary,
+      onSecondary: kOnSecondary,
+      secondaryContainer: kSecondaryContainer,
+      onSecondaryContainer: kOnSecondaryContainer,
+      surface: kSurface,
+      onSurface: kOnSurface,
+      surfaceVariant: kSurfaceVariant,
+      onSurfaceVariant: kOnSurfaceVariant,
+      outline: kOutline,
+      outlineVariant: kOutlineVariant,
+      error: kError,
+    ),
+    useMaterial3: true,
+  );
+
+  return base.copyWith(
+    textTheme: base.textTheme.apply(
+      bodyColor: kOnSurface,
+      displayColor: kOnSurface,
+      fontFamily: 'Roboto',
+    ),
+    appBarTheme: const AppBarTheme(
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      foregroundColor: kOnSurface,
+      centerTitle: false,
+      titleTextStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: kOnSurface, letterSpacing: -0.3),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: kPrimary,
+        foregroundColor: kOnPrimary,
+        minimumSize: const Size.fromHeight(54),
+        textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: kPrimary,
+        side: const BorderSide(color: kPrimary, width: 1.2),
+        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide(color: kOutlineVariant.withOpacity(0.55))),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide(color: kOutlineVariant.withOpacity(0.55))),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: kPrimary, width: 1.6)),
+      labelStyle: const TextStyle(color: kOnSurfaceVariant),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: kPrimaryDeep,
+      contentTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      elevation: 0,
+      height: 72,
+      backgroundColor: Colors.white,
+      indicatorColor: kPrimarySoft,
+      surfaceTintColor: Colors.transparent,
+      labelTextStyle: MaterialStateProperty.resolveWith((states) => TextStyle(
+        fontSize: 12,
+        fontWeight: states.contains(MaterialState.selected) ? FontWeight.w800 : FontWeight.w600,
+        color: states.contains(MaterialState.selected) ? kPrimary : kOnSurfaceVariant,
+      )),
+      iconTheme: MaterialStateProperty.resolveWith((states) => IconThemeData(
+        color: states.contains(MaterialState.selected) ? kPrimary : kOnSurfaceVariant,
+        size: 24,
+      )),
+    ),
+  );
+}
+
+class _GhostCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final Color color;
+  final double radius;
+  final List<BoxShadow>? shadows;
+  final Border? border;
+  const _GhostCard({required this.child, this.padding = const EdgeInsets.all(16), this.color = Colors.white, this.radius = 24, this.shadows, this.border});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(radius),
+        border: border ?? Border.all(color: kOutlineVariant.withOpacity(0.22)),
+        boxShadow: shadows ?? kSoftShadow,
+      ),
+      child: child,
+    );
+  }
+}
+
+class _IconPill extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final Color? background;
+  final double size;
+  const _IconPill(this.icon, {this.color = kPrimary, this.background, this.size = 44});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: background ?? color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(size * 0.34),
+      ),
+      child: Icon(icon, color: color, size: size * 0.52),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  final String? action;
+  final VoidCallback? onAction;
+  const _SectionTitle(this.title, {this.action, this.onAction});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: kOnSurface, letterSpacing: -0.2)),
+        const Spacer(),
+        if (action != null)
+          TextButton(onPressed: onAction, child: Text(action!, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800))),
+      ],
+    );
+  }
+}
+
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
@@ -101,26 +266,7 @@ class _GhostKeyAppState extends State<GhostKeyApp> {
         navigatorKey: rootNavigatorKey,
         title: 'GhostKey',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          brightness: Brightness.light,
-          scaffoldBackgroundColor: kSurface,
-          colorScheme: const ColorScheme.light(
-            primary: kPrimary,
-            onPrimary: kOnPrimary,
-            secondary: kSecondary,
-            onSecondary: kOnSecondary,
-            secondaryContainer: kSecondaryContainer,
-            onSecondaryContainer: kOnSecondaryContainer,
-            surface: kSurface,
-            onSurface: kOnSurface,
-            surfaceVariant: kSurfaceVariant,
-            onSurfaceVariant: kOnSurfaceVariant,
-            outline: kOutline,
-            outlineVariant: kOutlineVariant,
-            error: kError,
-          ),
-          useMaterial3: true,
-        ),
+        theme: _ghostKeyTheme(),
         home: _initialHome(widget.prefs),
       ),
     );
@@ -454,40 +600,51 @@ int _pow10(int n) {
 
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
-  final _pages = <Widget>[
-    const VaultDashboard(),
-    VaultPage(),
-    const HeirsPage(),
-    const SettingsScreen(),
-  ];
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
+  final List<Widget> _pages = const [
+    VaultDashboard(),
+    VaultPage(),
+    HeirsPage(),
+    SettingsScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: [
-        const VaultDashboard(),
-        const VaultPage(),
-        const HeirsPage(),
-        const SettingsScreen(),
-      ]),
-      floatingActionButton: null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        backgroundColor: kSurfaceContainer,
-        indicatorColor: kSecondaryContainer,
-        destinations: [
-          NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home, color: kPrimary), label: 'Home'),
-          NavigationDestination(icon: const Icon(Icons.lock_outlined), selectedIcon: const Icon(Icons.lock, color: kPrimary), label: 'Vault'),
-          NavigationDestination(icon: const Icon(Icons.group_outlined), selectedIcon: const Icon(Icons.group, color: kPrimary), label: 'Heirs'),
-          NavigationDestination(icon: const Icon(Icons.settings_outlined), selectedIcon: const Icon(Icons.settings, color: kPrimary), label: 'Settings'),
-        ],
+      extendBody: true,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 260),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        child: KeyedSubtree(
+          key: ValueKey(_currentIndex),
+          child: _pages[_currentIndex],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: kSoftShadow,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: NavigationBar(
+              selectedIndex: _currentIndex,
+              onDestinationSelected: (i) {
+                HapticFeedback.selectionClick();
+                setState(() => _currentIndex = i);
+              },
+              destinations: const [
+                NavigationDestination(icon: Icon(Icons.grid_view_rounded), selectedIcon: Icon(Icons.grid_view_rounded), label: 'Home'),
+                NavigationDestination(icon: Icon(Icons.lock_outline_rounded), selectedIcon: Icon(Icons.lock_rounded), label: 'Vault'),
+                NavigationDestination(icon: Icon(Icons.diversity_3_outlined), selectedIcon: Icon(Icons.diversity_3_rounded), label: 'Heirs'),
+                NavigationDestination(icon: Icon(Icons.tune_rounded), selectedIcon: Icon(Icons.tune_rounded), label: 'Settings'),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -2319,69 +2476,175 @@ class VaultDashboard extends StatefulWidget {
 }
 
 class _VaultDashboardState extends State<VaultDashboard> {
+  final List<_ActivityItem> _activity = const [
+    _ActivityItem(Icons.visibility_outlined, 'Vault item reviewed', 'Google account password', '9:20 AM', kAccentBlue),
+    _ActivityItem(Icons.verified_user_outlined, 'Check-in completed', 'Dead man switch extended', '9:00 AM', kPrimary),
+    _ActivityItem(Icons.person_add_alt_1_outlined, 'Heir invited', 'Sarah Ahmed • 2/5 shares', 'Yesterday', kAccentPurple),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kSurface,
       body: SafeArea(
-        child: ListView(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16), children: [
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('GhostKey', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: kOnSurface)), Stack(children: [const Icon(Icons.notifications_outlined, size: 28, color: kOnSurface), Positioned(right: 2, top: 2, child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: kError, shape: BoxShape.circle)))])]),
-          const SizedBox(height: 24),
-          const Text('Good morning,', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
-          const Text('Alex \u{1F44B}', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: kOnSurface)),
-          const SizedBox(height: 24),
-          _buildDeadManCard(),
-          const SizedBox(height: 16),
-          Row(children: [_statCard('34', 'Secrets'), const SizedBox(width: 12), _statCard('12', 'Crypto Assets'), const SizedBox(width: 12), _statCard('3', 'Heirs')]),
-          const SizedBox(height: 24),
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Recent Activity', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface)), TextButton(onPressed: () {}, child: const Text('View all', style: TextStyle(color: kPrimary, fontSize: 12)))]),
-          const SizedBox(height: 8),
-          _buildActivityList(),
-          const SizedBox(height: 100),
-        ]),
+        child: CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 108),
+              sliver: SliverList(delegate: SliverChildListDelegate([
+                _buildHeader(),
+                const SizedBox(height: 18),
+                _buildHeroCard(),
+                const SizedBox(height: 16),
+                Row(children: [
+                  _metricCard('34', 'Secrets', Icons.lock_outline_rounded, kAccentBlue),
+                  const SizedBox(width: 12),
+                  _metricCard('12', 'Assets', Icons.account_balance_wallet_outlined, kAccentTeal),
+                  const SizedBox(width: 12),
+                  _metricCard('3', 'Heirs', Icons.diversity_3_outlined, kAccentPurple),
+                ]),
+                const SizedBox(height: 24),
+                const _SectionTitle('Quick actions'),
+                const SizedBox(height: 12),
+                Row(children: [
+                  _quickAction(Icons.add_rounded, 'Add secret', kPrimary, () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AddSecretPage()))),
+                  const SizedBox(width: 12),
+                  _quickAction(Icons.qr_code_scanner_rounded, 'Scan 2FA', kAccentBlue, () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QrScannerScreen()))),
+                  const SizedBox(width: 12),
+                  _quickAction(Icons.health_and_safety_outlined, 'Check in', kAccentTeal, () {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Check-in recorded')));
+                  }),
+                ]),
+                const SizedBox(height: 24),
+                _SectionTitle('Recent activity', action: 'View all', onAction: () {}),
+                const SizedBox(height: 12),
+                _buildActivityList(),
+              ])),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildDeadManCard() {
-    return Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: kOutlineVariant.withOpacity(0.3)), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 1))]), child: Row(children: [
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text("Dead Man's Switch", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface)), const SizedBox(height: 4), Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [const Text('65', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: kPrimary)), const SizedBox(width: 4), const Text('days left', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant))]), const SizedBox(height: 4), const Text('Next check-in: Tomorrow', style: TextStyle(fontSize: 12, color: kOnSurfaceVariant)), const SizedBox(height: 12), OutlinedButton(onPressed: () {}, style: OutlinedButton.styleFrom(side: const BorderSide(color: kPrimary), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))), child: const Text('Check in now', style: TextStyle(color: kPrimary, fontSize: 14)))])),
-      const SizedBox(width: 16),
-      SizedBox(width: 96, height: 96, child: CustomPaint(painter: _ProgressRing(0.65), child: const Center(child: Text('65%', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface))))),
-    ]));
+  Widget _buildHeader() {
+    return Row(children: [
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
+        Text('Good morning, Alex', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: kOnSurface, letterSpacing: -0.6)),
+        SizedBox(height: 4),
+        Text('Your legacy vault is protected today', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant, fontWeight: FontWeight.w500)),
+      ])),
+      Container(
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), boxShadow: kSoftShadow),
+        child: Stack(children: [
+          IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none_rounded, color: kOnSurface, size: 26)),
+          Positioned(right: 11, top: 11, child: Container(width: 9, height: 9, decoration: BoxDecoration(color: kError, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 1.5)))),
+        ]),
+      ),
+    ]);
   }
 
-  Widget _statCard(String value, String label) {
-    return Expanded(child: Container(padding: const EdgeInsets.symmetric(vertical: 16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: kOutlineVariant.withOpacity(0.3)), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 1))]), child: Column(children: [Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: kOnSurface)), const SizedBox(height: 4), Text(label, style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant), textAlign: TextAlign.center)])));
+  Widget _buildHeroCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(32),
+        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [kPrimaryDeep, kPrimary, Color(0xFF46A64B)]),
+        boxShadow: [BoxShadow(color: kPrimary.withOpacity(0.28), blurRadius: 30, offset: const Offset(0, 16))],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.14), borderRadius: BorderRadius.circular(999), border: Border.all(color: Colors.white.withOpacity(0.22))),
+            child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.shield_outlined, color: Colors.white, size: 16), SizedBox(width: 6), Text('Active protection', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800))]),
+          ),
+          const Spacer(),
+          const Icon(Icons.more_horiz_rounded, color: Colors.white70),
+        ]),
+        const SizedBox(height: 26),
+        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
+            Text("Dead Man's Switch", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.4)),
+            SizedBox(height: 8),
+            Text('Next check-in is tomorrow. Heirs stay locked until your rules trigger.', style: TextStyle(color: Colors.white70, height: 1.35, fontSize: 13.5)),
+            SizedBox(height: 20),
+            Text('65 days left', style: TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w900, letterSpacing: -0.8)),
+          ])),
+          const SizedBox(width: 18),
+          SizedBox(width: 96, height: 96, child: CustomPaint(painter: _ProgressRing(0.65, foreground: Colors.white, background: Colors.white24, stroke: 8), child: const Center(child: Text('65%', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18))))),
+        ]),
+        const SizedBox(height: 20),
+        Row(children: [
+          Expanded(child: FilledButton.icon(onPressed: () {}, icon: const Icon(Icons.check_circle_outline_rounded), label: const Text('Check in now'), style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: kPrimaryDeep))),
+          const SizedBox(width: 10),
+          IconButton.filledTonal(onPressed: () {}, icon: const Icon(Icons.edit_calendar_outlined), style: IconButton.styleFrom(backgroundColor: Colors.white.withOpacity(0.16), foregroundColor: Colors.white)),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _metricCard(String value, String label, IconData icon, Color color) {
+    return Expanded(child: _GhostCard(padding: const EdgeInsets.all(14), radius: 22, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _IconPill(icon, color: color, size: 38),
+      const SizedBox(height: 14),
+      Text(value, style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w900, color: kOnSurface, letterSpacing: -0.5)),
+      const SizedBox(height: 2),
+      Text(label, style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant, fontWeight: FontWeight.w700)),
+    ])));
+  }
+
+  Widget _quickAction(IconData icon, String label, Color color, VoidCallback onTap) {
+    return Expanded(child: InkWell(onTap: () { HapticFeedback.selectionClick(); onTap(); }, borderRadius: BorderRadius.circular(22), child: _GhostCard(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14), radius: 22, shadows: const [], child: Column(children: [
+      _IconPill(icon, color: color, size: 42),
+      const SizedBox(height: 10),
+      Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: kOnSurface)),
+    ]))));
   }
 
   Widget _buildActivityList() {
-    return Container(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: kOutlineVariant.withOpacity(0.3))), child: Column(children: [
-      _activityRow(Icons.vpn_key, 'Secret viewed', 'Google Account', 'Today, 9:20 AM', kOnSurfaceVariant),
-      const Divider(color: kSurfaceContainerHighest, height: 1),
-      _activityRow(Icons.verified_user, 'Check-in successful', '', 'Today, 9:00 AM', kPrimary),
-      const Divider(color: kSurfaceContainerHighest, height: 1),
-      _activityRow(Icons.person_add, 'Heir added: Sarah', '', 'Yesterday, 3:15 PM', kOnSurfaceVariant),
+    return _GhostCard(padding: EdgeInsets.zero, child: Column(children: [
+      for (var i = 0; i < _activity.length; i++) ...[
+        _activityRow(_activity[i]),
+        if (i != _activity.length - 1) Divider(height: 1, color: kOutlineVariant.withOpacity(0.18), indent: 72),
+      ],
     ]));
   }
 
-  Widget _activityRow(IconData icon, String title, String subtitle, String time, Color iconColor) {
-    return Padding(padding: const EdgeInsets.all(16), child: Row(children: [Container(width: 40, height: 40, decoration: BoxDecoration(color: kSurfaceContainer, shape: BoxShape.circle), child: Icon(icon, size: 20, color: iconColor)), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: kOnSurface)), if (subtitle.isNotEmpty) Text(subtitle, style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant))])), Text(time, style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant))]));
+  Widget _activityRow(_ActivityItem item) {
+    return Padding(padding: const EdgeInsets.all(16), child: Row(children: [
+      _IconPill(item.icon, color: item.color, size: 42),
+      const SizedBox(width: 14),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item.title, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: kOnSurface)), const SizedBox(height: 3), Text(item.subtitle, style: const TextStyle(fontSize: 13, color: kOnSurfaceVariant))])),
+      Text(item.time, style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant, fontWeight: FontWeight.w600)),
+    ]));
   }
+}
+
+class _ActivityItem {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String time;
+  final Color color;
+  const _ActivityItem(this.icon, this.title, this.subtitle, this.time, this.color);
 }
 
 class _ProgressRing extends CustomPainter {
   final double progress;
-  _ProgressRing(this.progress);
+  final Color foreground;
+  final Color background;
+  final double stroke;
+  _ProgressRing(this.progress, {this.foreground = kPrimary, this.background = kSurfaceContainerHighest, this.stroke = 6});
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 8;
-    canvas.drawCircle(center, radius, Paint()..color = kSurfaceContainerHighest..style = PaintingStyle.stroke..strokeWidth = 6..strokeCap = StrokeCap.round);
-    canvas.drawArc(Rect.fromCircle(center: center, radius: radius), -math.pi / 2, 2 * math.pi * progress, false, Paint()..color = kPrimary..style = PaintingStyle.stroke..strokeWidth = 6..strokeCap = StrokeCap.round);
+    final radius = size.width / 2 - stroke;
+    canvas.drawCircle(center, radius, Paint()..color = background..style = PaintingStyle.stroke..strokeWidth = stroke..strokeCap = StrokeCap.round);
+    canvas.drawArc(Rect.fromCircle(center: center, radius: radius), -math.pi / 2, 2 * math.pi * progress, false, Paint()..color = foreground..style = PaintingStyle.stroke..strokeWidth = stroke..strokeCap = StrokeCap.round);
   }
   @override
-  bool shouldRepaint(covariant _ProgressRing old) => old.progress != progress;
+  bool shouldRepaint(covariant _ProgressRing old) => old.progress != progress || old.foreground != foreground || old.background != background || old.stroke != stroke;
 }
 
 class SettingsScreen extends StatefulWidget {
