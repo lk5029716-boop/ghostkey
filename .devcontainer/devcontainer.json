@@ -1,0 +1,83 @@
+{
+  "name": "ghostkey-live-preview",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "forwardPorts": [
+    6080,
+    5554,
+    5555,
+    8554,
+    6081
+  ],
+  "portsAttributes": {
+    "6080": {
+      "label": "VNC / noVNC",
+      "onAutoForward": "notify"
+    },
+    "6081": {
+      "label": "noVNC Web Client",
+      "onAutoForward": "openBrowser"
+    },
+    "5554": {
+      "label": "Android Emulator (console)",
+      "onAutoForward": "ignore"
+    },
+    "5555": {
+      "label": "Android Emulator (adb)",
+      "onAutoForward": "ignore"
+    },
+    "8554": {
+      "label": "Android Emulator (gRPC)",
+      "onAutoForward": "ignore"
+    }
+  },
+  "remoteUser": "vscode",
+  "containerUser": "vscode",
+  "postCreateCommand": "bash /workspace/ghostkey/.devcontainer/setup.sh",
+  "postStartCommand": "bash /workspace/ghostkey/.devcontainer/scripts/start-emulator.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Dart-Code.dart-code",
+        "Dart-Code.flutter",
+        "ms-vscode.vscode-typescript-next",
+        "redhat.java",
+        "vscjava.vscode-java-debug",
+        "vscjava.vscode-java-dependency",
+        "vscjava.vscode-maven",
+        "vscjava.vscode-gradle"
+      ],
+      "settings": {
+        "dart.flutterSdkPath": "/opt/flutter",
+        "dart.sdkPath": "/opt/flutter/bin/dart",
+        "dart.checkForSdkUpdates": false,
+        "dart.closingLabels": true,
+        "dart.openDevTools": "flutter",
+        "flutter.androidSdkPath": "/opt/android-sdk",
+        "flutter.additionalArgs": [
+          "--android-sdk=/opt/android-sdk"
+        ],
+        "files.watcherExclude": {
+          "**/.dart_tool/**": true,
+          "**/build/**": true
+        }
+      }
+    }
+  },
+  "remoteEnv": {
+    "ANDROID_HOME": "/opt/android-sdk",
+    "ANDROID_SDK_ROOT": "/opt/android-sdk",
+    "FLUTTER_HOME": "/opt/flutter",
+    "PUB_HOSTED_URL": "https://pub.dev",
+    "DISPLAY": ":99"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true,
+      "upgradePackages": false,
+      "nonFreePackages": false
+    }
+  }
+}

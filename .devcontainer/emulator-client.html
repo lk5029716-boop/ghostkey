@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ghostkey — Android Emulator Live Preview</title>
+  <!--
+    ─────────────────────────────────────────────────────
+    emulator-client.html
+    Standalone noVNC-based client that connects to the
+    Android emulator VNC stream.  Loads RFB from CDN so
+    it works without any local noVNC installation.
+    ─────────────────────────────────────────────────────
+  -->
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #0f0f1a;
+      --bg-secondary: #1a1a2e;
+      --bg-tertiary: #252540;
+      --text-primary: #e0e0f0;
+      --text-secondary: #9999b0;
+      --accent: #b388ff;
+      --accent-hover: #9c6eff;
+      --accent-bg: rgba(179, 136, 255, 0.12);
+      --success: #4caf50;
+      --error: #ef5350;
+      --warning: #ffa726;
+      --border: #333355;
+      --shadow: 0 8px 32px rgba(0,0,0,0.5);
+      --radius: 8px;
+      --transition: 200ms ease;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* ── Toolbar ── */
+    #toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 16px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      z-index: 100;
+    }
+
+    #toolbar .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #toolbar .logo h1 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.3px;
+    }
+
+    #toolbar .logo h1 span {
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    #toolbar .logo-icon {
+      font-size: 20px;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-weight: 500;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    .badge.idle {
+      background: rgba(255,255,255,0.08);
+      color: var(--text-secondary);
+    }
+
+    .badge.connecting {
+      background: rgba(255, 167, 38, 0.15);
+      color: var(--warning);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .badge.connected {
+      background: rgba(76, 175, 80, 0.15);
+      color: var(--success);
+    }
+
+    .badge.disconnected {
+      background: rgba(239, 83, 80, 0.15);
+      color: var(--error);
+    }
+
+    .badge.error {
+      background: rgba(239, 83, 80, 0.15);
+      color: var(--error);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    #controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+    }
+
+    #controls button {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 5px 12px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 13px;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-family: inherit;
+    }
+
+    #controls button:hover {
+      background: rgba(255,255,255,0.06);
+      color: var(--text-primary);
+      border-color: #555;
+    }
+
+    #controls button:active {
+      transform: scale(0.96);
+    }
+
+    #controls button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 500;
+    }
+
+    #controls button.primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    #controls button.primary.connected {
+      background: var(--error);
+      border-color: var(--error);
+    }
+
+    #controls button.primary.connected:hover {
+      background: #d32f2f;
+    }
+
+    .btn-icon {
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .divider {
+      width: 1px;
+      height: 20px;
+      background: var(--border);
+      margin: 0 6px;
+    }
+
+    /* ── Screen ── */
+    #screen-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(ellipse at center, #12121e 0%, #0a0a12 100%);
+      position: relative;
+      overflow: hidden;
+      padding: 20px;
+    }
+
+    #device-frame {
+      position: relative;
+      display: inline-block;
+      border-radius: 40px;
+      padding: 8px;
+      background: linear-gradient(135deg, #2a2a3e, #1a1a2e);
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.05),
+        0 0 0 2px rgba(0,0,0,0.3),
+        var(--shadow),
+        inset 0 0 0 1px rgba(255,255,255,0.03);
+      transition: all 0.3s ease;
+    }
+
+    #device-frame .frame-edge {
+      position: relative;
+      border-radius: 32px;
+      overflow: hidden;
+      background: #000;
+    }
+
+    #device-frame canvas {
+      display: block;
+      width: 412px;
+      height: 890px;
+      border-radius: 32px;
+      background: #111;
+      cursor: crosshair;
+    }
+
+    /* Notch */
+    .notch {
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 160px;
+      height: 30px;
+      background: #000;
+      border-radius: 0 0 18px 18px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .notch .camera {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 35%, #1a1a2e, #000);
+      border: 1px solid #222;
+    }
+
+    .notch .sensor {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #111;
+      border: 1px solid #222;
+    }
+
+    /* Bottom bar */
+    .bottom-bar {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 140px;
+      height: 4px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 2px;
+      z-index: 10;
+    }
+
+    /* ── Status bar ── */
+    #status-bar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 6px 16px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+
+    #status-bar .stat {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    #status-bar .stat-label {
+      color: var(--text-secondary);
+    }
+
+    #status-bar .stat-value {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    #status-bar .stat-value.ok { color: var(--success); }
+    #status-bar .stat-value.err { color: var(--error); }
+    #status-bar .stat-value.warn { color: var(--warning); }
+
+    /* ── Keyboard hint ── */
+    #keyboard-hint {
+      position: fixed;
+      bottom: 48px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      color: var(--text-secondary);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 11px;
+      z-index: 50;
+      opacity: 0;
+      transition: opacity 0.5s;
+      backdrop-filter: blur(4px);
+      pointer-events: none;
+    }
+
+    #keyboard-hint.visible {
+      opacity: 1;
+    }
+
+    /* ── Loading overlay ── */
+    #loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.7);
+      z-index: 20;
+      opacity: 0;
+      transition: opacity 0.4s;
+      pointer-events: none;
+    }
+
+    #loading-overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(179, 136, 255, 0.15);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    #loading-overlay .msg {
+      margin-top: 16px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      #toolbar { padding: 6px 10px; gap: 8px; flex-wrap: wrap; }
+      #toolbar .logo h1 { font-size: 13px; }
+      .badge { font-size: 10px; padding: 2px 8px; }
+      #controls button { padding: 4px 8px; font-size: 11px; }
+      #device-frame { border-radius: 24px; padding: 5px; }
+      #device-frame canvas { width: 280px; height: 600px; border-radius: 20px; }
+      .notch { width: 100px; height: 22px; top: 5px; }
+      .notch .camera { width: 10px; height: 10px; }
+      #screen-container { padding: 10px; }
+      .bottom-bar { width: 100px; height: 3px; bottom: 8px; }
+      #status-bar { font-size: 10px; gap: 10px; padding: 4px 10px; }
+    }
+
+    @media (max-height: 700px) {
+      #device-frame canvas { width: 240px; height: 520px; border-radius: 16px; }
+      .notch { height: 18px; width: 80px; top: 5px; }
+    }
+
+    /* ── Utility ── */
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <!-- ── Toolbar ── -->
+  <div id="toolbar">
+    <div class="logo">
+      <span class="logo-icon">🔑</span>
+      <h1>ghostkey <span>· Live Preview</span></h1>
+    </div>
+    <span id="connection-badge" class="badge idle">Initializing</span>
+    <span id="device-badge" class="badge idle">Pixel 6 · Android 14</span>
+    <div id="controls">
+      <button id="power-btn" title="Power (toggle screen)">
+        <span class="btn-icon">⏻</span>
+      </button>
+      <button id="volume-up-btn" title="Volume Up">
+        <span class="btn-icon">+</span>
+      </button>
+      <button id="volume-down-btn" title="Volume Down">
+        <span class="btn-icon">−</span>
+      </button>
+      <div class="divider"></div>
+      <button id="home-btn" title="Home">
+        <span class="btn-icon">⌂</span> Home
+      </button>
+      <button id="back-btn" title="Back">
+        <span class="btn-icon">‹</span> Back
+      </button>
+      <button id="recent-btn" title="Recent Apps">
+        <span class="btn-icon">☰</span>
+      </button>
+      <div class="divider"></div>
+      <button id="rotate-btn" title="Rotate Screen">
+        <span class="btn-icon">↻</span>
+      </button>
+      <button id="fullscreen-btn" title="Fullscreen">
+        <span class="btn-icon">⛶</span>
+      </button>
+      <button id="reconnect-btn" class="primary">Connect</button>
+    </div>
+  </div>
+
+  <!-- ── Screen ── -->
+  <div id="screen-container">
+    <div id="device-frame">
+      <div class="notch">
+        <div class="camera"></div>
+        <div class="sensor"></div>
+      </div>
+      <div class="frame-edge">
+        <canvas id="screen" width="1080" height="2400"></canvas>
+      </div>
+      <div class="bottom-bar"></div>
+      <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div class="msg">Connecting to emulator…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Keyboard hint ── -->
+  <div id="keyboard-hint">Keyboard input is sent directly to the emulator</div>
+
+  <!-- ── Status bar ── -->
+  <div id="status-bar">
+    <span class="stat">
+      <span class="stat-label">VNC:</span>
+      <span class="stat-value err" id="vnc-status">disconnected</span>
+    </span>
+    <span class="stat">
+      <span class="stat-label">Emulator:</span>
+      <span class="stat-value" id="emu-status">checking…</span>
+    </span>
+    <span class="stat">
+      <span class="stat-label">Flutter:</span>
+      <span class="stat-value" id="flutter-status">—</span>
+    </span>
+    <span class="stat">
+      <span class="stat-label">Resolution:</span>
+      <span class="stat-value" id="res-status">—</span>
+    </span>
+    <span class="stat">
+      <span class="stat-label">FPS:</span>
+      <span class="stat-value" id="fps-status">—</span>
+    </span>
+    <span class="stat" style="margin-left:auto;">
+      <span class="stat-label">v</span>
+      <span class="stat-value" id="version-status">1.0</span>
+    </span>
+  </div>
+
+  <!-- ── noVNC RFB from CDN ── -->
+  <script src="https://cdn.jsdelivr.net/npm/@novnc/novnc@1.4.0/dist/rfb.min.js"></script>
+
+  <script>
+  (function() {
+    'use strict';
+
+    // ── Configuration ────────────────────────────────
+    const CONFIG = {
+      host: window.location.hostname || 'localhost',
+      wsPort: '6080',
+      password: 'ghostkey',
+      reconnectDelay: 5000,
+      statusPollInterval: 10000,
+      canvasScale: 1,
+      maxReconnectAttempts: 0,  // 0 = unlimited
+    };
+
+    // Detect port — use the web server port from the page URL
+    const pagePort = parseInt(window.location.port, 10);
+    if (pagePort && pagePort !== 80 && pagePort !== 443) {
+      // The websocket port is likely wsPort (6080), not the web port
+      // Keep default — WS typically runs on 6080 separate from the page server
+    }
+
+    // ── DOM references ───────────────────────────────
+    const $ = (id) => document.getElementById(id);
+    const canvas = $('screen');
+    const statusBadge = $('connection-badge');
+    const vncStatus = $('vnc-status');
+    const emuStatus = $('emu-status');
+    const flutterStatus = $('flutter-status');
+    const resStatus = $('res-status');
+    const fpsStatus = $('fps-status');
+    const connectBtn = $('reconnect-btn');
+    const loadingOverlay = $('loading-overlay');
+    const loadingMsg = loadingOverlay?.querySelector('.msg');
+    const keyboardHint = $('keyboard-hint');
+
+    // ── State ────────────────────────────────────────
+    let rfb = null;
+    let connected = false;
+    let reconnectTimer = null;
+    let reconnectAttempts = 0;
+    let fpsInterval = null;
+    let frameCount = 0;
+    let lastFpsTime = 0;
+    let statusPollTimer = null;
+    let powerState = true;
+
+    // ── FPS tracking ─────────────────────────────────
+    function startFpsCounter() {
+      stopFpsCounter();
+      frameCount = 0;
+      lastFpsTime = performance.now();
+      fpsInterval = setInterval(() => {
+        const now = performance.now();
+        const elapsed = now - lastFpsTime;
+        if (elapsed > 0) {
+          const fps = Math.round((frameCount * 1000) / elapsed);
+          fpsStatus.textContent = fps + ' fps';
+          fpsStatus.className = 'stat-value' + (fps >= 15 ? ' ok' : fps > 5 ? ' warn' : ' err');
+        }
+        frameCount = 0;
+        lastFpsTime = now;
+      }, 2000);
+    }
+
+    function stopFpsCounter() {
+      if (fpsInterval) {
+        clearInterval(fpsInterval);
+        fpsInterval = null;
+      }
+      fpsStatus.textContent = '—';
+      fpsStatus.className = 'stat-value';
+    }
+
+    // ── Connection state UI ──────────────────────────
+    function setConnectionState(state, message) {
+      const states = {
+        idle:       { text: message || 'Idle',       cls: 'idle' },
+        connecting: { text: message || 'Connecting…', cls: 'connecting' },
+        connected:  { text: message || 'Connected',   cls: 'connected' },
+        disconnected: { text: message || 'Disconnected', cls: 'disconnected' },
+        error:      { text: message || 'Error',       cls: 'error' },
+      };
+
+      const s = states[state] || states.error;
+      statusBadge.textContent = s.text;
+      statusBadge.className = 'badge ' + s.cls;
+
+      if (state === 'connected') {
+        vncStatus.textContent = 'connected';
+        vncStatus.className = 'stat-value ok';
+        connectBtn.innerHTML = '<span class="btn-icon">⏹</span> Disconnect';
+        connectBtn.className = 'primary connected';
+        if (loadingOverlay) loadingOverlay.classList.remove('visible');
+      } else {
+        vncStatus.textContent = state === 'connecting' ? 'connecting…' : 'disconnected';
+        vncStatus.className = 'stat-value err';
+        connectBtn.innerHTML = '<span class="btn-icon">▶</span> Connect';
+        connectBtn.className = 'primary';
+        if (state === 'connecting' && loadingOverlay) {
+          loadingOverlay.classList.add('visible');
+          if (loadingMsg) loadingMsg.textContent = message || 'Connecting…';
+        }
+      }
+
+      if (state === 'error' && loadingOverlay) {
+        loadingOverlay.classList.add('visible');
+        if (loadingMsg) loadingMsg.textContent = message || 'Connection failed';
+      }
+    }
+
+    // ── RFB connection ───────────────────────────────
+    function connect() {
+      if (rfb && connected) {
+        disconnect();
+        // Brief delay then reconnect
+        setTimeout(connect, 300);
+        return;
+      }
+
+      if (rfb) {
+        // Clean up old instance
+        try { rfb.disconnect(); } catch(e) {}
+        rfb = null;
+      }
+
+      const url = `ws://${CONFIG.host}:${CONFIG.wsPort}`;
+      console.log('[ghostkey] Connecting to', url);
+
+      setConnectionState('connecting');
+
+      try {
+        rfb = new RFB(canvas, url, {
+          credentials: { password: CONFIG.password },
+          shared: true,
+          clipViewport: false,
+          dragViewport: false,
+          viewOnly: false,
+          focusOnClick: true,
+        });
+
+        rfb._canvas = canvas;  // Keep reference
+
+        rfb.addEventListener('connect', () => {
+          console.log('[ghostkey] VNC connected');
+          connected = true;
+          reconnectAttempts = 0;
+          setConnectionState('connected');
+          startFpsCounter();
+
+          // Show keyboard hint briefly
+          if (keyboardHint) {
+            keyboardHint.classList.add('visible');
+            setTimeout(() => keyboardHint.classList.remove('visible'), 4000);
+          }
+
+          // Try to wake the device
+          setTimeout(() => {
+            if (rfb && connected) {
+              try {
+                // Send Power key to wake (KEY_POWER = 0xFFB3 on X11)
+                rfb.sendKey(0xFFB3, 0, true);
+                setTimeout(() => rfb.sendKey(0xFFB3, 0, false), 150);
+              } catch(e) {}
+            }
+          }, 2000);
+        });
+
+        rfb.addEventListener('disconnect', (e) => {
+          console.log('[ghostkey] VNC disconnected:', e.detail?.clean ? 'clean' : 'unexpected');
+          const wasConnected = connected;
+          connected = false;
+          stopFpsCounter();
+          setConnectionState('disconnected', 'Disconnected');
+          if (loadingOverlay) loadingOverlay.classList.remove('visible');
+
+          // Auto-reconnect if it wasn't intentional
+          if (wasConnected) {
+            scheduleReconnect();
+          }
+        });
+
+        rfb.addEventListener('securityfailure', (e) => {
+          console.error('[ghostkey] VNC security failure:', e.detail?.reason || 'unknown');
+          const reason = e.detail?.reason || 'Authentication failed';
+          setConnectionState('error', `Auth error: ${reason}`);
+          scheduleReconnect();
+        });
+
+        rfb.addEventListener('desktopname', (e) => {
+          if (e.detail?.name) {
+            console.log('[ghostkey] Desktop name:', e.detail.name);
+          }
+        });
+
+        rfb.addEventListener('clipboard', (e) => {
+          // Clipboard from remote — we could handle it
+        });
+
+        // Track frame updates for FPS
+        rfb.addEventListener('framebufferupdate', () => {
+          frameCount++;
+          // Update resolution status on first frame
+          if (rfb) {
+            const w = rfb._canvas?.width || canvas.width;
+            const h = rfb._canvas?.height || canvas.height;
+            if (resStatus && w > 0 && h > 0) {
+              resStatus.textContent = `${w}×${h}`;
+            }
+          }
+        });
+      } catch (e) {
+        console.error('[ghostkey] Connection error:', e);
+        setConnectionState('error', 'Connection failed: ' + e.message);
+        scheduleReconnect();
+      }
+    }
+
+    function disconnect() {
+      clearReconnect();
+      if (rfb) {
+        try { rfb.disconnect(); } catch(e) {}
+        rfb.removeEventListener('connect', () => {});
+        rfb = null;
+      }
+      connected = false;
+      stopFpsCounter();
+      setConnectionState('disconnected', 'Disconnected');
+      if (loadingOverlay) loadingOverlay.classList.remove('visible');
+    }
+
+    // ── Auto-reconnect ───────────────────────────────
+    function scheduleReconnect() {
+      clearReconnect();
+      if (CONFIG.maxReconnectAttempts > 0 && reconnectAttempts >= CONFIG.maxReconnectAttempts) {
+        console.log('[ghostkey] Max reconnect attempts reached');
+        setConnectionState('error', 'Max reconnects reached');
+        return;
+      }
+
+      reconnectAttempts++;
+      setConnectionState('disconnected', `Reconnecting in ${Math.round(CONFIG.reconnectDelay / 1000)}s… (${reconnectAttempts})`);
+
+      reconnectTimer = setTimeout(() => {
+        console.log('[ghostkey] Auto-reconnecting…');
+        connect();
+      }, CONFIG.reconnectDelay);
+    }
+
+    function clearReconnect() {
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
+    }
+
+    // ── Keyboard input passthrough ───────────────────
+    function isTextField(el) {
+      if (!el) return false;
+      const tag = el.tagName.toLowerCase();
+      return tag === 'input' || tag === 'textarea' || tag === 'select' ||
+             el.isContentEditable || el.getAttribute('role') === 'textbox';
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (!rfb || !connected) return;
+      // Don't intercept if focus is in a text field
+      if (isTextField(document.activeElement)) return;
+
+      // Let the canvas handle the key event — the RFB client on the canvas
+      // will forward it to the VNC server. We just need to make sure the
+      // canvas has focus.
+      if (document.activeElement !== canvas) {
+        canvas.focus();
+      }
+    });
+
+    // ── Control buttons ──────────────────────────────
+    function sendKey(keyCode, modifiers) {
+      if (!rfb || !connected) return;
+      try {
+        if (modifiers) {
+          // Send modifier + key
+          rfb.sendKey(keyCode, 0, true);
+          setTimeout(() => rfb.sendKey(keyCode, 0, false), 100);
+        } else {
+          rfb.sendKey(keyCode, 0, true);
+          setTimeout(() => rfb.sendKey(keyCode, 0, false), 100);
+        }
+      } catch(e) {
+        console.warn('sendKey failed:', e);
+      }
+    }
+
+    // Key mappings (X11 keysyms)
+    const KEYS = {
+      POWER:    0xFFB3,   // XF86XK_PowerOff
+      HOME:     0xFF50,   // XK_Home
+      BACK:     0xFF1B,   // XK_Escape  (maps to Android Back)
+      MENU:     0xFF67,   // XK_Menu
+      VOL_UP:   0xFF52,   // XK_Up — or XF86XK_AudioRaiseVolume (0x1008FF13)
+      VOL_DOWN: 0xFF54,   // XK_Down — or XF86XK_AudioLowerVolume (0x1008FF11)
+      F11:      0xFFC9,   // XK_F11 — often rotates display
+      F12:      0xFFCC,   // XK_F12 — recent apps
+      TAB:      0xFF09,   // XK_Tab
+      ENTER:    0xFF0D,   // XK_Return
+    };
+
+    $('power-btn')?.addEventListener('click', () => {
+      sendKey(KEYS.POWER);
+      powerState = !powerState;
+    });
+
+    $('volume-up-btn')?.addEventListener('click', () => sendKey(KEYS.VOL_UP));
+    $('volume-down-btn')?.addEventListener('click', () => sendKey(KEYS.VOL_DOWN));
+    $('home-btn')?.addEventListener('click', () => sendKey(KEYS.HOME));
+    $('back-btn')?.addEventListener('click', () => sendKey(KEYS.BACK));
+    $('recent-btn')?.addEventListener('click', () => sendKey(KEYS.F12));
+    $('rotate-btn')?.addEventListener('click', () => sendKey(KEYS.F11));
+
+    $('fullscreen-btn')?.addEventListener('click', () => {
+      const container = $('screen-container');
+      if (!document.fullscreenElement) {
+        if (container?.requestFullscreen) {
+          container.requestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    });
+
+    $('reconnect-btn')?.addEventListener('click', () => {
+      if (connected) {
+        disconnect();
+      } else {
+        clearReconnect();
+        connect();
+      }
+    });
+
+    // ── Touch drag support ───────────────────────────
+    (function setupTouchScrolling() {
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let isDragging = false;
+
+      canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length > 0) {
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+          isDragging = false;
+        }
+      }, { passive: true });
+
+      canvas.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1) {
+          const dx = e.touches[0].clientX - touchStartX;
+          const dy = e.touches[0].clientY - touchStartY;
+          if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+            isDragging = true;
+          }
+        }
+      }, { passive: true });
+    })();
+
+    // ── Status polling ───────────────────────────────
+    function pollStatus() {
+      fetch('/api/status')
+        .then(r => r.json())
+        .then(data => {
+          if (data.emulator) {
+            emuStatus.textContent = data.emulator;
+            emuStatus.className = 'stat-value ' + (
+              data.emulator === 'booted' ? 'ok' :
+              data.emulator === 'running' ? 'warn' : 'err'
+            );
+          }
+          if (data.flutter) {
+            flutterStatus.textContent = data.flutter;
+            flutterStatus.className = 'stat-value ' + (
+              data.flutter === 'running' ? 'ok' : ''
+            );
+          }
+        })
+        .catch(() => {});
+    }
+
+    if (statusPollTimer) clearInterval(statusPollTimer);
+    statusPollTimer = setInterval(pollStatus, CONFIG.statusPollInterval);
+
+    // ── Resize handler ───────────────────────────────
+    function handleResize() {
+      const container = $('screen-container');
+      if (!container || !canvas) return;
+
+      const containerRect = container.getBoundingClientRect();
+      const maxW = containerRect.width - 80;
+      const maxH = containerRect.height - 80;
+
+      // The emulator sends 1080x2400 frames — we scale the canvas to fit
+      const aspect = 1080 / 2400;  // ~0.45
+      let w = Math.min(maxW, 1080);
+      let h = w / aspect;
+
+      if (h > maxH) {
+        h = maxH;
+        w = h * aspect;
+      }
+
+      // Clamp min size
+      w = Math.max(240, w);
+      h = Math.max(520, h);
+
+      canvas.style.width = Math.round(w) + 'px';
+      canvas.style.height = Math.round(h) + 'px';
+    }
+
+    window.addEventListener('resize', handleResize);
+    setTimeout(handleResize, 100);
+
+    // Also observe container size changes
+    if (window.ResizeObserver) {
+      const observer = new ResizeObserver(handleResize);
+      observer.observe($('screen-container'));
+    }
+
+    // ── Init ─────────────────────────────────────────
+    console.log('[ghostkey] Live Preview client initialized');
+    console.log('[ghostkey] WebSocket target:', `ws://${CONFIG.host}:${CONFIG.wsPort}`);
+
+    // Start connection after a brief pause to let everything render
+    setTimeout(() => {
+      connect();
+    }, 1500);
+
+    // ── Cleanup on page unload ───────────────────────
+    window.addEventListener('beforeunload', () => {
+      clearReconnect();
+      if (statusPollTimer) clearInterval(statusPollTimer);
+      stopFpsCounter();
+      if (rfb) {
+        try { rfb.disconnect(); } catch(e) {}
+      }
+    });
+  })();
+  </script>
+</body>
+</html>
