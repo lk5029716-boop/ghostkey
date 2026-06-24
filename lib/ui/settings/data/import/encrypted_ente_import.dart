@@ -64,12 +64,25 @@ Future<void> _pickEnteFile(BuildContext context) async {
   // This guarantees the password dialog's route removal is fully processed.
   await SchedulerBinding.instance.endOfFrame;
   if (!context.mounted) return;
-  await showImportProgressWithParsing(
-    context: context,
-    parser: (onProgress) => _decryptAndParseEnte(
-      export, password, onProgress,
-    ),
-  );
+  try {
+    await showImportProgressWithParsing(
+      context: context,
+      parser: (onProgress) => _decryptAndParseEnte(
+        export, password, onProgress,
+      ),
+    );
+  } catch (e, s) {
+    _logger.severe('Encrypted Ente import failed', e, s);
+    if (!context.mounted) return;
+    final msg = e.toString();
+    await showGhostKeyError(
+      context,
+      'Import failed',
+      msg.contains('SecretBox') || msg.contains('MAC')
+          ? 'Could not decrypt the Ente export. Please check your password and try again.\n\nDetails: $msg'
+          : 'Could not import Ente export.\nError: $msg',
+    );
+  }
 }
 
 /// Decrypts the Ente export in an isolate, then parses the lines.

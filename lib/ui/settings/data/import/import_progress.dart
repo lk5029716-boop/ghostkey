@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../../../../models/code.dart';
 import '../../../../store/code_store.dart';
@@ -55,7 +56,7 @@ Future<void> showImportProgressWithParsing({
 }) async {
   final controller = StreamController<ImportProgressEvent>();
 
-  showDialog(
+  unawaited(showDialog<void>(
     context: context,
     barrierDismissible: false,
     builder: (_) => PopScope(
@@ -79,7 +80,7 @@ Future<void> showImportProgressWithParsing({
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () => Navigator.of(ctx).pop(),
                   child: const Text('OK'),
                 ),
               ],
@@ -126,31 +127,45 @@ Future<void> showImportProgressWithParsing({
         },
       ),
     ),
-  );
+  ));
 
-  // Parse
-  final codes = await parser((current, total) {
-    controller.add(ImportProgressEvent(current: current, total: total, phase: ImportPhase.parsing));
-  });
+  // Ensure the progress dialog has entered the tree before parser callbacks
+  // start driving the StreamBuilder. Fast imports can otherwise close/update
+  // the stream during route insertion/deactivation and trigger Flutter's
+  // `_dependents.isEmpty` assertion in framework.dart.
+  await SchedulerBinding.instance.endOfFrame;
 
-  if (codes.isEmpty) {
+  try {
+    // Parse
+    final codes = await parser((current, total) {
+      controller.add(ImportProgressEvent(current: current, total: total, phase: ImportPhase.parsing));
+    });
+
+    if (codes.isEmpty) {
+      await controller.close();
+      return;
+    }
+
+    // Switch to saving
+    controller.add(ImportProgressEvent(current: 0, total: codes.length, phase: ImportPhase.saving));
+
+    int saved = 0;
+    for (final code in codes) {
+      try {
+        await CodeStore.instance.addCode(code);
+        saved++;
+        controller.add(ImportProgressEvent(current: saved, total: codes.length, phase: ImportPhase.saving));
+      } catch (_) {}
+    }
+
     await controller.close();
-    return;
+  } catch (_) {
+    await controller.close();
+    if (context.mounted && Navigator.of(context, rootNavigator: true).canPop()) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+    rethrow;
   }
-
-  // Switch to saving
-  controller.add(ImportProgressEvent(current: 0, total: codes.length, phase: ImportPhase.saving));
-
-  int saved = 0;
-  for (final code in codes) {
-    try {
-      await CodeStore.instance.addCode(code);
-      saved++;
-      controller.add(ImportProgressEvent(current: saved, total: codes.length, phase: ImportPhase.saving));
-    } catch (_) {}
-  }
-
-  await controller.close();
 }
 
 /// Legacy API: shows a progress dialog that updates as codes are saved.
@@ -167,7 +182,7 @@ Future<void> showImportProgress({
   final controller = StreamController<int>();
   int saved = 0;
 
-  showDialog(
+  unawaited(showDialog<void>(
     context: context,
     barrierDismissible: false,
     builder: (_) => PopScope(
@@ -187,7 +202,7 @@ Future<void> showImportProgress({
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () => Navigator.of(ctx).pop(),
                   child: const Text('OK'),
                 ),
               ],
@@ -216,7 +231,9 @@ Future<void> showImportProgress({
         },
       ),
     ),
-  );
+  ));
+
+  await SchedulerBinding.instance.endOfFrame;
 
   for (final code in codes) {
     try {

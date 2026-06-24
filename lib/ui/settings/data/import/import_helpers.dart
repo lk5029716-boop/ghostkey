@@ -1,9 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 /// M3 progress dialog for long-running imports.
 /// Shows a spinning indicator + message.
 Future<void> showGhostKeyProgress(BuildContext context, String message) async {
-  await showDialog(
+  // Do not await the dialog here. `showDialog` completes only after the
+  // route is popped, so awaiting it before starting the import deadlocks the
+  // caller behind its own non-dismissible progress dialog.
+  unawaited(showDialog<void>(
     context: context,
     barrierDismissible: false,
     builder: (ctx) => PopScope(
@@ -23,12 +29,23 @@ Future<void> showGhostKeyProgress(BuildContext context, String message) async {
         ),
       ),
     ),
-  );
+  ));
+
+  // Wait until the route has actually been inserted and the frame has
+  // settled. A zero-delay future is not enough on Android when callers
+  // immediately pop this progress dialog and push another route (password
+  // prompt / import-progress route); Flutter can otherwise tear down an
+  // inherited dialog subtree while a new route is still depending on it,
+  // which trips framework.dart's `_dependents.isEmpty` assertion.
+  await SchedulerBinding.instance.endOfFrame;
 }
 
 Future<void> hideGhostKeyProgress(BuildContext context) async {
   if (Navigator.of(context, rootNavigator: true).canPop()) {
     Navigator.of(context, rootNavigator: true).pop();
+    // Let the popped dialog fully deactivate before the caller pushes the
+    // next dialog. This avoids pop→push races in authenticator import flows.
+    await SchedulerBinding.instance.endOfFrame;
   }
 }
 
