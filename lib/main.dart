@@ -644,7 +644,7 @@ class _VaultPageState extends State<VaultPage> {
   List<VaultItem> _vaultItems = [];
   List<Code> _codes = [];
   bool _loaded = false;
-  int _selectedFilterIndex = 0; // default: Password filter selected
+  int _selectedFilterIndex = 3; // default: 2FA filter selected
   StreamSubscription<VaultItemsUpdatedEvent>? _vaultSub;
   StreamSubscription<CodesUpdatedEvent>? _codesSub;
 
@@ -814,6 +814,10 @@ class _VaultPageState extends State<VaultPage> {
           const SizedBox(height: 4),
           if (!_loaded)
             const Expanded(child: Center(child: CircularProgressIndicator(color: kPrimary)))
+          else if (_filterCategories[_selectedFilterIndex].category == VaultCategory.totp)
+            Expanded(
+              child: _CodesListWidget(codes: _codes),
+            )
           else if (_isEmpty)
             _buildEmptyState()
           else
@@ -900,10 +904,9 @@ class _VaultPageState extends State<VaultPage> {
         page = ApiKeysDetailScreen(item: item);
         break;
       case VaultCategory.codes:
-        page = TwoFactorDetailScreen(item: item);
+        page = CodesDetailScreen(item: item);
         break;
       case VaultCategory.totp:
-        page = TwoFactorDetailScreen(item: item);
         break;
       case VaultCategory.notes:
       case VaultCategory.privateKeys:

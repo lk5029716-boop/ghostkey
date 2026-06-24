@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../main.dart';
+import 'data/export/export_service.dart';
 import 'import_from_another_app_screen.dart';
 
 /// Settings → Data section.
@@ -47,15 +48,8 @@ class DataSectionWidget extends StatelessWidget {
         _ImportRow(
           icon: Icons.ios_share,
           title: 'Export to file',
-          subtitle: 'Save all codes as otpauth:// URIs',
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Export coming soon'),
-                duration: Duration(seconds: 2),
-              ),
-            );
-          },
+          subtitle: 'Plain text, HTML, or JSON',
+          onTap: () => ExportService.showExportOptions(context),
         ),
       ],
     );

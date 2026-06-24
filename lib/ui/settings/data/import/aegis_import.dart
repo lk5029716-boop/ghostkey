@@ -82,17 +82,17 @@ Future<List<Code>> _parseAegisCodes(
     final inner = decryptAegisVault(decoded, password: password);
     aegisDb = jsonDecode(inner) as Map;
   } else {
-    aegisDb = decoded['db'];
+    aegisDb = decoded;
   }
 
   final groupIdToName = <String, String>{};
-  if (aegisDb?['groups'] != null) {
-    for (final g in aegisDb!['groups']) {
+  if (aegisDb['groups'] != null) {
+    for (final g in aegisDb['groups']) {
       groupIdToName[g['uuid']] = g['name'];
     }
   }
 
-  final entries = aegisDb?['entries'] ?? [];
+  final entries = aegisDb['entries'] ?? [];
   final total = entries.length;
   final codes = <Code>[];
   for (var i = 0; i < entries.length; i++) {
