@@ -74,10 +74,14 @@ Future<void> _pickEnteFile(BuildContext context) async {
   } catch (e, s) {
     _logger.severe('Ente import failed', e, s);
     if (!context.mounted) return;
+    final msg = e.toString();
+    final isPwd = msg.contains('MAC verification failed') || msg.contains('decrypt') || msg.contains('password');
     await showGhostKeyError(
       context,
       'Import failed',
-      'Could not import Ente export.\nError: $e',
+      isPwd
+          ? 'Could not decrypt the backup. Please check your password and try again.\n\nDetails: $msg'
+          : 'Could not import Ente export.\nError: $msg',
     );
   }
 }
@@ -92,7 +96,7 @@ Future<List<Code>> _decryptAndParseEnte(
   // Report initial progress (0/1) so user sees something during decrypt
   onProgress(0, 1);
 
-  final decrypted = await compute(
+  final result = await compute(
     _decryptEnteInIsolate,
     _EnteDecryptParams(
       kdfParams: export.kdfParams,
@@ -102,6 +106,11 @@ Future<List<Code>> _decryptAndParseEnte(
     ),
   );
 
+  if (result['status'] == 'error') {
+    throw Exception(result['message'] ?? 'Decryption failed');
+  }
+
+  final decrypted = result['data']!;
   final lines = decrypted.split('\n').where((l) => l.trim().isNotEmpty).toList();
   final total = lines.length;
   final codes = <Code>[];
@@ -129,35 +138,39 @@ class _EnteDecryptParams {
   });
 }
 
-String _decryptEnteInIsolate(_EnteDecryptParams params) {
-  // 1. Derive 32-byte key from password via Argon2id.
-  final salt = base64Decode(params.kdfParams.salt);
-  // Ente's export stores memLimit in bytes (libsodium convention), but
-  // pointycastle's Argon2Parameters.memory expects 1024-byte blocks.
-  final memoryBlocks = params.kdfParams.memLimit ~/ 1024;
-  final generator = Argon2BytesGenerator()
-    ..init(
-      Argon2Parameters(
-        Argon2Parameters.ARGON2_id,
-        Uint8List.fromList(salt),
-        desiredKeyLength: 32,
-        iterations: params.kdfParams.opsLimit,
-        memory: memoryBlocks,
-        lanes: 1,
-        version: Argon2Parameters.ARGON2_VERSION_13,
-      ),
+Map<String, String> _decryptEnteInIsolate(_EnteDecryptParams params) {
+  try {
+    // 1. Derive 32-byte key from password via Argon2id.
+    final salt = base64Decode(params.kdfParams.salt);
+    // Ente's export stores memLimit in bytes (libsodium convention), but
+    // pointycastle's Argon2Parameters.memory expects 1024-byte blocks.
+    final memoryBlocks = params.kdfParams.memLimit ~/ 1024;
+    final generator = Argon2BytesGenerator()
+      ..init(
+        Argon2Parameters(
+          Argon2Parameters.ARGON2_id,
+          Uint8List.fromList(salt),
+          desiredKeyLength: 32,
+          iterations: params.kdfParams.opsLimit,
+          memory: memoryBlocks,
+          lanes: 1,
+          version: Argon2Parameters.ARGON2_VERSION_13,
+        ),
+      );
+    final derivedKey = generator.process(
+      Uint8List.fromList(utf8.encode(params.password)),
     );
-  final derivedKey = generator.process(
-    Uint8List.fromList(utf8.encode(params.password)),
-  );
 
-  // 2. Decrypt via XChaCha20-Poly1305 secretbox.
-  final ciphertext = base64Decode(params.encryptedDataB64);
-  final nonce = base64Decode(params.encryptionNonceB64);
-  final plaintext = secretBoxOpenEasy(
-    ciphertextWithTag: Uint8List.fromList(ciphertext),
-    nonce: Uint8List.fromList(nonce),
-    key: derivedKey,
-  );
-  return utf8.decode(plaintext);
+    // 2. Decrypt via XChaCha20-Poly1305 secretbox.
+    final ciphertext = base64Decode(params.encryptedDataB64);
+    final nonce = base64Decode(params.encryptionNonceB64);
+    final plaintext = secretBoxOpenEasy(
+      ciphertextWithTag: Uint8List.fromList(ciphertext),
+      nonce: Uint8List.fromList(nonce),
+      key: derivedKey,
+    );
+    return {'status': 'ok', 'data': utf8.decode(plaintext)};
+  } catch (e) {
+    return {'status': 'error', 'message': e.toString()};
+  }
 }
