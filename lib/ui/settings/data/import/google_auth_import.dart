@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:logging/logging.dart';
 
 import '../../../../models/code.dart';
@@ -33,6 +34,8 @@ Future<void> showGoogleAuthInstruction(BuildContext context) async {
     return;
   }
 
+  if (!context.mounted) return;
+  await SchedulerBinding.instance.endOfFrame;
   if (!context.mounted) return;
   try {
     await showImportProgressWithParsing(

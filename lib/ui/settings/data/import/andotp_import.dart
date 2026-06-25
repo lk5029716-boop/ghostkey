@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:logging/logging.dart';
 import 'package:pointycastle/export.dart';
 
@@ -48,6 +49,8 @@ Future<void> _pickAndOTPFile(BuildContext context) async {
     if (password == null) return;
   }
 
+  if (!context.mounted) return;
+  await SchedulerBinding.instance.endOfFrame;
   if (!context.mounted) return;
   try {
     await showImportProgressWithParsing(
