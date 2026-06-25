@@ -31,7 +31,7 @@ import 'store/vault_store.dart';
 import 'events/vault_items_updated_event.dart';
 import 'models/code.dart';
 import 'models/code_display.dart';
-import 'events/codes_updated_event.dart';
+import 'screens/openrouter_test_screen.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -2431,7 +2431,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _sectionHeader('Support', primary),
           const SizedBox(height: 8),
           _card([
-            _row(Icons.bug_report_outlined, 'Report a bug', chevron: true),
+            _row(Icons.api, 'OpenRouter Test', chevron: true, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OpenRouterTestScreen()))),
           ]),
           const SizedBox(height: 24),
 
