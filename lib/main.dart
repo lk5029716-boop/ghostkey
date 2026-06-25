@@ -457,7 +457,6 @@ class _MainShellState extends State<MainShell> {
   final _pages = <Widget>[
     const VaultDashboard(),
     VaultPage(),
-    const HeirsPage(),
     const SettingsScreen(),
   ];
 
@@ -472,7 +471,6 @@ class _MainShellState extends State<MainShell> {
       body: IndexedStack(index: _currentIndex, children: [
         const VaultDashboard(),
         const VaultPage(),
-        const HeirsPage(),
         const SettingsScreen(),
       ]),
       floatingActionButton: null,
@@ -485,7 +483,6 @@ class _MainShellState extends State<MainShell> {
         destinations: [
           NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home, color: kPrimary), label: 'Home'),
           NavigationDestination(icon: const Icon(Icons.lock_outlined), selectedIcon: const Icon(Icons.lock, color: kPrimary), label: 'Vault'),
-          NavigationDestination(icon: const Icon(Icons.group_outlined), selectedIcon: const Icon(Icons.group, color: kPrimary), label: 'Heirs'),
           NavigationDestination(icon: const Icon(Icons.settings_outlined), selectedIcon: const Icon(Icons.settings, color: kPrimary), label: 'Settings'),
         ],
       ),
@@ -2175,54 +2172,7 @@ class _BinanceAccountScreenState extends State<BinanceAccountScreen> {
   }
 }
 
-class HeirsPage extends StatelessWidget {
-  const HeirsPage({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: kSurface,
-      body: SafeArea(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Text('Heirs', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kPrimary))),
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Heirs', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: kOnSurface)), const SizedBox(height: 4), const Text('Add trusted people who can inherit your assets', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant))])),
-          const SizedBox(height: 24),
-          Expanded(child: ListView.separated(padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: 3, separatorBuilder: (_, __) => const SizedBox(height: 8), itemBuilder: (context, index) {
-            final names = ['Sarah Ahmed', 'Ahmed Rahman', 'John Smith'];
-            final relations = ['Sister', 'Brother', 'Lawyer'];
-            final shares = ['2/5 shares', '1/5 shares', '1/5 shares'];
-            final avatars = ['S', 'A', 'J'];
-            return Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: kOutlineVariant.withOpacity(0.3)),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 1))],
-              ),
-              child: Row(
-                children: [
-                  Container(width: 48, height: 48, decoration: BoxDecoration(color: kSurfaceContainer, shape: BoxShape.circle), child: Center(child: Text(avatars[index], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurfaceVariant)))),
-                  const SizedBox(width: 16),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(names[index], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: kOnSurface)),
-                    const SizedBox(height: 2),
-                    Text('${relations[index]}  \u2022  ${shares[index]}', style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
-                  ])),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.mail_outlined, color: kOnSurfaceVariant, size: 20),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.more_vert, color: kOnSurfaceVariant, size: 20),
-                ],
-              ),
-            );
-          })),
-          Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, kSurface.withOpacity(0.9), kSurface], stops: const [0.0, 0.3, 1.0])), child: SafeArea(top: false, child: SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: () {}, icon: const Icon(Icons.add, size: 20), label: const Text('Add Heir', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)), style: FilledButton.styleFrom(backgroundColor: kPrimary, foregroundColor: kOnPrimary, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))))),
-        ]),
-      ),
-    );
-  }
-}
 
 class AddSecretPage extends StatelessWidget {
   const AddSecretPage({super.key});
@@ -2335,7 +2285,7 @@ class _VaultDashboardState extends State<VaultDashboard> {
           const SizedBox(height: 24),
           _buildDeadManCard(),
           const SizedBox(height: 16),
-          Row(children: [_statCard('34', 'Secrets'), const SizedBox(width: 12), _statCard('12', 'Crypto Assets'), const SizedBox(width: 12), _statCard('3', 'Heirs')]),
+          Row(children: [_statCard('34', 'Secrets'), const SizedBox(width: 12), _statCard('12', 'Crypto Assets')]),
           const SizedBox(height: 24),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Recent Activity', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface)), TextButton(onPressed: () {}, child: const Text('View all', style: TextStyle(color: kPrimary, fontSize: 12)))]),
           const SizedBox(height: 8),
@@ -2363,8 +2313,6 @@ class _VaultDashboardState extends State<VaultDashboard> {
       _activityRow(Icons.vpn_key, 'Secret viewed', 'Google Account', 'Today, 9:20 AM', kOnSurfaceVariant),
       const Divider(color: kSurfaceContainerHighest, height: 1),
       _activityRow(Icons.verified_user, 'Check-in successful', '', 'Today, 9:00 AM', kPrimary),
-      const Divider(color: kSurfaceContainerHighest, height: 1),
-      _activityRow(Icons.person_add, 'Heir added: Sarah', '', 'Yesterday, 3:15 PM', kOnSurfaceVariant),
     ]));
   }
 
