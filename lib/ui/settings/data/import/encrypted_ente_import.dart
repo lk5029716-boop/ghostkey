@@ -93,13 +93,12 @@ Future<List<Code>> _decryptAndParseEnte(
   String password,
   void Function(int current, int total) onProgress,
 ) async {
-  // Report initial progress (0/1) so user sees something during decrypt
-  onProgress(0, 1);
-
   final result = await compute(
     _decryptEnteInIsolate,
     _EnteDecryptParams(
-      kdfParams: export.kdfParams,
+      memLimit: export.kdfParams.memLimit,
+      opsLimit: export.kdfParams.opsLimit,
+      salt: export.kdfParams.salt,
       encryptedDataB64: export.encryptedData,
       encryptionNonceB64: export.encryptionNonce,
       password: password,
@@ -126,12 +125,16 @@ Future<List<Code>> _decryptAndParseEnte(
 }
 
 class _EnteDecryptParams {
-  final KDFParams kdfParams;
+  final int memLimit;
+  final int opsLimit;
+  final String salt;
   final String encryptedDataB64;
   final String encryptionNonceB64;
   final String password;
   _EnteDecryptParams({
-    required this.kdfParams,
+    required this.memLimit,
+    required this.opsLimit,
+    required this.salt,
     required this.encryptedDataB64,
     required this.encryptionNonceB64,
     required this.password,
@@ -141,17 +144,17 @@ class _EnteDecryptParams {
 Map<String, String> _decryptEnteInIsolate(_EnteDecryptParams params) {
   try {
     // 1. Derive 32-byte key from password via Argon2id.
-    final salt = base64Decode(params.kdfParams.salt);
+    final salt = base64Decode(params.salt);
     // Ente's export stores memLimit in bytes (libsodium convention), but
     // pointycastle's Argon2Parameters.memory expects 1024-byte blocks.
-    final memoryBlocks = params.kdfParams.memLimit ~/ 1024;
+    final memoryBlocks = params.memLimit ~/ 1024;
     final generator = Argon2BytesGenerator()
       ..init(
         Argon2Parameters(
           Argon2Parameters.ARGON2_id,
           Uint8List.fromList(salt),
           desiredKeyLength: 32,
-          iterations: params.kdfParams.opsLimit,
+          iterations: params.opsLimit,
           memory: memoryBlocks,
           lanes: 1,
           version: Argon2Parameters.ARGON2_VERSION_13,
