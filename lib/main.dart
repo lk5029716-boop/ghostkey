@@ -28,7 +28,7 @@ import 'ui/reorder_codes_page.dart';
 import 'ui/home/coach_mark_widget.dart';
 import 'store/code_store.dart';
 import 'store/vault_store.dart';
-import 'events/vault_items_updated_event.dart';
+import 'services/quick_add_service.dart';
 import 'models/code.dart';
 import 'models/code_display.dart';
 import 'screens/openrouter_test_screen.dart';
@@ -644,6 +644,8 @@ class _VaultPageState extends State<VaultPage> {
   int _selectedFilterIndex = 3; // default: 2FA filter selected
   StreamSubscription<VaultItemsUpdatedEvent>? _vaultSub;
   StreamSubscription<CodesUpdatedEvent>? _codesSub;
+  StreamSubscription? _quickAddSub;
+
 
   @override
   void initState() {
@@ -651,6 +653,15 @@ class _VaultPageState extends State<VaultPage> {
     _loadAll();
     _vaultSub = VaultStore.instance.onVaultItemsUpdated().listen((_) => _loadVaultItems());
     _codesSub = CodeStore.instance.onCodesUpdated().listen((_) => _loadCodes());
+    // Listen for quick-add events from Home tab
+    _quickAddSub = QuickAddService.instance.bus.listen((event) {
+      if (event is QuickAddService.FilterChangedEvent) {
+        final idx = _filterCategories.indexWhere((c) => c.category == event.category);
+        if (idx >= 0) {
+          setState(() => _selectedFilterIndex = idx);
+        }
+      }
+    });
   }
 
   @override
