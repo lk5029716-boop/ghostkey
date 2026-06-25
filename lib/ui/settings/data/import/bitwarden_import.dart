@@ -53,7 +53,7 @@ Future<List<Code>> _parseBitwardenCodes(
   String jsonString,
   void Function(int current, int total) onProgress,
 ) async {
-  final data = jsonDecode(jsonString);
+  final data = jsonDecode(jsonString) as Map<String, dynamic>;
   final items = data['items'] as List<dynamic>? ?? [];
 
   final folderIdToName = <String, String>{};

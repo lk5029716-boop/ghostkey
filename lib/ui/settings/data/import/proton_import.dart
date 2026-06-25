@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:logging/logging.dart';
 import 'package:pointycastle/export.dart';
 
@@ -101,10 +102,22 @@ List<Code> parseProtonExport(Map<String, dynamic> decoded) {
 
 Future<List<Code>> _parseProtonEntries(
   Map<String, dynamic> decoded,
+  String? password,
   void Function(int current, int total) onProgress,
 ) async {
   if (isEncryptedProtonExport(decoded)) {
-    throw const FormatException('Password protected Proton export');
+    if (password == null) {
+      throw Exception('Password required for encrypted Proton export');
+    }
+    onProgress(0, 1);
+    final result = await compute(
+      _decryptProtonInIsolate,
+      _ProtonDecryptParams(jsonEncode(decoded), password),
+    );
+    if (result['status'] == 'incorrect_password') {
+      throw const IncorrectProtonExportPasswordException();
+    }
+    decoded = decodeProtonExportJson(result['jsonString']!);
   }
   final entries = decoded['entries'];
   if (entries is! List) throw const FormatException('Invalid Proton export');
@@ -267,62 +280,37 @@ Future<void> _pickProtonFile(BuildContext context) async {
   final jsonString = await readPickedImportFileAsString(path);
 
   if (!context.mounted) return;
-  await showGhostKeyProgress(context, 'Importing…');
+  var decoded = decodeProtonExportJson(jsonString);
 
-  try {
-    var decoded = decodeProtonExportJson(jsonString);
-
-    // Decrypt in a loop if password-protected
-    if (isEncryptedProtonExport(decoded)) {
-      while (true) {
-        if (!context.mounted) return;
-        await hideGhostKeyProgress(context);
-        final password = await showGhostKeyPasswordPrompt(
-          context,
-          title: 'Enter Proton export password',
-        );
-        if (password == null) return;
-        if (!context.mounted) return;
-        await showGhostKeyProgress(context, 'Decrypting…');
-
-        final result = await compute(
-          _decryptProtonInIsolate,
-          _ProtonDecryptParams(jsonString, password),
-        );
-        if (result['status'] == 'ok') {
-          decoded = decodeProtonExportJson(result['jsonString']!);
-          break;
-        } else {
-          // wrong password, loop again
-          continue;
-        }
-      }
-    }
-
+  String? password;
+  if (isEncryptedProtonExport(decoded)) {
     if (!context.mounted) return;
-    await hideGhostKeyProgress(context);
-    try {
-      await showImportProgressWithParsing(
-        context: context,
-        parser: (onProgress) => _parseProtonEntries(decoded, onProgress),
-      );
-    } catch (e, s) {
-      _logger.severe('Proton import failed', e, s);
-      if (!context.mounted) return;
-      await showGhostKeyError(
-        context,
-        'Import failed',
-        'Could not import Proton export.\nError: $e',
-      );
-    }
+    password = await showGhostKeyPasswordPrompt(
+      context,
+      title: 'Enter Proton export password',
+    );
+    if (password == null) return;
+  }
+
+  if (!context.mounted) return;
+  await SchedulerBinding.instance.endOfFrame;
+  if (!context.mounted) return;
+  try {
+    await showImportProgressWithParsing(
+      context: context,
+      parser: (onProgress) => _parseProtonEntries(decoded, password, onProgress),
+    );
   } catch (e, s) {
     _logger.severe('Proton import failed', e, s);
     if (!context.mounted) return;
-    await hideGhostKeyProgress(context);
+    final msg = e.toString();
+    final isPwd = password != null && (msg.contains('decrypt') || msg.contains('password') || msg.contains('cipher'));
     await showGhostKeyError(
       context,
       'Import failed',
-      'Could not import Proton export.\nError: $e',
+      isPwd
+          ? 'Could not decrypt the backup. Please check your password.\n\nDetails: $msg'
+          : 'Could not import Proton export.\nError: $msg',
     );
   }
 }

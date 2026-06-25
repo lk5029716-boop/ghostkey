@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../../../../models/code.dart';
 import '../../../../store/code_store.dart';
@@ -63,6 +64,15 @@ Future<void> showImportProgressWithParsing({
       child: StreamBuilder<ImportProgressEvent>(
         stream: controller.stream,
         builder: (ctx, snapshot) {
+          // Stream error: close the dialog silently so the caller's catch
+          // block can show a clean error dialog on a fresh route.
+          if (snapshot.hasError) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              Navigator.of(ctx).pop();
+            });
+            return const SizedBox.shrink();
+          }
+
           // Stream closed: show success dialog
           if (snapshot.connectionState == ConnectionState.done) {
             final event = snapshot.data;
@@ -149,6 +159,8 @@ Future<void> showImportProgressWithParsing({
         controller.add(ImportProgressEvent(current: saved, total: codes.length, phase: ImportPhase.saving));
       } catch (_) {}
     }
+  } catch (e) {
+    controller.addError(e);
   } finally {
     await controller.close();
   }
