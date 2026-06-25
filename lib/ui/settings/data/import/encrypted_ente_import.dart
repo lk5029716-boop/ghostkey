@@ -93,6 +93,7 @@ Future<List<Code>> _decryptAndParseEnte(
   String password,
   void Function(int current, int total) onProgress,
 ) async {
+  onProgress(0, 1); // Show progress bar immediately, matching other importers
   final result = await compute(
     _decryptEnteInIsolate,
     _EnteDecryptParams(
