@@ -144,11 +144,11 @@ Future<String?> showGhostKeyPasswordPrompt(
   required String title,
   String? hint,
 }) async {
-  final controller = TextEditingController();
-  try {
-    final result = await showDialog<String?>(
-      context: context,
-      builder: (ctx) => AlertDialog(
+  final result = await showDialog<String?>(
+    context: context,
+    builder: (ctx) {
+      final controller = TextEditingController();
+      return AlertDialog(
         title: Text(title),
         content: TextField(
           controller: controller,
@@ -161,18 +161,23 @@ Future<String?> showGhostKeyPasswordPrompt(
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(null),
+            onPressed: () {
+              controller.dispose();
+              Navigator.of(ctx).pop(null);
+            },
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text),
+            onPressed: () {
+              final text = controller.text;
+              controller.dispose();
+              Navigator.of(ctx).pop(text);
+            },
             child: const Text('Unlock'),
           ),
         ],
-      ),
-    );
-    return result;
-  } finally {
-    controller.dispose();
-  }
+      );
+    },
+  );
+  return result;
 }
