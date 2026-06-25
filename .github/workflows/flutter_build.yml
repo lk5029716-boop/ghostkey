@@ -1,49 +1,44 @@
-name: Build GhostKey APK
+name: Flutter Build
 
 on:
   push:
     branches: [main]
-  workflow_dispatch:
+  pull_request:
+    branches: [main]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Java
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
-
-      - name: Setup Flutter
+      - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.22.0"
           channel: stable
-
-      - name: Flutter version
-        run: flutter --version
-
-      - name: Install dependencies
+          flutter-version: '3.22.0'
+      - name: Cache Pub packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            ${{ runner.workspace }}/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('pubspec.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+      - name: Get Flutter packages
         run: flutter pub get
-
+      - name: Flutter analyze
+        run: flutter analyze
       - name: Build APK
-        run: flutter build apk --debug 2>&1 | tee /tmp/build_output.txt; exit ${PIPESTATUS[0]}
-
-      - name: Upload build log
-        if: always()
+        run: flutter build apk --debug
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: build-log
-          path: /tmp/build_output.txt
-          retention-days: 1
-
-      - name: Upload to Firebase App Distribution
-        if: success()
-        uses: wzieba/Firebase-Distribution-Github-Action@v1
-        with:
-          appId: ${{ secrets.FIREBASE_APP_ID }}
-          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          file: build/app/outputs/flutter-apk/app-debug.apk
+          name: ghostkey-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
