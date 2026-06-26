@@ -2348,9 +2348,9 @@ class _VaultDashboardState extends State<VaultDashboard> {
             initiallyExpanded: _documentsExpanded,
             onExpansionChanged: (v) => setState(() => _documentsExpanded = v),
             children: [
-              _actionTile(Icons.passport, 'Passport', 'Store passport info', VaultCategory.privateKeys),
+              _actionTile(Icons.book, 'Passport', 'Store passport info', VaultCategory.privateKeys),
               _actionTile(Icons.badge, 'ID Card', 'Store ID card info', VaultCategory.privateKeys),
-              _actionTile(Icons.license, 'Drivers License', 'Store license info', VaultCategory.privateKeys),
+              _actionTile(Icons.article, 'Drivers License', 'Store license info', VaultCategory.privateKeys),
             ],
           ),
 
