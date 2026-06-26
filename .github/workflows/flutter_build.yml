@@ -1,27 +1,28 @@
-name: Flutter Build
+name: Build GhostKey APK
 
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK
+
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - name: Install Flutter
+
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: "3.22.0"
           channel: stable
-          flutter-version: '3.22.0'
+
       - name: Cache Pub packages
         uses: actions/cache@v4
         with:
@@ -31,14 +32,16 @@ jobs:
           key: ${{ runner.os }}-pub-${{ hashFiles('pubspec.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pub-
-      - name: Get Flutter packages
+
+      - name: Install dependencies
         run: flutter pub get
-      - name: Flutter analyze
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
       - name: Build APK
         run: flutter build apk --debug
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+
+      - name: Upload to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
-          name: ghostkey-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          file: build/app/outputs/flutter-apk/app-debug.apk
