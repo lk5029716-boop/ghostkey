@@ -28,6 +28,9 @@ import 'ui/reorder_codes_page.dart';
 import 'ui/home/coach_mark_widget.dart';
 import 'store/code_store.dart';
 import 'store/vault_store.dart';
+import 'events/vault_items_updated_event.dart';
+import 'events/codes_updated_event.dart';
+import 'services/quick_add_service.dart';
 import 'services/quick_add_service.dart';
 import 'models/code.dart';
 import 'models/code_display.dart';
@@ -654,8 +657,8 @@ class _VaultPageState extends State<VaultPage> {
     _vaultSub = VaultStore.instance.onVaultItemsUpdated().listen((_) => _loadVaultItems());
     _codesSub = CodeStore.instance.onCodesUpdated().listen((_) => _loadCodes());
     // Listen for quick-add events from Home tab
-    _quickAddSub = QuickAddService.instance.bus.listen((event) {
-      if (event is QuickAddService.FilterChangedEvent) {
+    _quickAddSub = QuickAddService.instance.bus.on<FilterChangedEvent>().listen((event) {
+      if (event is FilterChangedEvent) {
         final idx = _filterCategories.indexWhere((c) => c.category == event.category);
         if (idx >= 0) {
           setState(() => _selectedFilterIndex = idx);
