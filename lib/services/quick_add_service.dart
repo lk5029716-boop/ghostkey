@@ -19,7 +19,7 @@ class QuickAddService {
 
   /// Add a placeholder item and request the Vault UI to filter to that category.
   Future<void> addAndShow(VaultCategory category) async {
-    final placeholder = VaultItem.placeholder(category);
+    final placeholder = createPlaceholder(category);
     await _store.addItem(placeholder);
     _bus.fire(FilterChangedEvent(category));
   }

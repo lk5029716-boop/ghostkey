@@ -84,6 +84,7 @@ VaultItem createPlaceholder(VaultCategory cat) {
   }
 }
 
+class VaultItem {
   final String id;
   final String title;
   final String subtitle;
@@ -92,7 +93,7 @@ VaultItem createPlaceholder(VaultCategory cat) {
   final Color iconColor;
   final Color iconBgColor;
   final String date;
-  final Map<String, String> fields; // category-specific data
+  final Map<String, String> fields;
 
   const VaultItem({
     required this.id,
