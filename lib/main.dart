@@ -2286,52 +2286,123 @@ class VaultDashboard extends StatefulWidget {
 }
 
 class _VaultDashboardState extends State<VaultDashboard> {
+  bool _importExpanded = false;
+  bool _paymentsExpanded = false;
+  bool _documentsExpanded = false;
+
+  static const _iconColors = <Color>[
+    Color(0xFF4285F4),
+    Color(0xFF0D631B),
+    Color(0xFFFF9900),
+    Color(0xFF6A1B9A),
+    Color(0xFF00796B),
+    Color(0xFF1E88E5),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kSurface,
       body: SafeArea(
         child: ListView(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16), children: [
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('GhostKey', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: kOnSurface)), Stack(children: [const Icon(Icons.notifications_outlined, size: 28, color: kOnSurface), Positioned(right: 2, top: 2, child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: kError, shape: BoxShape.circle)))])]),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('GhostKey', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: kOnSurface)),
+              Stack(children: [
+                const Icon(Icons.notifications_outlined, size: 28, color: kOnSurface),
+                Positioned(right: 2, top: 2, child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: kError, shape: BoxShape.circle))),
+              ]),
+            ],
+          ),
           const SizedBox(height: 24),
           const Text('Good morning,', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
-          const Text('Alex \u{1F44B}', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: kOnSurface)),
+          const Text('Alex', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: kOnSurface)),
           const SizedBox(height: 24),
-          _buildDeadManCard(),
-          const SizedBox(height: 16),
-          Row(children: [_statCard('34', 'Secrets'), const SizedBox(width: 12), _statCard('12', 'Crypto Assets')]),
+
+          // Import banner
+          _buildImportSection(),
           const SizedBox(height: 24),
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Recent Activity', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface)), TextButton(onPressed: () {}, child: const Text('View all', style: TextStyle(color: kPrimary, fontSize: 12)))]),
-          const SizedBox(height: 8),
-          _buildActivityList(),
+
+          // Quick actions
+          const Text('Quick Add', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface)),
+          const SizedBox(height: 12),
+          _actionTile(Icons.vpn_key, 'Login', 'Add a password', VaultCategory.password),
+          _actionTile(Icons.alternate_email, 'Hide My Email', 'Generate a private relay', VaultCategory.password),
+          _actionTile(Icons.note, 'Note', 'Save a secure note', VaultCategory.notes),
+
+          ExpansionTile(
+            title: const Text('Payments', style: TextStyle(fontWeight: FontWeight.w500)),
+            leading: Icon(Icons.credit_card, color: _iconColors[4]),
+            initiallyExpanded: _paymentsExpanded,
+            onExpansionChanged: (v) => setState(() => _paymentsExpanded = v),
+            children: [
+              _actionTile(Icons.account_balance, 'Bank Account', 'Add banking details', VaultCategory.password),
+              _actionTile(Icons.credit_card, 'Card', 'Add payment card', VaultCategory.password),
+            ],
+          ),
+
+          ExpansionTile(
+            title: const Text('Documents', style: TextStyle(fontWeight: FontWeight.w500)),
+            leading: Icon(Icons.description, color: _iconColors[3]),
+            initiallyExpanded: _documentsExpanded,
+            onExpansionChanged: (v) => setState(() => _documentsExpanded = v),
+            children: [
+              _actionTile(Icons.passport, 'Passport', 'Store passport info', VaultCategory.privateKeys),
+              _actionTile(Icons.badge, 'ID Card', 'Store ID card info', VaultCategory.privateKeys),
+              _actionTile(Icons.license, 'Drivers License', 'Store license info', VaultCategory.privateKeys),
+            ],
+          ),
+
+          _actionTile(Icons.face, 'Identity', 'Manage your identity', VaultCategory.privateKeys),
           const SizedBox(height: 100),
         ]),
       ),
     );
   }
 
-  Widget _buildDeadManCard() {
-    return Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: kOutlineVariant.withOpacity(0.3)), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 1))]), child: Row(children: [
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text("Dead Man's Switch", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface)), const SizedBox(height: 4), Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [const Text('65', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: kPrimary)), const SizedBox(width: 4), const Text('days left', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant))]), const SizedBox(height: 4), const Text('Next check-in: Tomorrow', style: TextStyle(fontSize: 12, color: kOnSurfaceVariant)), const SizedBox(height: 12), OutlinedButton(onPressed: () {}, style: OutlinedButton.styleFrom(side: const BorderSide(color: kPrimary), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))), child: const Text('Check in now', style: TextStyle(color: kPrimary, fontSize: 14)))])),
-      const SizedBox(width: 16),
-      SizedBox(width: 96, height: 96, child: CustomPaint(painter: _ProgressRing(0.65), child: const Center(child: Text('65%', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface))))),
-    ]));
+  Widget _buildImportSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kOutlineVariant.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Container(width: 40, height: 40, decoration: BoxDecoration(color: kPrimary.withOpacity(0.1), shape: BoxShape.circle), child: const Icon(Icons.file_upload_outlined, color: kPrimary, size: 20)),
+            const SizedBox(width: 12),
+            const Expanded(child: Text('Import from other password managers', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: kOnSurface))),
+          ]),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => setState(() => _importExpanded = !_importExpanded),
+              style: OutlinedButton.styleFrom(side: const BorderSide(color: kPrimary), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+              child: Text(_importExpanded ? 'Hide formats' : 'Learn more', style: const TextStyle(color: kPrimary)),
+            ),
+          ),
+          if (_importExpanded) ...[
+            const SizedBox(height: 12),
+            const Text('Supported formats: CSV, JSON, 1Password (.1pif), Bitwarden, Dashlane, LastPass', style: TextStyle(fontSize: 12, color: kOnSurfaceVariant)),
+          ],
+        ],
+      ),
+    );
   }
 
-  Widget _statCard(String value, String label) {
-    return Expanded(child: Container(padding: const EdgeInsets.symmetric(vertical: 16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: kOutlineVariant.withOpacity(0.3)), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 1))]), child: Column(children: [Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: kOnSurface)), const SizedBox(height: 4), Text(label, style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant), textAlign: TextAlign.center)])));
-  }
-
-  Widget _buildActivityList() {
-    return Container(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: kOutlineVariant.withOpacity(0.3))), child: Column(children: [
-      _activityRow(Icons.vpn_key, 'Secret viewed', 'Google Account', 'Today, 9:20 AM', kOnSurfaceVariant),
-      const Divider(color: kSurfaceContainerHighest, height: 1),
-      _activityRow(Icons.verified_user, 'Check-in successful', '', 'Today, 9:00 AM', kPrimary),
-    ]));
-  }
-
-  Widget _activityRow(IconData icon, String title, String subtitle, String time, Color iconColor) {
-    return Padding(padding: const EdgeInsets.all(16), child: Row(children: [Container(width: 40, height: 40, decoration: BoxDecoration(color: kSurfaceContainer, shape: BoxShape.circle), child: Icon(icon, size: 20, color: iconColor)), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: kOnSurface)), if (subtitle.isNotEmpty) Text(subtitle, style: const TextStyle(fontSize: 14, color: kOnSurfaceVariant))])), Text(time, style: const TextStyle(fontSize: 12, color: kOnSurfaceVariant))]));
+  Widget _actionTile(IconData icon, String title, String subtitle, VaultCategory category) {
+    return ListTile(
+      leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: kPrimary.withOpacity(0.1), shape: BoxShape.circle), child: Icon(icon, color: kPrimary, size: 20)),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500, color: kOnSurface)),
+      subtitle: Text(subtitle, style: const TextStyle(color: kOnSurfaceVariant, fontSize: 12)),
+      trailing: const Icon(Icons.add_circle_outline, color: kPrimary),
+      onTap: () => QuickAddService.instance.addAndShow(category),
+    );
   }
 }
 
