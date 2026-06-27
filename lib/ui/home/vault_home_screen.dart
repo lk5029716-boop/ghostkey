@@ -70,16 +70,10 @@ class _TopBar extends StatelessWidget {
               Text('Good morning',
                   style: _font(12, FontWeight.w500, _cOnSurfaceVariant, ls: 0.05)),
               const SizedBox(height: 2),
-              Text('Your Vault', style: _font(24, FontWeight.w700, _cPrimary)),
+              Text('Maruf', style: _font(24, FontWeight.w700, _cPrimary)),
             ],
           ),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: const BoxDecoration(color: _cPrimary, shape: BoxShape.circle),
-            alignment: Alignment.center,
-            child: Text('GK', style: _font(14, FontWeight.w700, _cOnPrimary)),
-          ),
+          // GK profile icon removed — replaced with user name above
         ],
       ),
     );
@@ -208,7 +202,7 @@ class _VaultCard extends StatefulWidget {
   State<_VaultCard> createState() => _VaultCardState();
 }
 
-class _VaultCardState extends State<_VaultCard> {
+class _VaultCardState extends State<_aultCard> {
   bool _pressed = false;
 
   @override
