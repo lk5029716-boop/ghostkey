@@ -33,17 +33,18 @@ class VaultHomeScreen extends StatelessWidget {
         child: Stack(
           children: [
             SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 92, 16, 104),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 104),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: const [
+                  _TopBar(),
+                  SizedBox(height: 8),
                   _ImportStrip(),
                   SizedBox(height: 16),
                   _VaultGrid(),
                 ],
               ),
             ),
-            const Positioned(left: 0, right: 0, top: 0, child: _TopBar()),
             const Positioned(right: 24, bottom: 28, child: _Fab()),
           ],
         ),
