@@ -633,27 +633,39 @@ class VaultPage extends StatefulWidget {
   State<VaultPage> createState() => _VaultPageState();
 }
 
-/// Filter chip categories — NO "All" chip
-const _filterCategories = <_FilterChip>[
-  _FilterChip(label: 'Password', category: VaultCategory.password),
-  _FilterChip(label: 'Seeds', category: VaultCategory.seeds),
-  _FilterChip(label: 'API Keys', category: VaultCategory.apiKeys),
-  _FilterChip(label: '2FA', category: VaultCategory.totp),
-  _FilterChip(label: 'Codes', category: VaultCategory.codes),
-  _FilterChip(label: 'Notes', category: VaultCategory.notes),
-];
-
-class _FilterChip {
+/// Category boxes shown in the Vault tab grid. Each maps to a
+/// [VaultCategory] so all existing filter / FAB / detail code keeps
+/// working unchanged — only the UI switches from chips to a box grid.
+class _CategoryBox {
   final String label;
   final VaultCategory category;
-  const _FilterChip({required this.label, required this.category});
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBgColor;
+  const _CategoryBox({
+    required this.label,
+    required this.category,
+    required this.icon,
+    required this.iconColor,
+    required this.iconBgColor,
+  });
 }
+
+const _categoryBoxes = <_CategoryBox>[
+  _CategoryBox(label: 'Passwords', category: VaultCategory.password, icon: Icons.key, iconColor: Color(0xFF5B3FE8), iconBgColor: Color(0xFFEBE9FE)),
+  _CategoryBox(label: 'Seeds', category: VaultCategory.seeds, icon: Icons.eco, iconColor: Color(0xFF16A34A), iconBgColor: Color(0xFFDCFCE7)),
+  _CategoryBox(label: 'API Keys', category: VaultCategory.apiKeys, icon: Icons.api, iconColor: Color(0xFF0D9488), iconBgColor: Color(0xFFCCFBF1)),
+  _CategoryBox(label: '2FA Codes', category: VaultCategory.totp, icon: Icons.security, iconColor: Color(0xFF2563EB), iconBgColor: Color(0xFFDBEAFE)),
+  _CategoryBox(label: 'Recovery Codes', category: VaultCategory.codes, icon: Icons.grid_view, iconColor: Color(0xFF7C3AED), iconBgColor: Color(0xFFF3E8FF)),
+  _CategoryBox(label: 'Secure Notes', category: VaultCategory.notes, icon: Icons.sticky_note_2, iconColor: Color(0xFFE8692A), iconBgColor: Color(0xFFFFEDD5)),
+  _CategoryBox(label: 'Private Keys', category: VaultCategory.privateKeys, icon: Icons.badge, iconColor: Color(0xFF475569), iconBgColor: Color(0xFFF1F5F9)),
+];
 
 class _VaultPageState extends State<VaultPage> {
   List<VaultItem> _vaultItems = [];
   List<Code> _codes = [];
   bool _loaded = false;
-  int _selectedFilterIndex = 3; // default: 2FA filter selected
+  VaultCategory? _selectedCategory; // null = box grid view; non-null = filtered list
   StreamSubscription<VaultItemsUpdatedEvent>? _vaultSub;
   StreamSubscription<CodesUpdatedEvent>? _codesSub;
   StreamSubscription? _quickAddSub;
@@ -668,10 +680,7 @@ class _VaultPageState extends State<VaultPage> {
     // Listen for quick-add events from Home tab
     _quickAddSub = QuickAddService.instance.bus.on<FilterChangedEvent>().listen((event) {
       if (event is FilterChangedEvent) {
-        final idx = _filterCategories.indexWhere((c) => c.category == event.category);
-        if (idx >= 0) {
-          setState(() => _selectedFilterIndex = idx);
-        }
+        setState(() => _selectedCategory = event.category);
       }
     });
   }
@@ -733,17 +742,18 @@ class _VaultPageState extends State<VaultPage> {
     return list;
   }
 
-  /// Items filtered by selected chip
+  /// Items filtered by the selected category box.
   List<VaultItem> get _filteredItems {
-    final cat = _filterCategories[_selectedFilterIndex].category;
+    final cat = _selectedCategory;
+    if (cat == null) return _allVaultItems;
     return _allVaultItems.where((i) => i.category == cat).toList();
   }
 
   bool get _isEmpty => _allVaultItems.isEmpty;
 
-  /// Navigate to the add screen for the currently selected filter
+  /// Navigate to the add screen for the currently selected category.
   Future<void> _onFabPressed(BuildContext context) async {
-    final cat = _filterCategories[_selectedFilterIndex].category;
+    final cat = _selectedCategory ?? VaultCategory.password;
     Widget? page;
     switch (cat) {
       case VaultCategory.password:
@@ -767,12 +777,6 @@ class _VaultPageState extends State<VaultPage> {
       case VaultCategory.privateKeys:
         return; // not implemented yet
     }
-    // Switch to this category's filter so new item is visible immediately
-    final newIndex = _filterCategories.indexWhere((c) => c.category == cat);
-    if (newIndex >= 0 && newIndex != _selectedFilterIndex) {
-      setState(() => _selectedFilterIndex = newIndex);
-    }
-    // Navigate and wait for result — refresh vault when user comes back
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => page!));
     _loadVaultItems();
     _loadCodes();
@@ -780,7 +784,11 @@ class _VaultPageState extends State<VaultPage> {
 
   @override
   Widget build(BuildContext context) {
-    final items = _filteredItems;
+    // A category box was tapped → show the filtered list (all existing code).
+    if (_selectedCategory != null) {
+      return _buildListView();
+    }
+    // Default: category box grid.
     return Scaffold(
       backgroundColor: kSurface,
       body: SafeArea(
@@ -799,45 +807,67 @@ class _VaultPageState extends State<VaultPage> {
               ],
             ),
           ),
-          // Filter chips row
-          SizedBox(
-            height: 44,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _filterCategories.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, i) {
-                final chip = _filterCategories[i];
-                final selected = _selectedFilterIndex == i;
-                return FilterChip(
-                  label: Text(chip.label),
-                  selected: selected,
-                  onSelected: (_) {
-                    setState(() {
-                      _selectedFilterIndex = i;
-                    });
-                  },
-                  selectedColor: kSecondaryContainer,
-                  checkmarkColor: kPrimary,
-                  labelStyle: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: selected ? kPrimary : kOnSurfaceVariant,
+          const SizedBox(height: 4),
+          Expanded(
+            child: !_loaded
+                ? const Center(child: CircularProgressIndicator(color: kPrimary))
+                : GridView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 1.0,
+                    ),
+                    itemCount: _categoryBoxes.length,
+                    itemBuilder: (context, i) {
+                      final box = _categoryBoxes[i];
+                      return _CategoryBoxCard(
+                        box: box,
+                        onTap: () => setState(() => _selectedCategory = box.category),
+                      );
+                    },
                   ),
-                  side: BorderSide(color: selected ? kPrimary : kSurfaceContainerHighest),
-                  showCheckmark: false,
-                );
-              },
+          ),
+        ]),
+      ),
+    );
+  }
+
+  /// Filtered list view shown after tapping a category box. Reuses all
+  /// existing list / FAB / detail / multi-select code unchanged.
+  Widget _buildListView() {
+    final items = _filteredItems;
+    final cat = _selectedCategory!;
+    return Scaffold(
+      backgroundColor: kSurface,
+      body: SafeArea(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 16, 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: kOnSurface, size: 24),
+                    onPressed: () => setState(() => _selectedCategory = null),
+                  ),
+                  Text(_catLabel(cat), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: kOnSurface)),
+                ]),
+                Row(children: [
+                  IconButton(onPressed: _loadAll, icon: const Icon(Icons.refresh, color: kOnSurfaceVariant, size: 24)),
+                  const SizedBox(width: 4),
+                  IconButton(onPressed: () {}, icon: const Icon(Icons.more_vert, color: kOnSurfaceVariant, size: 24)),
+                ]),
+              ],
             ),
           ),
           const SizedBox(height: 4),
           if (!_loaded)
             const Expanded(child: Center(child: CircularProgressIndicator(color: kPrimary)))
-          else if (_filterCategories[_selectedFilterIndex].category == VaultCategory.totp)
-            Expanded(
-              child: _CodesListWidget(codes: _codes),
-            )
+          else if (cat == VaultCategory.totp)
+            Expanded(child: _CodesListWidget(codes: _codes))
           else if (_isEmpty)
             _buildEmptyState()
           else
@@ -953,6 +983,59 @@ class _VaultPageState extends State<VaultPage> {
             const SizedBox(height: 8),
             const Text('Tap the + button to add your first secret', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant), textAlign: TextAlign.center),
           ]),
+        ),
+      ),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════
+// CATEGORY BOX CARD — a single tile in the Vault grid
+// ════════════════════════════════════════════════
+class _CategoryBoxCard extends StatefulWidget {
+  final _CategoryBox box;
+  final VoidCallback onTap;
+  const _CategoryBoxCard({required this.box, required this.onTap});
+
+  @override
+  State<_CategoryBoxCard> createState() => _CategoryBoxCardState();
+}
+
+class _CategoryBoxCardState extends State<_CategoryBoxCard> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _pressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(color: widget.box.iconBgColor, shape: BoxShape.circle),
+                child: Icon(widget.box.icon, color: widget.box.iconColor, size: 24),
+              ),
+              Text(widget.box.label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: kOnSurface)),
+            ],
+          ),
         ),
       ),
     );
