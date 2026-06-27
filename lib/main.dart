@@ -790,7 +790,7 @@ class _VaultPageState extends State<VaultPage> {
     }
     // Default: category box grid.
     return Scaffold(
-      backgroundColor: kSurface,
+      backgroundColor: const Color(0xFF1C1331),
       body: SafeArea(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Padding(
@@ -798,12 +798,8 @@ class _VaultPageState extends State<VaultPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Vault', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: kOnSurface)),
-                Row(children: [
-                  IconButton(onPressed: _loadAll, icon: const Icon(Icons.refresh, color: kOnSurfaceVariant, size: 24)),
-                  const SizedBox(width: 4),
-                  IconButton(onPressed: () {}, icon: const Icon(Icons.more_vert, color: kOnSurfaceVariant, size: 24)),
-                ]),
+                const Text('Vault', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Colors.white)),
+                // refresh and three-dot icons removed
               ],
             ),
           ),
@@ -840,7 +836,7 @@ class _VaultPageState extends State<VaultPage> {
     final items = _filteredItems;
     final cat = _selectedCategory!;
     return Scaffold(
-      backgroundColor: kSurface,
+      backgroundColor: const Color(0xFF1C1331),
       body: SafeArea(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Padding(
@@ -850,16 +846,12 @@ class _VaultPageState extends State<VaultPage> {
               children: [
                 Row(children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: kOnSurface, size: 24),
+                    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
                     onPressed: () => setState(() => _selectedCategory = null),
                   ),
-                  Text(_catLabel(cat), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: kOnSurface)),
+                  Text(_catLabel(cat), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
                 ]),
-                Row(children: [
-                  IconButton(onPressed: _loadAll, icon: const Icon(Icons.refresh, color: kOnSurfaceVariant, size: 24)),
-                  const SizedBox(width: 4),
-                  IconButton(onPressed: () {}, icon: const Icon(Icons.more_vert, color: kOnSurfaceVariant, size: 24)),
-                ]),
+                // refresh and three-dot icons removed
               ],
             ),
           ),
@@ -892,7 +884,7 @@ class _VaultPageState extends State<VaultPage> {
 
   Widget _buildCard(VaultItem item) {
     return Material(
-      color: Colors.white,
+      color: const Color(0xFF2A1F44),
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: () => _openDetail(item),
@@ -901,7 +893,7 @@ class _VaultPageState extends State<VaultPage> {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: kSurfaceContainerHighest),
+            border: Border.all(color: const Color(0xFF3D2B5E)),
           ),
           child: Row(children: [
             Container(
@@ -911,9 +903,9 @@ class _VaultPageState extends State<VaultPage> {
             ),
             const SizedBox(width: 14),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(item.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: kOnSurface)),
+              Text(item.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
               const SizedBox(height: 2),
-              Text(item.subtitle, style: const TextStyle(fontSize: 13, color: kOnSurfaceVariant)),
+              Text(item.subtitle, style: const TextStyle(fontSize: 13, color: Colors.white60)),
             ])),
             const SizedBox(width: 8),
             Container(
@@ -922,7 +914,7 @@ class _VaultPageState extends State<VaultPage> {
               child: Text(_catLabel(item.category), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: item.iconColor)),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.chevron_right, size: 18, color: kOutlineVariant),
+            const Icon(Icons.chevron_right, size: 18, color: Colors.white38),
           ]),
         ),
       ),
@@ -979,9 +971,9 @@ class _VaultPageState extends State<VaultPage> {
               child: const Icon(Icons.lock_outline, size: 32, color: kOnSurfaceVariant),
             ),
             const SizedBox(height: 20),
-            const Text('Your vault is empty', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface)),
+            const Text('Your vault is empty', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
             const SizedBox(height: 8),
-            const Text('Tap the + button to add your first secret', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant), textAlign: TextAlign.center),
+            const Text('Tap the + button to add your first secret', style: TextStyle(fontSize: 14, color: Colors.white60), textAlign: TextAlign.center),
           ]),
         ),
       ),
@@ -1017,10 +1009,10 @@ class _CategoryBoxCardState extends State<_CategoryBoxCard> {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: const Color(0xFF2A1F44),
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
+              BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 4, offset: const Offset(0, 2)),
             ],
           ),
           child: Column(
@@ -1033,7 +1025,7 @@ class _CategoryBoxCardState extends State<_CategoryBoxCard> {
                 decoration: BoxDecoration(color: widget.box.iconBgColor, shape: BoxShape.circle),
                 child: Icon(widget.box.icon, color: widget.box.iconColor, size: 24),
               ),
-              Text(widget.box.label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: kOnSurface)),
+              Text(widget.box.label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
             ],
           ),
         ),
