@@ -202,7 +202,7 @@ class _VaultCard extends StatefulWidget {
   State<_VaultCard> createState() => _VaultCardState();
 }
 
-class _VaultCardState extends State<_aultCard> {
+class _VaultCardState extends State<_VaultCard> {
   bool _pressed = false;
 
   @override
