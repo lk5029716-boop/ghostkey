@@ -35,27 +35,33 @@ import 'services/quick_add_service.dart';
 import 'models/code.dart';
 import 'models/code_display.dart';
 import 'screens/openrouter_test_screen.dart';
+import 'ui/home/vault_home_screen.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
-const Color kSurface = Color(0xFFF8F9FA);
-const Color kOnSurface = Color(0xFF191C1D);
-const Color kSurfaceContainer = Color(0xFFF3F4F5);
-const Color kSurfaceContainerLow = Color(0xFFF3F4F5);
-const Color kSurfaceContainerHigh = Color(0xFFE1E3E4);
-const Color kSurfaceContainerHighest = Color(0xFFE1E3E4);
-const Color kPrimary = Color(0xFF0D631B);
+const Color kSurface = Color(0xFFF4F3FF); // surface-dim (body bg)
+const Color kOnSurface = Color(0xFF12101E);
+const Color kSurfaceContainer = Color(0xFFFFFFFF); // surface (nav bar bg)
+const Color kSurfaceContainerLow = Color(0xFFF6F1FF);
+const Color kSurfaceContainerHigh = Color(0xFFEBE6F4);
+const Color kSurfaceContainerHighest = Color(0xFFE5E0EE);
+const Color kPrimary = Color(0xFF5B3FE8);
 const Color kOnPrimary = Colors.white;
-const Color kSecondary = Color(0xFF2A6B2C);
+const Color kSecondary = Color(0xFF5D5E68);
 const Color kOnSecondary = Colors.white;
-const Color kSecondaryContainer = Color(0xFFACF4A4);
-const Color kOnSecondaryContainer = Color(0xFF002203);
-const Color kOutlineVariant = Color(0xFFBFCABA);
-const Color kOutline = Color(0xFF707A6C);
-const Color kSurfaceVariant = Color(0xFFE1E3E4);
-const Color kOnSurfaceVariant = Color(0xFF40493D);
+const Color kSecondaryContainer = Color(0xFFE2E1ED);
+const Color kOnSecondaryContainer = Color(0xFF63646E);
+const Color kOutlineVariant = Color(0xFFE4E2F5);
+const Color kOutline = Color(0xFF787587);
+const Color kSurfaceVariant = Color(0xFFE5E0EE);
+const Color kOnSurfaceVariant = Color(0xFF8E8BA8);
 const Color kError = Color(0xFFBA1A1A);
 const Color kWarning = Color(0xFFF59E0B);
+const Color kPrimaryContainer = Color(0xFFEBE8FF);
+const Color kSurfaceDim = Color(0xFFF4F3FF);
+const Color kSurfaceBright = Color(0xFFFCF8FF);
+const Color kTertiary = Color(0xFF7D3100);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -107,13 +113,16 @@ class _GhostKeyAppState extends State<GhostKeyApp> {
         theme: ThemeData(
           brightness: Brightness.light,
           scaffoldBackgroundColor: kSurface,
+          fontFamily: GoogleFonts.spaceGrotesk().fontFamily,
           colorScheme: const ColorScheme.light(
             primary: kPrimary,
             onPrimary: kOnPrimary,
+            primaryContainer: kPrimaryContainer,
             secondary: kSecondary,
             onSecondary: kOnSecondary,
             secondaryContainer: kSecondaryContainer,
             onSecondaryContainer: kOnSecondaryContainer,
+            tertiary: kTertiary,
             surface: kSurface,
             onSurface: kOnSurface,
             surfaceVariant: kSurfaceVariant,
@@ -458,7 +467,7 @@ int _pow10(int n) {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
   final _pages = <Widget>[
-    const VaultDashboard(),
+    const VaultHomeScreen(),
     VaultPage(),
     const SettingsScreen(),
   ];
@@ -472,7 +481,7 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: [
-        const VaultDashboard(),
+        const VaultHomeScreen(),
         const VaultPage(),
         const SettingsScreen(),
       ]),
@@ -482,7 +491,7 @@ class _MainShellState extends State<MainShell> {
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
         backgroundColor: kSurfaceContainer,
-        indicatorColor: kSecondaryContainer,
+        indicatorColor: kPrimaryContainer,
         destinations: [
           NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home, color: kPrimary), label: 'Home'),
           NavigationDestination(icon: const Icon(Icons.lock_outlined), selectedIcon: const Icon(Icons.lock, color: kPrimary), label: 'Vault'),
