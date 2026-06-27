@@ -642,23 +642,27 @@ class _CategoryBox {
   final IconData icon;
   final Color iconColor;
   final Color iconBgColor;
+  final Color bgColor;
+  final Color titleColor;
   const _CategoryBox({
     required this.label,
     required this.category,
     required this.icon,
     required this.iconColor,
     required this.iconBgColor,
+    required this.bgColor,
+    required this.titleColor,
   });
 }
 
 const _categoryBoxes = <_CategoryBox>[
-  _CategoryBox(label: 'Passwords', category: VaultCategory.password, icon: Icons.key, iconColor: Color(0xFF5B3FE8), iconBgColor: Color(0xFFEBE9FE)),
-  _CategoryBox(label: 'Seeds', category: VaultCategory.seeds, icon: Icons.eco, iconColor: Color(0xFF16A34A), iconBgColor: Color(0xFFDCFCE7)),
-  _CategoryBox(label: 'API Keys', category: VaultCategory.apiKeys, icon: Icons.api, iconColor: Color(0xFF0D9488), iconBgColor: Color(0xFFCCFBF1)),
-  _CategoryBox(label: '2FA Codes', category: VaultCategory.totp, icon: Icons.security, iconColor: Color(0xFF2563EB), iconBgColor: Color(0xFFDBEAFE)),
-  _CategoryBox(label: 'Recovery Codes', category: VaultCategory.codes, icon: Icons.grid_view, iconColor: Color(0xFF7C3AED), iconBgColor: Color(0xFFF3E8FF)),
-  _CategoryBox(label: 'Secure Notes', category: VaultCategory.notes, icon: Icons.sticky_note_2, iconColor: Color(0xFFE8692A), iconBgColor: Color(0xFFFFEDD5)),
-  _CategoryBox(label: 'Private Keys', category: VaultCategory.privateKeys, icon: Icons.badge, iconColor: Color(0xFF475569), iconBgColor: Color(0xFFF1F5F9)),
+  _CategoryBox(label: 'Passwords', category: VaultCategory.password, icon: Icons.key, iconColor: Color(0xFF5B3FE8), iconBgColor: Color(0xFFEBE9FE), bgColor: Color(0xFFEBE8FF), titleColor: Color(0xFF5B3FE8)),
+  _CategoryBox(label: 'Seeds', category: VaultCategory.seeds, icon: Icons.eco, iconColor: Color(0xFF16A34A), iconBgColor: Color(0xFFDCFCE7), bgColor: Color(0xFFD1F7F1), titleColor: Color(0xFF004D40)),
+  _CategoryBox(label: 'API Keys', category: VaultCategory.apiKeys, icon: Icons.api, iconColor: Color(0xFF0D9488), iconBgColor: Color(0xFFCCFBF1), bgColor: Color(0xFFCCFBF1), titleColor: Color(0xFF004D40)),
+  _CategoryBox(label: '2FA Codes', category: VaultCategory.totp, icon: Icons.security, iconColor: Color(0xFF2563EB), iconBgColor: Color(0xFFDBEAFE), bgColor: Color(0xFFD1E3FF), titleColor: Color(0xFF0D47A1)),
+  _CategoryBox(label: 'Recovery Codes', category: VaultCategory.codes, icon: Icons.grid_view, iconColor: Color(0xFF7C3AED), iconBgColor: Color(0xFFF3E8FF), bgColor: Color(0xFFF3E8FF), titleColor: Color(0xFF880E4F)),
+  _CategoryBox(label: 'Secure Notes', category: VaultCategory.notes, icon: Icons.sticky_note_2, iconColor: Color(0xFFE8692A), iconBgColor: Color(0xFFFFEDD5), bgColor: Color(0xFFFFE8D1), titleColor: Color(0xFF3E2723)),
+  _CategoryBox(label: 'Private Keys', category: VaultCategory.privateKeys, icon: Icons.badge, iconColor: Color(0xFF475569), iconBgColor: Color(0xFFF1F5F9), bgColor: Color(0xFFEBE6F4), titleColor: Color(0xFF475569)),
 ];
 
 class _VaultPageState extends State<VaultPage> {
@@ -1009,7 +1013,7 @@ class _CategoryBoxCardState extends State<_CategoryBoxCard> {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: widget.box.bgColor,
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
@@ -1025,7 +1029,7 @@ class _CategoryBoxCardState extends State<_CategoryBoxCard> {
                 decoration: BoxDecoration(color: widget.box.iconBgColor, shape: BoxShape.circle),
                 child: Icon(widget.box.icon, color: widget.box.iconColor, size: 24),
               ),
-              Text(widget.box.label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: kOnSurface)),
+              Text(widget.box.label, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: widget.box.titleColor)),
             ],
           ),
         ),
