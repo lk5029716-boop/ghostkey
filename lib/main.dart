@@ -906,7 +906,7 @@ class _VaultPageState extends State<VaultPage> {
                 ),
               ]),
               const SizedBox(height: gap),
-              // Row 4: Private Keys + Custom item (same size, same line)
+              // Row 4: Private Keys + Create an identity (same size)
               Row(children: [
                 _VaultGridCard(
                   width: cellW,
@@ -922,6 +922,20 @@ class _VaultPageState extends State<VaultPage> {
                 _VaultGridCard(
                   width: cellW,
                   height: cellW,
+                  bgColor: const Color(0xFFEBE6F4),
+                  iconColor: const Color(0xFF475569),
+                  icon: Icons.face,
+                  title: 'Create an identity',
+                  titleColor: const Color(0xFF475569),
+                  onTap: () => setState(() => _selectedCategory = VaultCategory.privateKeys),
+                ),
+              ]),
+              const SizedBox(height: gap),
+              // Row 5: Create a custom item (same size, full-width pair — matches home design)
+              Row(children: [
+                _VaultGridCard(
+                  width: cellW,
+                  height: cellW,
                   bgColor: const Color(0xFFFFD1E8),
                   iconColor: const Color(0xFFC2185B),
                   icon: Icons.dashboard_customize,
@@ -929,19 +943,9 @@ class _VaultPageState extends State<VaultPage> {
                   titleColor: const Color(0xFF880E4F),
                   onTap: () => setState(() => _selectedCategory = VaultCategory.privateKeys),
                 ),
+                const SizedBox(width: gap),
+                SizedBox(width: cellW, height: cellW), // empty cell to keep grid alignment
               ]),
-              const SizedBox(height: gap),
-              // Create an identity (same size, same line as custom item)
-              _VaultGridCard(
-                width: double.infinity,
-                height: cellW,
-                bgColor: const Color(0xFFEBE6F4),
-                iconColor: const Color(0xFF475569),
-                icon: Icons.face,
-                title: 'Create an identity',
-                titleColor: const Color(0xFF475569),
-                onTap: () => setState(() => _selectedCategory = VaultCategory.privateKeys),
-              ),
             ],
           ),
         );
