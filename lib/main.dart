@@ -811,145 +811,26 @@ class _VaultPageState extends State<VaultPage> {
           Expanded(
             child: !_loaded
                 ? const Center(child: CircularProgressIndicator(color: kPrimary))
-                : _buildVaultGrid(),
+                : GridView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 1.0,
+                    ),
+                    itemCount: _categoryBoxes.length,
+                    itemBuilder: (context, i) {
+                      final box = _categoryBoxes[i];
+                      return _CategoryBoxCard(
+                        box: box,
+                        onTap: () => setState(() => _selectedCategory = box.category),
+                      );
+                    },
+                  ),
           ),
         ]),
       ),
-    );
-  }
-
-  /// Vault grid styled to match the home screen's _VaultGrid layout:
-  /// 2-column rows of square cards with a bottom "Create a custom item"
-  /// card side-by-side with "Create an identity" — same size, same line.
-  Widget _buildVaultGrid() {
-    return LayoutBuilder(
-      builder: (ctx, c) {
-        const gap = 16.0;
-        final cellW = (c.maxWidth - gap) / 2;
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Row 1: Passwords + Seeds
-              Row(children: [
-                _VaultGridCard(
-                  width: cellW,
-                  height: cellW,
-                  bgColor: const Color(0xFFEBE8FF),
-                  iconColor: const Color(0xFF5B3FE8),
-                  icon: Icons.key,
-                  title: 'Passwords',
-                  titleColor: const Color(0xFF5B3FE8),
-                  onTap: () => setState(() => _selectedCategory = VaultCategory.password),
-                ),
-                const SizedBox(width: gap),
-                _VaultGridCard(
-                  width: cellW,
-                  height: cellW,
-                  bgColor: const Color(0xFFD1F7F1),
-                  iconColor: const Color(0xFF16A34A),
-                  icon: Icons.eco,
-                  title: 'Seeds',
-                  titleColor: const Color(0xFF004D40),
-                  onTap: () => setState(() => _selectedCategory = VaultCategory.seeds),
-                ),
-              ]),
-              const SizedBox(height: gap),
-              // Row 2: API Keys + 2FA Codes
-              Row(children: [
-                _VaultGridCard(
-                  width: cellW,
-                  height: cellW,
-                  bgColor: const Color(0xFFCCFBF1),
-                  iconColor: const Color(0xFF0D9488),
-                  icon: Icons.api,
-                  title: 'API Keys',
-                  titleColor: const Color(0xFF004D40),
-                  onTap: () => setState(() => _selectedCategory = VaultCategory.apiKeys),
-                ),
-                const SizedBox(width: gap),
-                _VaultGridCard(
-                  width: cellW,
-                  height: cellW,
-                  bgColor: const Color(0xFFD1E3FF),
-                  iconColor: const Color(0xFF2563EB),
-                  icon: Icons.security,
-                  title: '2FA Codes',
-                  titleColor: const Color(0xFF0D47A1),
-                  onTap: () => setState(() => _selectedCategory = VaultCategory.totp),
-                ),
-              ]),
-              const SizedBox(height: gap),
-              // Row 3: Recovery Codes + Secure Notes
-              Row(children: [
-                _VaultGridCard(
-                  width: cellW,
-                  height: cellW,
-                  bgColor: const Color(0xFFF3E8FF),
-                  iconColor: const Color(0xFF7C3AED),
-                  icon: Icons.grid_view,
-                  title: 'Recovery Codes',
-                  titleColor: const Color(0xFF880E4F),
-                  onTap: () => setState(() => _selectedCategory = VaultCategory.codes),
-                ),
-                const SizedBox(width: gap),
-                _VaultGridCard(
-                  width: cellW,
-                  height: cellW,
-                  bgColor: const Color(0xFFFFE8D1),
-                  iconColor: const Color(0xFFE8692A),
-                  icon: Icons.sticky_note_2,
-                  title: 'Secure Notes',
-                  titleColor: const Color(0xFF3E2723),
-                  onTap: () => setState(() => _selectedCategory = VaultCategory.notes),
-                ),
-              ]),
-              const SizedBox(height: gap),
-              // Row 4: Private Keys + Create an identity (same size)
-              Row(children: [
-                _VaultGridCard(
-                  width: cellW,
-                  height: cellW,
-                  bgColor: const Color(0xFFEBE6F4),
-                  iconColor: const Color(0xFF475569),
-                  icon: Icons.badge,
-                  title: 'Private Keys',
-                  titleColor: const Color(0xFF475569),
-                  onTap: () => setState(() => _selectedCategory = VaultCategory.privateKeys),
-                ),
-                const SizedBox(width: gap),
-                _VaultGridCard(
-                  width: cellW,
-                  height: cellW,
-                  bgColor: const Color(0xFFEBE6F4),
-                  iconColor: const Color(0xFF475569),
-                  icon: Icons.face,
-                  title: 'Create an identity',
-                  titleColor: const Color(0xFF475569),
-                  onTap: () => setState(() => _selectedCategory = VaultCategory.privateKeys),
-                ),
-              ]),
-              const SizedBox(height: gap),
-              // Row 5: Create a custom item (same size, full-width pair — matches home design)
-              Row(children: [
-                _VaultGridCard(
-                  width: cellW,
-                  height: cellW,
-                  bgColor: const Color(0xFFFFD1E8),
-                  iconColor: const Color(0xFFC2185B),
-                  icon: Icons.dashboard_customize,
-                  title: 'Create a custom item',
-                  titleColor: const Color(0xFF880E4F),
-                  onTap: () => setState(() => _selectedCategory = VaultCategory.privateKeys),
-                ),
-                const SizedBox(width: gap),
-                SizedBox(width: cellW, height: cellW), // empty cell to keep grid alignment
-              ]),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -1149,87 +1030,6 @@ class _CategoryBoxCardState extends State<_CategoryBoxCard> {
                 child: Icon(widget.box.icon, color: widget.box.iconColor, size: 24),
               ),
               Text(widget.box.label, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: widget.box.titleColor)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// VAULT GRID CARD — matches home screen _VaultCard design
-// ═══════════════════════════════════════════════════════════════
-class _VaultGridCard extends StatefulWidget {
-  final double? width;
-  final double? height;
-  final Color bgColor;
-  final Color iconColor;
-  final IconData icon;
-  final String title;
-  final Color titleColor;
-  final VoidCallback onTap;
-
-  const _VaultGridCard({
-    this.width,
-    this.height,
-    required this.bgColor,
-    required this.iconColor,
-    required this.icon,
-    required this.title,
-    required this.titleColor,
-    required this.onTap,
-  });
-
-  @override
-  State<_VaultGridCard> createState() => _VaultGridCardState();
-}
-
-class _VaultGridCardState extends State<_VaultGridCard> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTap: widget.onTap,
-      child: AnimatedScale(
-        scale: _pressed ? 0.96 : 1.0,
-        duration: const Duration(milliseconds: 120),
-        child: Container(
-          width: widget.width,
-          height: widget.height,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: widget.bgColor,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: widget.iconColor.withOpacity(0.10),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(widget.icon, color: widget.iconColor, size: 24),
-              ),
-              Text(
-                widget.title,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: widget.titleColor,
-                  height: 28 / 18,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
             ],
           ),
         ),
