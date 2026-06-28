@@ -159,11 +159,9 @@ class _VaultGrid extends StatelessWidget {
               children: [
                 _VaultCard.square(cellW, const Color(0xFFFFD1E8), const Color(0xFFC2185B), Icons.badge, 'Create an identity', const Color(0xFF880E4F)),
                 const SizedBox(width: gap),
-                SizedBox(width: cellW, height: cellW), // empty cell (grid auto-flow)
+                _VaultCard.square(cellW, _cSurfaceContainerHigh, _cOnSurface, Icons.dashboard_customize, 'Create a custom item', _cOnSurface),
               ],
             ),
-            const SizedBox(height: gap),
-            _VaultCard.wide(c.maxWidth, _cSurfaceContainerHigh, _cOnSurface, Icons.dashboard_customize, 'Create a custom item', _cOnSurface),
           ],
         );
       },
@@ -194,10 +192,6 @@ class _VaultCard extends StatefulWidget {
   const _VaultCard.square(double size, this.bg, this.iconColor, this.icon, this.title, this.titleColor)
       : width = size,
         height = size;
-
-  const _VaultCard.wide(double width, this.bg, this.iconColor, this.icon, this.title, this.titleColor)
-      : height = 128,
-        width = width;
 
   @override
   State<_VaultCard> createState() => _VaultCardState();
