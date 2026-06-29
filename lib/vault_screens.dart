@@ -232,106 +232,250 @@ class PasswordDetailScreen extends StatelessWidget {
   final VaultItem item;
   const PasswordDetailScreen({super.key, required this.item});
 
-  // App color core
-  static const _primary = Color(0xFF5B3FE8);
-  static const _surfaceDim = Color(0xFFF4F3FF);
-  static const _onSurface = Color(0xFF12101E);
-  static const _onSurfaceVariant = Color(0xFF8E8BA8);
-
-  // Field classification for auto-icon + styling
-  static const _sensitiveFields = {'Password', 'Secret', 'Token', 'Private Key', 'Seed Phrase', 'Recovery Key'};
+  // Field classification
+  static const _sensitive = {'Password', 'Secret', 'Token', 'Private Key', 'Recovery Key'};
   static const _emailFields = {'Email', 'Username', 'Login'};
   static const _urlFields = {'URL', 'Website', 'Domain', 'Link', 'Issuer'};
   static const _monoFields = {'API Key', 'Access Key ID', 'Secret Access Key', 'API Secret', 'Client Secret', 'PIN'};
 
-  bool _isSensitive(String label) => _sensitiveFields.contains(label) || label.toLowerCase().contains('password') || label.toLowerCase().contains('secret');
-  bool _isEmail(String label) => _emailFields.contains(label);
-  bool _isUrl(String label) => _urlFields.contains(label);
-  bool _isMono(String label) => _monoFields.contains(label);
+  bool _isSensitive(String l) => _sensitive.contains(l) || l.toLowerCase().contains('password') || l.toLowerCase().contains('secret');
+  bool _isEmail(String l) => _emailFields.contains(l);
+  bool _isUrl(String l) => _urlFields.contains(l);
+  bool _isMono(String l) => _monoFields.contains(l);
 
-  IconData _iconFor(String label) {
-    if (_isEmail(label)) return Icons.alternate_email;
-    if (_isUrl(label)) return Icons.link;
-    if (label.toLowerCase().contains('password') || label.toLowerCase().contains('pass')) return Icons.lock_outline;
-    if (label.toLowerCase().contains('secret') || label.toLowerCase().contains('token')) return Icons.vpn_key;
-    if (label.toLowerCase().contains('recovery')) return Icons.replay;
-    if (label.toLowerCase().contains('note') || label.toLowerCase().contains('memo')) return Icons.notes;
-    if (label.toLowerCase().contains('phone') || label.toLowerCase().contains('mobile')) return Icons.phone_outlined;
-    return Icons.label_outline;
+  IconData _iconFor(String l) {
+    if (_isEmail(l)) return Icons.alternate_email;
+    if (_isUrl(l)) return Icons.link;
+    if (l.toLowerCase().contains('password') || l.toLowerCase().contains('pass')) return Icons.lock_outline;
+    if (l.toLowerCase().contains('secret') || l.toLowerCase().contains('token')) return Icons.vpn_key;
+    if (l.toLowerCase().contains('recovery')) return Icons.replay;
+    if (l.toLowerCase().contains('note') || l.toLowerCase().contains('memo')) return Icons.sticky_note_2_outlined;
+    if (l.toLowerCase().contains('phone') || l.toLowerCase().contains('mobile')) return Icons.phone_outlined;
+    return Icons.label_important_outline;
   }
 
   @override
   Widget build(BuildContext context) {
     final f = item.fields;
+    final ic = item.iconColor;
+    final ibg = item.iconBgColor;
 
     return Scaffold(
-      backgroundColor: _surfaceDim,
-      appBar: AppBar(
-        backgroundColor: _surfaceDim,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: _onSurface),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          item.title,
-          style: const TextStyle(color: _onSurface, fontSize: 20, fontWeight: FontWeight.w700),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Hero header — uses item's actual icon
-          Center(child: Column(children: [
-            Container(
-              width: 72, height: 72,
-              decoration: BoxDecoration(
-                color: item.iconBgColor,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: item.iconColor.withOpacity(0.2),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
+      backgroundColor: const Color(0xFFF4F3FF),
+      body: SafeArea(
+        child: Column(children: [
+          // Top bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Color(0xFF12101E)),
+                onPressed: () => Navigator.pop(context),
               ),
-              child: Icon(item.icon, size: 36, color: item.iconColor),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              item.title,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: _onSurface, letterSpacing: -0.3),
-            ),
-            if (item.subtitle.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                item.subtitle,
-                style: const TextStyle(fontSize: 14, color: _onSurfaceVariant),
+              Expanded(
+                child: Text(
+                  item.title,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF12101E)),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ],
-          ])),
-          const SizedBox(height: 24),
-
-          // Header label
-          const Text(
-            'Saved fields',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _onSurfaceVariant, letterSpacing: 0.2),
+              IconButton(
+                icon: Container(
+                  width: 36, height: 36,
+                  decoration: BoxDecoration(color: ibg, shape: BoxShape.circle),
+                  child: Icon(item.icon, size: 18, color: ic),
+                ),
+                onPressed: () {},
+              ),
+            ]),
           ),
-          const SizedBox(height: 12),
 
-          // ALL fields rendered dynamically
-          for (final entry in f.entries) ...[
-            _RevealField(
-              icon: _iconFor(entry.key),
-              label: entry.key,
-              value: entry.value,
-              isWarning: _isSensitive(entry.key),
-              isMono: _isMono(entry.key),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                // HERO CARD — icon + title + subtitle
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: ibg,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(color: ic.withOpacity(0.10), blurRadius: 20, offset: const Offset(0, 8)),
+                    ],
+                  ),
+                  child: Column(children: [
+                    Container(
+                      width: 64, height: 64,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.7),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(item.icon, size: 32, color: ic),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      item.title,
+                      style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: ic, letterSpacing: -0.4),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (item.subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        item.subtitle,
+                        style: TextStyle(fontSize: 14, color: ic.withOpacity(0.65), fontWeight: FontWeight.w500),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ]),
+                ),
+                const SizedBox(height: 24),
+
+                // FIELD CARDS
+                for (final entry in f.entries) ...[
+                  _DetailFieldCard(
+                    icon: _iconFor(entry.key),
+                    label: entry.key,
+                    value: entry.value,
+                    isSensitive: _isSensitive(entry.key),
+                    isMono: _isMono(entry.key),
+                    accentColor: ic,
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                const SizedBox(height: 16),
+              ]),
             ),
-            const SizedBox(height: 12),
-          ],
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DETAIL FIELD CARD — rich card for each saved field on detail
+// ═══════════════════════════════════════════════════════════════
+class _DetailFieldCard extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool isSensitive;
+  final bool isMono;
+  final Color accentColor;
+
+  const _DetailFieldCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.isSensitive,
+    required this.isMono,
+    required this.accentColor,
+  });
+
+  @override
+  State<_DetailFieldCard> createState() => _DetailFieldCardState();
+}
+
+class _DetailFieldCardState extends State<_DetailFieldCard> {
+  bool _revealed = false;
+  int _timer = 30;
+  Timer? _t;
+
+  @override
+  void dispose() { _t?.cancel(); super.dispose(); }
+
+  void _startTimer() {
+    _t?.cancel();
+    setState(() => _timer = 30);
+    _t = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
+      setState(() => _timer--);
+      if (_timer <= 0) { t.cancel(); if (mounted) setState(() => _revealed = false); }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sensitive = widget.isSensitive;
+    final accent = sensitive ? const Color(0xFFF59E0B) : widget.accentColor;
+    final bg = sensitive ? const Color(0xFFFFF8E1) : Colors.white;
+
+    return GestureDetector(
+      onTap: () {
+        if (!sensitive) {
+          Clipboard.setData(ClipboardData(text: widget.value));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Copied ${widget.label}'),
+              duration: const Duration(seconds: 1),
+              backgroundColor: widget.accentColor,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder BorderRadius.circular(12)),
+            ),
+          );
+          return;
+        }
+        setState(() {
+          if (!_revealed) {
+            _revealed = true;
+            _startTimer();
+          } else {
+            _revealed = false;
+            _t?.cancel();
+          }
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: accent.withOpacity(0.15), width: 1),
+          boxShadow: [BoxShadow(color: accent.withOpacity(0.06), blurRadius: 14, offset: const Offset(0, 4))],
+        ),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          Container(
+            width: 48, height: 48,
+            decoration: BoxDecoration(color: accent.withOpacity(0.12), borderRadius: BorderRadius.circular(14)),
+            child: Icon(widget.icon, size: 22, color: accent),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(
+                widget.label,
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: accent.withOpacity(0.8), letterSpacing: 0.5),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                (sensitive && !_revealed) ? '••••••••••••' : widget.value,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: widget.isMono ? 'monospace' : null,
+                  color: const Color(0xFF12101E),
+                  letterSpacing: widget.isMono ? 1.5 : 0,
+                  height: 1.3,
+                ),
+              ),
+            ]),
+          ),
+          const SizedBox(width: 10),
+          if (sensitive && _revealed)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: const Color(0xFFFFF3CD)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.timer_outlined, size: 12, color: Color(0xFFF59E0B)),
+                const SizedBox(width: 3),
+                Text('$_timer', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFF59E0B))),
+              ]),
+          else if (!sensitive)
+            Icon(Icons.copy_all, size: 18, color: accent.withOpacity(0.5))
+          else
+            Icon(_revealed ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20, color: accent),
         ]),
       ),
     );

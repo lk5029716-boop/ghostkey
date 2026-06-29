@@ -4,9 +4,9 @@ import '../vault_data.dart';
 import '../store/vault_store.dart';
 
 // ═══════════════════════════════════════════════════════════════
-// PASSWORD ADD SCREEN
-// Redesigned to match the app's color core: light purple surface,
-// white rounded inputs, larger field icons, full-width primary CTA.
+// PASSWORD ADD SCREEN — full redesign
+// Premium form: colored hero, inline icon+label+input rows,
+// rich primary CTA, floating feedback.
 // ═══════════════════════════════════════════════════════════════
 
 class PasswordAddScreen extends StatefulWidget {
@@ -17,16 +17,6 @@ class PasswordAddScreen extends StatefulWidget {
 }
 
 class _PasswordAddScreenState extends State<PasswordAddScreen> {
-  // App color core
-  static const _primary = Color(0xFF5B3FE8);
-  static const _surfaceDim = Color(0xFFF4F3FF);
-  static const _surface = Color(0xFFFFFFFF);
-  static const _onSurface = Color(0xFF12101E);
-  static const _onSurfaceVariant = Color(0xFF8E8BA8);
-  static const _outlineVariant = Color(0xFFE4E2F5);
-  static const _fieldBg = Color(0xFFF6F5FF);
-  static const _error = Color(0xFFBA1A1A);
-
   final _titleCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
@@ -48,7 +38,12 @@ class _PasswordAddScreenState extends State<PasswordAddScreen> {
   Future<void> _save() async {
     if (_titleCtrl.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Title is required')),
+        SnackBar(
+          content: const Text('Title is required'),
+          backgroundColor: const Color(0xFF5B3FE8),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
       return;
     }
@@ -61,9 +56,9 @@ class _PasswordAddScreenState extends State<PasswordAddScreen> {
             ? _emailCtrl.text.trim()
             : _urlCtrl.text.trim(),
         category: VaultCategory.password,
-        icon: Icons.lock,
-        iconColor: const Color(0xFF1976D2),
-        iconBgColor: const Color(0xFFBBDEFB),
+        icon: Icons.key,
+        iconColor: const Color(0xFF5B3FE8),
+        iconBgColor: const Color(0xFFEBE9FE),
         date: 'Today',
         fields: {
           if (_emailCtrl.text.trim().isNotEmpty) 'Email': _emailCtrl.text.trim(),
@@ -87,85 +82,130 @@ class _PasswordAddScreenState extends State<PasswordAddScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _surfaceDim,
-      appBar: AppBar(
-        backgroundColor: _surfaceDim,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        centerTitle: false,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: _onSurface),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'New Password',
-          style: TextStyle(
-            color: _onSurface,
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.2,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: _saving ? null : _save,
-            child: const Text(
-              'Save',
-              style: TextStyle(
-                color: _primary,
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      backgroundColor: const Color(0xFFF4F3FF),
       body: SafeArea(
         child: Column(children: [
+          // Top bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Color(0xFF12101E)),
+                onPressed: () => Navigator.pop(context),
+              ),
+              const Expanded(
+                child: Text(
+                  'New Password',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF12101E),
+                    letterSpacing: -0.3,
+                  ),
+                ),
+              ),
+            ]),
+          ),
+
+          // Scrollable form area
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _field(
-                    icon: Icons.label_outline,
-                    label: 'Title',
-                    required: true,
-                    ctrl: _titleCtrl,
-                    hint: 'e.g. Google, Binance',
+              child: Column(children: [
+                // Hero card
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEBE9FE),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF5B3FE8).withOpacity(0.08),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 14),
-                  _field(
-                    icon: Icons.alternate_email,
-                    label: 'Email / Username',
-                    ctrl: _emailCtrl,
-                    hint: 'alex@gmail.com',
-                    keyboardType: TextInputType.emailAddress,
-                  ),
-                  const SizedBox(height: 14),
-                  _passwordField(),
-                  const SizedBox(height: 14),
-                  _field(
-                    icon: Icons.link,
-                    label: 'Website URL',
-                    ctrl: _urlCtrl,
-                    hint: 'https://example.com',
-                    keyboardType: TextInputType.url,
-                  ),
-                  const SizedBox(height: 14),
-                  _field(
-                    icon: Icons.notes,
-                    label: 'Notes',
-                    ctrl: _notesCtrl,
-                    hint: 'Optional notes',
-                    maxLines: 3,
-                  ),
-                ],
-              ),
+                  child: Column(children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.8),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.enhanced_encryption,
+                        size: 28,
+                        color: Color(0xFF5B3FE8),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Save a login securely',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF5B3FE8),
+                      ),
+                    ),
+                  ]),
+                ),
+                const SizedBox(height: 20),
+
+                // Input fields
+                _FieldRow(
+                  icon: Icons.label_important_outline,
+                  label: 'Title',
+                  required: true,
+                  ctrl: _titleCtrl,
+                  hint: 'e.g. Google, Binance',
+                ),
+                const SizedBox(height: 14),
+                _FieldRow(
+                  icon: Icons.alternate_email,
+                  label: 'Email / Username',
+                  ctrl: _emailCtrl,
+                  hint: 'alex@gmail.com',
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 14),
+                _PasswordRow(
+                  ctrl: _passwordCtrl,
+                  revealed: _revealed,
+                  onToggleReveal: () => setState(() => _revealed = !_revealed),
+                  onGenerate: () {
+                    const chars =
+                        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#\$%^&*()_+-=';
+                    final rng = DateTime.now().microsecondsSinceEpoch;
+                    _passwordCtrl.text =
+                        List.generate(24, (i) => chars[(rng + i * 13) % chars.length]).join();
+                    setState(() => _revealed = true);
+                  },
+                ),
+                const SizedBox(height: 14),
+                _FieldRow(
+                  icon: Icons.link,
+                  label: 'Website URL',
+                  ctrl: _urlCtrl,
+                  hint: 'https://example.com',
+                  keyboardType: TextInputType.url,
+                ),
+                const SizedBox(height: 14),
+                _FieldRow(
+                  icon: Icons.sticky_note_2_outlined,
+                  label: 'Notes',
+                  ctrl: _notesCtrl,
+                  hint: 'Optional notes',
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 24),
+              ]),
             ),
           ),
+
+          // Bottom CTA bar
           _bottomBar(),
         ]),
       ),
@@ -175,7 +215,7 @@ class _PasswordAddScreenState extends State<PasswordAddScreen> {
   Widget _bottomBar() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      decoration: const BoxDecoration(color: _surfaceDim),
+      decoration: const BoxDecoration(color: Color(0xFFF4F3FF)),
       child: SafeArea(
         top: false,
         child: SizedBox(
@@ -184,9 +224,9 @@ class _PasswordAddScreenState extends State<PasswordAddScreen> {
           child: ElevatedButton(
             onPressed: _saving ? null : _save,
             style: ElevatedButton.styleFrom(
-              backgroundColor: _primary,
+              backgroundColor: const Color(0xFF5B3FE8),
               foregroundColor: Colors.white,
-              disabledBackgroundColor: _primary.withOpacity(0.5),
+              disabledBackgroundColor: const Color(0xFF5B3FE8).withOpacity(0.5),
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -206,179 +246,268 @@ class _PasswordAddScreenState extends State<PasswordAddScreen> {
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   )
-                : const Text('Save Password'),
+                : const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle_outline, size: 20),
+                      SizedBox(width: 8),
+                      Text('Save Password'),
+                    ],
+                  ),
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _field({
-    required IconData icon,
-    required String label,
-    required TextEditingController ctrl,
-    required String hint,
-    bool required = false,
-    int maxLines = 1,
-    TextInputType? keyboardType,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Row(children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: _onSurface,
-                letterSpacing: 0.1,
-              ),
-            ),
-            if (required) ...[
-              const SizedBox(width: 2),
-              const Text(
-                '*',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: _error,
-                ),
-              ),
-            ],
-          ]),
-        ),
-        TextField(
-          controller: ctrl,
-          maxLines: maxLines,
-          keyboardType: keyboardType,
-          style: const TextStyle(
-            fontSize: 15,
-            color: _onSurface,
-            fontWeight: FontWeight.w500,
-          ),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: const TextStyle(
-              color: _onSurfaceVariant,
-              fontSize: 15,
-              fontWeight: FontWeight.w400,
-            ),
-            prefixIcon: maxLines == 1
-                ? Padding(
-                    padding: const EdgeInsets.only(left: 14, right: 8),
-                    child: Icon(icon, color: _primary, size: 20),
-                  )
-                : null,
-            prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-            filled: true,
-            fillColor: _surface,
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: maxLines == 1 ? 0 : 16,
-              vertical: maxLines == 1 ? 16 : 14,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: _outlineVariant, width: 1),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: _primary, width: 1.5),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+// ═══════════════════════════════════════════════════════════════
+// FIELD ROW — generic input row with icon + label + input
+// ═══════════════════════════════════════════════════════════════
+class _FieldRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool required;
+  final TextEditingController ctrl;
+  final String hint;
+  final int maxLines;
+  final TextInputType? keyboardType;
 
-  Widget _passwordField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Password',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: _onSurface,
-                  letterSpacing: 0.1,
-                ),
+  const _FieldRow({
+    required this.icon,
+    required this.label,
+    required this.ctrl,
+    required this.hint,
+    this.required = false,
+    this.maxLines = 1,
+    this.keyboardType,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isMultiline = maxLines > 1;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF5B3FE8).withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: Row(
+          crossAxisAlignment:
+              isMultiline ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEBE8FF),
+                borderRadius: BorderRadius.circular(12),
               ),
-              GestureDetector(
-                onTap: () => setState(() => _revealed = !_revealed),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(
-                    _revealed ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                    size: 16,
-                    color: _primary,
+              child: Icon(icon,
+                  size: 20, color: const Color(0xFF5B3FE8)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6, bottom: 2),
+                    child: Row(children: [
+                      Text(
+                        label,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF8E8BA8),
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      if (required) ...[
+                        const SizedBox(width: 2),
+                        const Text(
+                          '*',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFFBA1A1A),
+                          ),
+                        ),
+                      ],
+                    ]),
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    _revealed ? 'Hide' : 'Show',
+                  TextField(
+                    controller: ctrl,
+                    maxLines: maxLines,
+                    keyboardType: keyboardType,
                     style: const TextStyle(
-                      fontSize: 12,
-                      color: _primary,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: Color(0xFF12101E),
+                      fontWeight: FontWeight.w500,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: hint,
+                      hintStyle: const TextStyle(
+                        color: Color(0xFF8E8BA8),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding:
+                          EdgeInsets.symmetric(vertical: isMultiline ? 8 : 10),
                     ),
                   ),
-                ]),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-        TextField(
-          controller: _passwordCtrl,
-          obscureText: !_revealed,
-          style: const TextStyle(
-            fontSize: 15,
-            color: _onSurface,
-            fontFamily: 'monospace',
-            fontWeight: FontWeight.w500,
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PASSWORD ROW — password input + show/hide + auto-generate
+// ═══════════════════════════════════════════════════════════════
+class _PasswordRow extends StatelessWidget {
+  final TextEditingController ctrl;
+  final bool revealed;
+  final VoidCallback onToggleReveal;
+  final VoidCallback onGenerate;
+
+  const _PasswordRow({
+    required this.ctrl,
+    required this.revealed,
+    required this.onToggleReveal,
+    required this.onGenerate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF5B3FE8).withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
           ),
-          decoration: InputDecoration(
-            hintText: 'Enter password',
-            hintStyle: const TextStyle(
-              color: _onSurfaceVariant,
-              fontSize: 15,
-              fontWeight: FontWeight.w400,
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEBE8FF),
+              borderRadius: BorderRadius.circular(12),
             ),
-            prefixIcon: const Padding(
-              padding: EdgeInsets.only(left: 14, right: 8),
-              child: Icon(Icons.lock_outline, color: _primary, size: 20),
-            ),
-            prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.auto_awesome, size: 18, color: _primary),
-              tooltip: 'Generate strong password',
-              onPressed: () {
-                const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#\$%^&*()_+-=';
-                final rng = DateTime.now().microsecondsSinceEpoch;
-                _passwordCtrl.text =
-                    List.generate(24, (i) => chars[(rng + i * 13) % chars.length]).join();
-                setState(() => _revealed = true);
-              },
-            ),
-            filled: true,
-            fillColor: _surface,
-            contentPadding: const EdgeInsets.symmetric(vertical: 16),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: _outlineVariant, width: 1),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: _primary, width: 1.5),
+            child: const Icon(Icons.lock_outline,
+                size: 20, color: const Color(0xFF5B3FE8)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, bottom: 2),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Password',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF8E8BA8),
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: onToggleReveal,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              revealed
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              size: 14,
+                              color: const Color(0xFF5B3FE8),
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              revealed ? 'Hide' : 'Show',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF5B3FE8),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                TextField(
+                  controller: ctrl,
+                  obscureText: !revealed,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Color(0xFF12101E),
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.w500,
+                  ),
+                  decoration: const InputDecoration(
+                    hintText: 'Enter password',
+                    hintStyle: TextStyle(
+                      color: Color(0xFF8E8BA8),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(vertical: 10),
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: onGenerate,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFF5B3FE8).withOpacity(0.10),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.auto_awesome,
+                size: 18,
+                color: Color(0xFF5B3FE8),
+              ),
+            ),
+          ),
+        ]),
+      ),
     );
   }
 }
