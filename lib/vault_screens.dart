@@ -85,6 +85,13 @@ class _RevealFieldState extends State<_RevealField> {
   int _timer = 30;
   Timer? _t;
 
+  // App color core
+  static const _primary = Color(0xFF5B3FE8);
+  static const _onSurface = Color(0xFF12101E);
+  static const _onSurfaceVariant = Color(0xFF8E8BA8);
+  static const _outlineVariant = Color(0xFFE4E2F5);
+  static const _warning = Color(0xFFF59E0B);
+
   @override
   void dispose() { _t?.cancel(); super.dispose(); }
 
@@ -100,18 +107,33 @@ class _RevealFieldState extends State<_RevealField> {
 
   @override
   Widget build(BuildContext context) {
+    final isWarning = widget.isWarning;
+    final accentColor = isWarning ? _warning : _primary;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: widget.isWarning ? const Color(0xFFF59E0B).withOpacity(0.3) : const Color(0xFFBFCABA).withOpacity(0.3)),
+        border: Border.all(
+          color: isWarning ? _warning.withOpacity(0.25) : _outlineVariant,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: _primary.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Icon(widget.icon, size: 18, color: widget.isWarning ? const Color(0xFFF59E0B) : const Color(0xFF40493D)),
+          Icon(widget.icon, size: 18, color: accentColor),
           const SizedBox(width: 8),
-          Text(widget.label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: widget.isWarning ? const Color(0xFFF59E0B) : const Color(0xFF40493D))),
+          Text(
+            widget.label,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: accentColor, letterSpacing: 0.3),
+          ),
           const Spacer(),
           GestureDetector(
             onTap: () {
@@ -124,13 +146,16 @@ class _RevealFieldState extends State<_RevealField> {
               }
             },
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(_revealed ? Icons.visibility_off : Icons.visibility, size: 16, color: const Color(0xFF0D631B)),
+              Icon(_revealed ? Icons.visibility_off : Icons.visibility, size: 16, color: _primary),
               const SizedBox(width: 4),
-              Text(_revealed ? 'Hide' : 'Reveal', style: const TextStyle(fontSize: 12, color: Color(0xFF0D631B), fontWeight: FontWeight.w500)),
+              Text(
+                _revealed ? 'Hide' : 'Reveal',
+                style: const TextStyle(fontSize: 12, color: _primary, fontWeight: FontWeight.w600),
+              ),
             ]),
           ),
         ]),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Row(children: [
           Expanded(
             child: Text(
@@ -139,8 +164,9 @@ class _RevealFieldState extends State<_RevealField> {
                 fontSize: widget.isMono ? 15 : 16,
                 fontWeight: FontWeight.w500,
                 fontFamily: widget.isMono ? 'monospace' : null,
-                color: const Color(0xFF191C1D),
-                letterSpacing: widget.isMono ? 2 : 0.5,
+                color: _onSurface,
+                letterSpacing: widget.isMono ? 2 : 0.3,
+                height: 1.4,
               ),
             ),
           ),
@@ -149,18 +175,33 @@ class _RevealFieldState extends State<_RevealField> {
               onTap: () {
                 Clipboard.setData(ClipboardData(text: widget.value));
                 HapticFeedback.lightImpact();
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied'), duration: Duration(seconds: 1)));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Copied ${widget.label}'),
+                    duration: const Duration(seconds: 1),
+                    backgroundColor: _primary,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                );
               },
-              child: const Icon(Icons.copy, size: 18, color: Color(0xFF40493D)),
+              child: const Icon(Icons.copy, size: 18, color: _onSurfaceVariant),
             ),
         ]),
         if (_revealed) ...[
-          const SizedBox(height: 8),
-          Row(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.timer_outlined, size: 14, color: Color(0xFFF59E0B)),
-            const SizedBox(width: 4),
-            Text('Auto-hide in $_timer s', style: const TextStyle(fontSize: 11, color: Color(0xFFF59E0B), fontWeight: FontWeight.w500)),
-          ]),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: _warning.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.timer_outlined, size: 13, color: _warning),
+              const SizedBox(width: 4),
+              Text('Auto-hide in $_timer s', style: const TextStyle(fontSize: 11, color: _warning, fontWeight: FontWeight.w600)),
+            ]),
+          ),
         ],
       ]),
     );
@@ -191,81 +232,106 @@ class PasswordDetailScreen extends StatelessWidget {
   final VaultItem item;
   const PasswordDetailScreen({super.key, required this.item});
 
+  // App color core
+  static const _primary = Color(0xFF5B3FE8);
+  static const _surfaceDim = Color(0xFFF4F3FF);
+  static const _onSurface = Color(0xFF12101E);
+  static const _onSurfaceVariant = Color(0xFF8E8BA8);
+
+  // Field classification for auto-icon + styling
+  static const _sensitiveFields = {'Password', 'Secret', 'Token', 'Private Key', 'Seed Phrase', 'Recovery Key'};
+  static const _emailFields = {'Email', 'Username', 'Login'};
+  static const _urlFields = {'URL', 'Website', 'Domain', 'Link', 'Issuer'};
+  static const _monoFields = {'API Key', 'Access Key ID', 'Secret Access Key', 'API Secret', 'Client Secret', 'PIN'};
+
+  bool _isSensitive(String label) => _sensitiveFields.contains(label) || label.toLowerCase().contains('password') || label.toLowerCase().contains('secret');
+  bool _isEmail(String label) => _emailFields.contains(label);
+  bool _isUrl(String label) => _urlFields.contains(label);
+  bool _isMono(String label) => _monoFields.contains(label);
+
+  IconData _iconFor(String label) {
+    if (_isEmail(label)) return Icons.alternate_email;
+    if (_isUrl(label)) return Icons.link;
+    if (label.toLowerCase().contains('password') || label.toLowerCase().contains('pass')) return Icons.lock_outline;
+    if (label.toLowerCase().contains('secret') || label.toLowerCase().contains('token')) return Icons.vpn_key;
+    if (label.toLowerCase().contains('recovery')) return Icons.replay;
+    if (label.toLowerCase().contains('note') || label.toLowerCase().contains('memo')) return Icons.notes;
+    if (label.toLowerCase().contains('phone') || label.toLowerCase().contains('mobile')) return Icons.phone_outlined;
+    return Icons.label_outline;
+  }
+
   @override
   Widget build(BuildContext context) {
     final f = item.fields;
-    final isBinance = item.id == 'binance';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: _surfaceDim,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF8F9FA),
+        backgroundColor: _surfaceDim,
         elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFF191C1D)), onPressed: () => Navigator.pop(context)),
-        title: Text(item.title, style: const TextStyle(color: Color(0xFF191C1D))),
-        actions: [
-          IconButton(icon: const Icon(Icons.more_vert, color: Color(0xFF40493D)), onPressed: () {}),
-          const SizedBox(width: 8),
-        ],
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: _onSurface),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          item.title,
+          style: const TextStyle(color: _onSurface, fontSize: 20, fontWeight: FontWeight.w700),
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const SizedBox(height: 16),
-          // Header
+          // Hero header — uses item's actual icon
           Center(child: Column(children: [
-            Container(width: 72, height: 72, decoration: BoxDecoration(color: item.iconBgColor, shape: BoxShape.circle), child: Icon(item.icon, size: 36, color: item.iconColor)),
-            const SizedBox(height: 12),
-            Text(item.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: Color(0xFF191C1D))),
-            const SizedBox(height: 4), Text(item.subtitle, style: const TextStyle(fontSize: 14, color: Color(0xFF40493D))),
-          ])),
-          const SizedBox(height: 32),
-
-          // Email
-          _RevealField(icon: Icons.alternate_email, label: 'Email', value: f['Email'] ?? ''),
-          const SizedBox(height: 12),
-
-          // Password
-          _RevealField(icon: Icons.lock_outline, label: 'Password', value: f['Password'] ?? '', isWarning: true),
-          const SizedBox(height: 12),
-
-          // 2FA section
-          if (isBinance && f.containsKey('TOTP Secret')) ...[
-            // Binance: TOTP secret with live code generation
-            _TotpField(secret: f['TOTP Secret']!),
-            const SizedBox(height: 12),
-          ] else if (f.containsKey('Backup Codes')) ...[
-            // Google: Backup codes grid
-            _BackupCodesGrid(codes: f['Backup Codes']!.split('\n')),
-            const SizedBox(height: 12),
-          ],
-
-          // Recovery Email (Google) or extra info (Binance)
-          if (f.containsKey('Recovery Email'))
-            _RevealField(icon: Icons.replay, label: 'Recovery Email', value: f['Recovery Email']!),
-
-          // Account info card
-          if (f.containsKey('Account Type') || f.containsKey('Created')) ...[
-            const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFBFCABA).withOpacity(0.3))),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                if (f.containsKey('Account Type')) ...[
-                  _InfoRow('Account Type', f['Account Type']!),
-                  if (f.containsKey('Created') || f.containsKey('Last Login')) const Divider(height: 20, color: Color(0xFFE1E3E4)),
+              width: 72, height: 72,
+              decoration: BoxDecoration(
+                color: item.iconBgColor,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: item.iconColor.withOpacity(0.2),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
                 ],
-                if (f.containsKey('Created')) ...[
-                  _InfoRow('Created', f['Created']!),
-                  if (f.containsKey('Last Login')) const Divider(height: 20, color: Color(0xFFE1E3E4)),
-                ],
-                if (f.containsKey('Last Login'))
-                  _InfoRow('Last Login', f['Last Login']!),
-              ]),
+              ),
+              child: Icon(item.icon, size: 36, color: item.iconColor),
             ),
-          ],
+            const SizedBox(height: 14),
+            Text(
+              item.title,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: _onSurface, letterSpacing: -0.3),
+            ),
+            if (item.subtitle.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                item.subtitle,
+                style: const TextStyle(fontSize: 14, color: _onSurfaceVariant),
+              ),
+            ],
+          ])),
+          const SizedBox(height: 24),
 
-          const SizedBox(height: 32),
+          // Header label
+          const Text(
+            'Saved fields',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _onSurfaceVariant, letterSpacing: 0.2),
+          ),
+          const SizedBox(height: 12),
+
+          // ALL fields rendered dynamically
+          for (final entry in f.entries) ...[
+            _RevealField(
+              icon: _iconFor(entry.key),
+              label: entry.key,
+              value: entry.value,
+              isWarning: _isSensitive(entry.key),
+              isMono: _isMono(entry.key),
+            ),
+            const SizedBox(height: 12),
+          ],
         ]),
       ),
     );
