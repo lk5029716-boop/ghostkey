@@ -887,41 +887,9 @@ class _VaultPageState extends State<VaultPage> {
   }
 
   Widget _buildCard(VaultItem item) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: () => _openDetail(item),
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: kSurfaceContainerHighest),
-          ),
-          child: Row(children: [
-            Container(
-              width: 44, height: 44,
-              decoration: BoxDecoration(color: item.iconBgColor, borderRadius: BorderRadius.circular(12)),
-              child: Icon(item.icon, size: 22, color: item.iconColor),
-            ),
-            const SizedBox(width: 14),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(item.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: kOnSurface)),
-              const SizedBox(height: 2),
-              Text(item.subtitle, style: const TextStyle(fontSize: 13, color: kOnSurfaceVariant)),
-            ])),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(color: item.iconBgColor.withOpacity(0.5), borderRadius: BorderRadius.circular(6)),
-              child: Text(_catLabel(item.category), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: item.iconColor)),
-            ),
-            const SizedBox(width: 8),
-            const Icon(Icons.chevron_right, size: 18, color: kOutlineVariant),
-          ]),
-        ),
-      ),
+    return _VaultListCard(
+      item: item,
+      onTap: () => _openDetail(item),
     );
   }
 
@@ -978,6 +946,96 @@ class _VaultPageState extends State<VaultPage> {
             const Text('Your vault is empty', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface)),
             const SizedBox(height: 8),
             const Text('Tap the + button to add your first secret', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant), textAlign: TextAlign.center),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════
+// VAULT LIST CARD — item card in filtered list view
+// White surface, larger square tinted icon, bold title + subtitle,
+// subtle press-scale. Matches the app's color core (white card on
+// light purple surface) — no chevron, no category pill.
+// ════════════════════════════════════════════════
+class _VaultListCard extends StatefulWidget {
+  final VaultItem item;
+  final VoidCallback onTap;
+  const _VaultListCard({required this.item, required this.onTap});
+
+  @override
+  State<_VaultListCard> createState() => _VaultListCardState();
+}
+
+class _VaultListCardState extends State<_VaultListCard> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final item = widget.item;
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 110),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF5B3FE8).withOpacity(0.06),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(children: [
+            Container(
+              width: 52, height: 52,
+              decoration: BoxDecoration(
+                color: item.iconBgColor,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(item.icon, size: 26, color: item.iconColor),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    item.title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF12101E),
+                      height: 1.2,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    item.subtitle,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF8E8BA8),
+                      height: 1.3,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
           ]),
         ),
       ),
