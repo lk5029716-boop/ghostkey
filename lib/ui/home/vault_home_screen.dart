@@ -141,25 +141,25 @@ class _VaultGrid extends StatelessWidget {
           children: [
             Row(
               children: [
-                _VaultCard.square(cellW, _cPrimaryContainer, _cPrimary, Icons.login, 'Create a login', _cPrimary),
+                _VaultCard.square(cellW, _cSurface, _cPrimary, Icons.login, 'Create a login', _cOnSurface),
                 const SizedBox(width: gap),
-                _VaultCard.square(cellW, const Color(0xFFD1F7F1), const Color(0xFF00897B), Icons.alternate_email, 'Hide-my-email alias', const Color(0xFF004D40)),
+                _VaultCard.square(cellW, _cSurface, _cPrimary, Icons.alternate_email, 'Hide-my-email alias', _cOnSurface),
               ],
             ),
             const SizedBox(height: gap),
             Row(
               children: [
-                _VaultCard.square(cellW, const Color(0xFFFFE8D1), const Color(0xFFE65100), Icons.note, 'Create a note', const Color(0xFF3E2723)),
+                _VaultCard.square(cellW, _cSurface, _cPrimary, Icons.note, 'Create a note', _cOnSurface),
                 const SizedBox(width: gap),
-                _VaultCard.square(cellW, const Color(0xFFD1E3FF), const Color(0xFF1565C0), Icons.credit_card, 'Credit card', const Color(0xFF0D47A1)),
+                _VaultCard.square(cellW, _cSurface, _cPrimary, Icons.credit_card, 'Credit card', _cOnSurface),
               ],
             ),
             const SizedBox(height: gap),
             Row(
               children: [
-                _VaultCard.square(cellW, const Color(0xFFFFD1E8), const Color(0xFFC2185B), Icons.badge, 'Create an identity', const Color(0xFF880E4F)),
+                _VaultCard.square(cellW, _cSurface, _cPrimary, Icons.badge, 'Create an identity', _cOnSurface),
                 const SizedBox(width: gap),
-                _VaultCard.square(cellW, _cSurfaceContainerHigh, _cOnSurface, Icons.dashboard_customize, 'Create a custom item', _cOnSurface),
+                _VaultCard.square(cellW, _cSurface, _cPrimary, Icons.dashboard_customize, 'Create a custom item', _cOnSurface),
               ],
             ),
           ],
@@ -213,25 +213,28 @@ class _VaultCardState extends State<_VaultCard> {
         child: Container(
           width: widget.width,
           height: widget.height,
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: widget.bg,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(color: _cPrimary.withOpacity(0.06), blurRadius: 14, offset: const Offset(0, 4)),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: widget.iconColor.withOpacity(0.10),
-                  shape: BoxShape.circle,
+                  color: widget.iconColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(widget.icon, color: widget.iconColor, size: 24),
               ),
-              Text(widget.title, style: _font(20, FontWeight.w700, widget.titleColor, height: 28 / 20)),
+              Text(widget.title, style: _font(18, FontWeight.w700, widget.titleColor, height: 24 / 18)),
             ],
           ),
         ),
