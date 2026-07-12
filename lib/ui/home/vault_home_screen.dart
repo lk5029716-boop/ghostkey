@@ -1,11 +1,25 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
+import 'package:dotted_border/dotted_border.dart';
+
+import '../../screens/password_add_screen.dart';
+import '../../screens/secure_note_add_screen.dart';
+import '../../screens/api_key_add_screen.dart';
+import '../../screens/recovery_codes_add_screen.dart';
+import '../../enter_key_manually_screen.dart';
+import '../../seed_phrase_restore_screen.dart';
 
 // ═══════════════════════════════════════════════════════════════
 // HOME TAB — "Your Vault"
-// Faithful visual reproduction of the GhostKey vault home design:
-// translucent top app bar, import strip, 2-column vault grid of six
-// action cards, and a floating add button. Cards are purely visual
-// placeholders (no service wiring) per the requested scope.
+// Customizable dashboard: users add, remove, and reorder shortcut
+// tiles. Long-press any tile to enter organize mode (wobble +
+// remove badges + drag-to-reorder). Tap "+" to add a shortcut from
+// a bottom sheet. Layout persists locally via SharedPreferences.
+// Every tile routes to a real, already-implemented add screen —
+// no placeholder/demo destinations.
 // ═══════════════════════════════════════════════════════════════
 
 // M3 design tokens — exact values from the "Your Vault" design spec.
@@ -18,12 +32,162 @@ const Color _cOnSurface = Color(0xFF12101E);
 const Color _cOnSurfaceVariant = Color(0xFF8E8BA8);
 const Color _cSurfaceContainerHigh = Color(0xFFEBE6F4);
 const Color _cOutlineVariant = Color(0xFFE4E2F5);
+const Color _cDanger = Color(0xFFE0435B);
 
 TextStyle _font(double size, FontWeight w, Color c, {double? height, double? ls}) =>
     TextStyle(fontSize: size, fontWeight: w, color: c, height: height, letterSpacing: ls ?? 0);
 
-class VaultHomeScreen extends StatelessWidget {
+// ── Home tile data model ─────────────────────────────────────────
+
+enum HomeTileType { login, note, apiKey, recoveryCodes, totp, seed }
+
+class HomeTile {
+  final String id;
+  final HomeTileType type;
+  const HomeTile({required this.id, required this.type});
+
+  Map<String, dynamic> toJson() => {'id': id, 'type': type.name};
+
+  factory HomeTile.fromJson(Map<String, dynamic> json) => HomeTile(
+        id: json['id'] as String,
+        type: HomeTileType.values.byName(json['type'] as String),
+      );
+}
+
+class _TileTypeInfo {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final Color bg;
+  final WidgetBuilder destinationBuilder;
+  const _TileTypeInfo(this.label, this.icon, this.color, this.bg, this.destinationBuilder);
+}
+
+// Top-level function tear-offs so this map can stay a compile-time const.
+Widget _buildPasswordAdd(BuildContext ctx) => const PasswordAddScreen();
+Widget _buildNoteAdd(BuildContext ctx) => const SecureNoteAddScreen();
+Widget _buildApiKeyAdd(BuildContext ctx) => const ApiKeyAddScreen();
+Widget _buildRecoveryAdd(BuildContext ctx) => const RecoveryCodesAddScreen();
+Widget _buildTotpAdd(BuildContext ctx) => const EnterKeyManuallyScreen();
+Widget _buildSeedAdd(BuildContext ctx) => const SeedPhraseRestoreScreen();
+
+const Map<HomeTileType, _TileTypeInfo> _kTileInfo = {
+  HomeTileType.login: _TileTypeInfo(
+      'Create a login', Icons.login, Color(0xFF4285F4), Color(0xFFBBDEFB), _buildPasswordAdd),
+  HomeTileType.note: _TileTypeInfo(
+      'Create a note', Icons.note, Color(0xFF6A1B9A), Color(0xFFE1BEE7), _buildNoteAdd),
+  HomeTileType.apiKey: _TileTypeInfo(
+      'Add API key', Icons.vpn_key, Color(0xFF00796B), Color(0xFFB2DFDB), _buildApiKeyAdd),
+  HomeTileType.recoveryCodes: _TileTypeInfo(
+      'Recovery codes', Icons.grid_view, Color(0xFF7B1FA2), Color(0xFFE1BEE7), _buildRecoveryAdd),
+  HomeTileType.totp: _TileTypeInfo(
+      'Add 2FA code', Icons.shield, Color(0xFF1D4FA6), Color(0xFFBBDEFB), _buildTotpAdd),
+  HomeTileType.seed: _TileTypeInfo(
+      'Seed phrase', Icons.spa, Color(0xFF0D631B), Color(0xFFC8E6C9), _buildSeedAdd),
+};
+
+// ── Screen ────────────────────────────────────────────────────────
+
+class VaultHomeScreen extends StatefulWidget {
   const VaultHomeScreen({super.key});
+
+  @override
+  State<VaultHomeScreen> createState() => _VaultHomeScreenState();
+}
+
+class _VaultHomeScreenState extends State<VaultHomeScreen> {
+  static const _kPrefsKey = 'gk_home_tiles_v1';
+  static const _uuid = Uuid();
+
+  List<HomeTile> _tiles = [];
+  final Set<String> _removingIds = {};
+  bool _organizeMode = false;
+  bool _loaded = false;
+  SharedPreferences? _prefs;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  List<HomeTile> _defaultTiles() => [
+        HomeTile(id: _uuid.v4(), type: HomeTileType.login),
+        HomeTile(id: _uuid.v4(), type: HomeTileType.note),
+        HomeTile(id: _uuid.v4(), type: HomeTileType.totp),
+        HomeTile(id: _uuid.v4(), type: HomeTileType.recoveryCodes),
+      ];
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    _prefs = prefs;
+    final raw = prefs.getString(_kPrefsKey);
+    List<HomeTile> loaded;
+    if (raw != null) {
+      try {
+        final decoded = (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
+        loaded = decoded.map(HomeTile.fromJson).toList();
+      } catch (_) {
+        loaded = _defaultTiles();
+      }
+    } else {
+      loaded = _defaultTiles();
+    }
+    if (!mounted) return;
+    setState(() {
+      _tiles = loaded;
+      _loaded = true;
+    });
+    if (raw == null) _persist();
+  }
+
+  Future<void> _persist() async {
+    _prefs ??= await SharedPreferences.getInstance();
+    await _prefs!.setString(_kPrefsKey, jsonEncode(_tiles.map((t) => t.toJson()).toList()));
+  }
+
+  void _addTile(HomeTileType type) {
+    setState(() => _tiles.add(HomeTile(id: _uuid.v4(), type: type)));
+    _persist();
+  }
+
+  Future<void> _removeTile(String id) async {
+    setState(() => _removingIds.add(id));
+    await Future.delayed(const Duration(milliseconds: 180));
+    if (!mounted) return;
+    setState(() {
+      _tiles.removeWhere((t) => t.id == id);
+      _removingIds.remove(id);
+      if (_tiles.isEmpty) _organizeMode = false;
+    });
+    _persist();
+  }
+
+  void _reorder(int fromIndex, int toIndex) {
+    if (fromIndex == toIndex) return;
+    setState(() {
+      final tile = _tiles.removeAt(fromIndex);
+      _tiles.insert(toIndex, tile);
+    });
+    _persist();
+  }
+
+  void _openTile(HomeTile tile) {
+    final info = _kTileInfo[tile.type]!;
+    Navigator.of(context).push(MaterialPageRoute(builder: info.destinationBuilder));
+  }
+
+  Future<void> _openAddSheet() async {
+    final used = _tiles.map((t) => t.type).toSet();
+    final available = HomeTileType.values.where((t) => !used.contains(t)).toList();
+    final selected = await showModalBottomSheet<HomeTileType>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => _AddShortcutSheet(available: available),
+    );
+    if (selected != null) _addTile(selected);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,26 +200,105 @@ class VaultHomeScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 104),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: const [
-                  _TopBar(),
-                  SizedBox(height: 8),
-                  _ImportStrip(),
-                  SizedBox(height: 16),
-                  _VaultGrid(),
+                children: [
+                  _TopBar(
+                    organizeMode: _organizeMode,
+                    onDone: () => setState(() => _organizeMode = false),
+                  ),
+                  const SizedBox(height: 8),
+                  const _ImportStrip(),
+                  const SizedBox(height: 16),
+                  if (!_loaded)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: Center(child: CircularProgressIndicator(color: _cPrimary)),
+                    )
+                  else
+                    _buildGrid(context),
                 ],
               ),
             ),
-            const Positioned(right: 24, bottom: 28, child: _Fab()),
+            if (!_organizeMode)
+              Positioned(right: 24, bottom: 28, child: _Fab(onTap: _openAddSheet)),
           ],
         ),
       ),
     );
   }
+
+  Widget _buildGrid(BuildContext context) {
+    return LayoutBuilder(builder: (ctx, constraints) {
+      const gap = 16.0;
+      final cellW = (constraints.maxWidth - gap) / 2;
+      final cellH = cellW;
+      final totalSlots = _tiles.length + (_organizeMode ? 0 : 1);
+      final rows = totalSlots == 0 ? 0 : ((totalSlots - 1) ~/ 2) + 1;
+      final height = rows == 0 ? 0.0 : rows * cellH + (rows - 1) * gap;
+
+      final children = <Widget>[];
+
+      for (int i = 0; i < _tiles.length; i++) {
+        final tile = _tiles[i];
+        final col = i % 2;
+        final row = i ~/ 2;
+        children.add(
+          AnimatedPositioned(
+            key: ValueKey('pos_${tile.id}'),
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
+            left: col * (cellW + gap),
+            top: row * (cellH + gap),
+            width: cellW,
+            height: cellH,
+            child: _HomeTileWidget(
+              key: ValueKey(tile.id),
+              tile: tile,
+              width: cellW,
+              height: cellH,
+              organizeMode: _organizeMode,
+              removing: _removingIds.contains(tile.id),
+              index: i,
+              onTap: () => _openTile(tile),
+              onLongPress: () => setState(() => _organizeMode = true),
+              onRemove: () => _removeTile(tile.id),
+              onReorderRequested: (from) => _reorder(from, i),
+            ),
+          ),
+        );
+      }
+
+      if (!_organizeMode) {
+        final i = _tiles.length;
+        final col = i % 2;
+        final row = i ~/ 2;
+        children.add(
+          AnimatedPositioned(
+            key: const ValueKey('add_tile'),
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
+            left: col * (cellW + gap),
+            top: row * (cellH + gap),
+            width: cellW,
+            height: cellH,
+            child: _AddTileWidget(onTap: _openAddSheet),
+          ),
+        );
+      }
+
+      return SizedBox(
+        height: height,
+        child: Stack(clipBehavior: Clip.none, children: children),
+      );
+    });
+  }
 }
 
 // ── Top App Bar ──────────────────────────────────────────────────
 class _TopBar extends StatelessWidget {
-  const _TopBar();
+  final bool organizeMode;
+  final VoidCallback onDone;
+  const _TopBar({required this.organizeMode, required this.onDone});
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -74,7 +317,12 @@ class _TopBar extends StatelessWidget {
               Text('Maruf', style: _font(24, FontWeight.w700, _cPrimary)),
             ],
           ),
-          // GK profile icon removed — replaced with user name above
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: organizeMode
+                ? _PillButton(key: const ValueKey('done'), label: 'Done', onTap: onDone)
+                : const SizedBox(key: ValueKey('empty')),
+          ),
         ],
       ),
     );
@@ -109,7 +357,7 @@ class _ImportStrip extends StatelessWidget {
 class _PillButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
-  const _PillButton({required this.label, required this.onTap});
+  const _PillButton({super.key, required this.label, required this.onTap});
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -127,77 +375,181 @@ class _PillButton extends StatelessWidget {
   }
 }
 
-// ── Vault Grid ───────────────────────────────────────────────────
-class _VaultGrid extends StatelessWidget {
-  const _VaultGrid();
+// ── Home Tile (tap-to-open / long-press-to-organize / drag-to-reorder) ──
+class _HomeTileWidget extends StatefulWidget {
+  final HomeTile tile;
+  final double width;
+  final double height;
+  final bool organizeMode;
+  final bool removing;
+  final int index;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+  final VoidCallback onRemove;
+  final void Function(int fromIndex) onReorderRequested;
+
+  const _HomeTileWidget({
+    super.key,
+    required this.tile,
+    required this.width,
+    required this.height,
+    required this.organizeMode,
+    required this.removing,
+    required this.index,
+    required this.onTap,
+    required this.onLongPress,
+    required this.onRemove,
+    required this.onReorderRequested,
+  });
+
+  @override
+  State<_HomeTileWidget> createState() => _HomeTileWidgetState();
+}
+
+class _HomeTileWidgetState extends State<_HomeTileWidget> with SingleTickerProviderStateMixin {
+  bool _pressed = false;
+  bool _entered = false;
+  late final AnimationController _wobbleCtrl;
+  late final double _wobbleSign;
+
+  @override
+  void initState() {
+    super.initState();
+    _wobbleSign = widget.index.isEven ? 1.0 : -1.0;
+    _wobbleCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 260))
+      ..repeat(reverse: true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _entered = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _wobbleCtrl.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (ctx, c) {
-        const gap = 16.0;
-        final cellW = (c.maxWidth - gap) / 2;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                _VaultCard.square(cellW, _cSurface, _cPrimary, Icons.login, 'Create a login', _cOnSurface),
-                const SizedBox(width: gap),
-                _VaultCard.square(cellW, _cSurface, _cPrimary, Icons.alternate_email, 'Hide-my-email alias', _cOnSurface),
+    final info = _kTileInfo[widget.tile.type]!;
+
+    final cardContent = AnimatedScale(
+      scale: widget.removing ? 0.0 : (_pressed ? 0.96 : (_entered ? 1.0 : 0.0)),
+      duration: Duration(milliseconds: widget.removing ? 180 : 220),
+      curve: Curves.easeOutBack,
+      child: AnimatedOpacity(
+        opacity: widget.removing ? 0.0 : (_entered ? 1.0 : 0.0),
+        duration: const Duration(milliseconds: 200),
+        child: AnimatedBuilder(
+          animation: _wobbleCtrl,
+          builder: (ctx, child) {
+            final angle =
+                widget.organizeMode ? (_wobbleSign * 0.018 * (_wobbleCtrl.value * 2 - 1)) : 0.0;
+            return Transform.rotate(angle: angle, child: child);
+          },
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: _cSurface,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(color: _cPrimary.withOpacity(0.06), blurRadius: 14, offset: const Offset(0, 4)),
               ],
             ),
-            const SizedBox(height: gap),
-            Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _VaultCard.square(cellW, _cSurface, _cPrimary, Icons.note, 'Create a note', _cOnSurface),
-                const SizedBox(width: gap),
-                _VaultCard.square(cellW, _cSurface, _cPrimary, Icons.credit_card, 'Credit card', _cOnSurface),
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: info.color.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(info.icon, color: info.color, size: 24),
+                ),
+                Text(info.label, style: _font(18, FontWeight.w700, _cOnSurface, height: 24 / 18)),
               ],
             ),
-            const SizedBox(height: gap),
-            Row(
-              children: [
-                _VaultCard.square(cellW, _cSurface, _cPrimary, Icons.badge, 'Create an identity', _cOnSurface),
-                const SizedBox(width: gap),
-                _VaultCard.square(cellW, _cSurface, _cPrimary, Icons.dashboard_customize, 'Create a custom item', _cOnSurface),
-              ],
-            ),
-          ],
-        );
-      },
+          ),
+        ),
+      ),
+    );
+
+    if (!widget.organizeMode) {
+      return GestureDetector(
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
+        child: cardContent,
+      );
+    }
+
+    final withBadge = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        cardContent,
+        Positioned(
+          right: -6,
+          top: -6,
+          child: _RemoveBadge(onTap: widget.onRemove),
+        ),
+      ],
+    );
+
+    return DragTarget<int>(
+      onWillAcceptWithDetails: (details) => details.data != widget.index,
+      onAcceptWithDetails: (details) => widget.onReorderRequested(details.data),
+      builder: (ctx, candidate, rejected) => LongPressDraggable<int>(
+        data: widget.index,
+        feedback: Material(
+          color: Colors.transparent,
+          child: Transform.scale(
+            scale: 1.06,
+            child: SizedBox(width: widget.width, height: widget.height, child: cardContent),
+          ),
+        ),
+        childWhenDragging: Opacity(opacity: 0.25, child: withBadge),
+        child: withBadge,
+      ),
     );
   }
 }
 
-// ── Vault Card (press scale, no service wiring) ──────────────────
-class _VaultCard extends StatefulWidget {
-  final double width;
-  final double height;
-  final Color bg;
-  final Color iconColor;
-  final IconData icon;
-  final String title;
-  final Color titleColor;
-
-  const _VaultCard({
-    required this.width,
-    required this.height,
-    required this.bg,
-    required this.iconColor,
-    required this.icon,
-    required this.title,
-    required this.titleColor,
-  });
-
-  const _VaultCard.square(double size, this.bg, this.iconColor, this.icon, this.title, this.titleColor)
-      : width = size,
-        height = size;
-
+class _RemoveBadge extends StatelessWidget {
+  final VoidCallback onTap;
+  const _RemoveBadge({required this.onTap});
   @override
-  State<_VaultCard> createState() => _VaultCardState();
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 26,
+        height: 26,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 6, offset: const Offset(0, 2))],
+        ),
+        child: const Icon(Icons.close, size: 16, color: _cDanger),
+      ),
+    );
+  }
 }
 
-class _VaultCardState extends State<_VaultCard> {
+// ── "Add shortcut" dashed tile ───────────────────────────────────
+class _AddTileWidget extends StatefulWidget {
+  final VoidCallback onTap;
+  const _AddTileWidget({super.key, required this.onTap});
+
+  @override
+  State<_AddTileWidget> createState() => _AddTileWidgetState();
+}
+
+class _AddTileWidgetState extends State<_AddTileWidget> {
   bool _pressed = false;
 
   @override
@@ -206,36 +558,38 @@ class _VaultCardState extends State<_VaultCard> {
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) => setState(() => _pressed = false),
       onTapCancel: () => setState(() => _pressed = false),
-      onTap: () {}, // visual only — no service wiring
+      onTap: widget.onTap,
       child: AnimatedScale(
         scale: _pressed ? 0.96 : 1.0,
         duration: const Duration(milliseconds: 120),
-        child: Container(
-          width: widget.width,
-          height: widget.height,
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: widget.bg,
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(color: _cPrimary.withOpacity(0.06), blurRadius: 14, offset: const Offset(0, 4)),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: widget.iconColor.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(widget.icon, color: widget.iconColor, size: 24),
+        child: DottedBorder(
+          color: _cOnSurfaceVariant.withOpacity(0.5),
+          strokeWidth: 1.5,
+          dashPattern: const [6, 5],
+          borderType: BorderType.RRect,
+          radius: const Radius.circular(28),
+          child: Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: BoxDecoration(
+              color: _cSurfaceContainerHigh.withOpacity(0.4),
+              borderRadius: BorderRadius.circular(28),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(color: _cPrimary.withOpacity(0.12), shape: BoxShape.circle),
+                    child: const Icon(Icons.add, color: _cPrimary, size: 22),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('Add shortcut', style: _font(13, FontWeight.w600, _cOnSurfaceVariant)),
+                ],
               ),
-              Text(widget.title, style: _font(18, FontWeight.w700, widget.titleColor, height: 24 / 18)),
-            ],
+            ),
           ),
         ),
       ),
@@ -245,11 +599,12 @@ class _VaultCardState extends State<_VaultCard> {
 
 // ── Floating Add Button ──────────────────────────────────────────
 class _Fab extends StatelessWidget {
-  const _Fab();
+  final VoidCallback onTap;
+  const _Fab({required this.onTap});
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {}, // visual only
+      onTap: onTap,
       child: Container(
         width: 56,
         height: 56,
@@ -264,7 +619,74 @@ class _Fab extends StatelessWidget {
             ),
           ],
         ),
-        child: Icon(Icons.add, color: _cOnPrimary, size: 32),
+        child: const Icon(Icons.add, color: _cOnPrimary, size: 32),
+      ),
+    );
+  }
+}
+
+// ── "Add shortcut" bottom sheet ──────────────────────────────────
+class _AddShortcutSheet extends StatelessWidget {
+  final List<HomeTileType> available;
+  const _AddShortcutSheet({required this.available});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Container(
+        margin: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+        decoration: BoxDecoration(color: _cSurface, borderRadius: BorderRadius.circular(28)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(color: _cOutlineVariant, borderRadius: BorderRadius.circular(4)),
+              ),
+            ),
+            Text('Add shortcut', style: _font(20, FontWeight.w700, _cOnSurface)),
+            const SizedBox(height: 4),
+            Text('Choose what to add to your Home tab',
+                style: _font(13, FontWeight.w400, _cOnSurfaceVariant)),
+            const SizedBox(height: 16),
+            if (available.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Text(
+                  'All shortcuts are already on your Home tab.',
+                  style: _font(14, FontWeight.w500, _cOnSurfaceVariant),
+                ),
+              )
+            else
+              ...available.map((t) {
+                final info = _kTileInfo[t]!;
+                return InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => Navigator.of(context).pop(t),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(color: info.bg, borderRadius: BorderRadius.circular(12)),
+                          child: Icon(info.icon, color: info.color, size: 20),
+                        ),
+                        const SizedBox(width: 14),
+                        Text(info.label, style: _font(15.5, FontWeight.w600, _cOnSurface)),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+          ],
+        ),
       ),
     );
   }
