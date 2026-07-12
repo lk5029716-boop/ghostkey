@@ -731,7 +731,7 @@ class _VaultPageState extends State<VaultPage> {
     super.initState();
     _loadOrder().then((_) => _loadAll());
     _vaultSub = VaultStore.instance.onVaultItemsUpdated().listen((_) => _loadVaultItems().then((_) => _rebuildItems()));
-    // codes listener wired with rebuild below
+    // codes listener wired with rebuild above
     // Listen for quick-add events from Home tab
     _quickAddSub = QuickAddService.instance.bus.on<FilterChangedEvent>().listen((event) {
       if (event is FilterChangedEvent) {
@@ -1215,6 +1215,56 @@ class _VaultListCardState extends State<_VaultListCard> {
 }
 
 // ════════════════════════════════════════════════
+// CATEGORY BOX CARD — a single tile in the Vault grid
+// ════════════════════════════════════════════════
+// ── Unified indigo palette matching the Home tab ──
+const Color _cSurface = Color(0xFFFFFFFF);
+const Color _cPrimary = Color(0xFF5B3FE8);
+const Color _cOnSurface = Color(0xFF12101E);
+TextStyle _vaultFont(double size, FontWeight w, Color c, {double? height}) =>
+    TextStyle(fontSize: size, fontWeight: w, color: c, height: height);
+
+class _VaultDonePill extends StatelessWidget {
+  final VoidCallback onTap;
+  const _VaultDonePill({super.key, required this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: _cPrimary,
+      borderRadius: BorderRadius.circular(9999),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(9999),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          child: Text('Done', style: _vaultFont(14, FontWeight.w500, Colors.white)),
+        ),
+      ),
+    );
+  }
+}
+
+class _RemoveBadge extends StatelessWidget {
+  final VoidCallback onTap;
+  const _RemoveBadge({super.key, required this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 26,
+        height: 26,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 6, offset: const Offset(0, 2))],
+        ),
+        child: const Icon(Icons.close, size: 16, color: Colors.red),
+      ),
+    );
+  }
+}
+
 // ════════════════════════════════════════════════
 // 2FA CODES LIST — uses CodeWidget for full features
 // (multi-select, reorder, brand icons, coach marks)
