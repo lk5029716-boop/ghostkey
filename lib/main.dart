@@ -1130,6 +1130,144 @@ class _VaultPageState extends State<VaultPage> {
 // subtle press-scale. Matches the app's color core (white card on
 // light purple surface) — no chevron, no category pill.
 // ════════════════════════════════════════════════
+class _VaultItemCard extends StatefulWidget {
+  final VaultItem item;
+  final double width;
+  final double height;
+  final bool organizeMode;
+  final bool removing;
+  final int index;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+  final VoidCallback onRemove;
+  final void Function(int fromIndex) onReorderRequested;
+
+  const _VaultItemCard({
+    super.key,
+    required this.item,
+    required this.width,
+    required this.height,
+    required this.organizeMode,
+    required this.removing,
+    required this.index,
+    required this.onTap,
+    required this.onLongPress,
+    required this.onRemove,
+    required this.onReorderRequested,
+  });
+
+  @override
+  State<_VaultItemCard> createState() => _VaultItemCardState();
+}
+
+class _VaultItemCardState extends State<_VaultItemCard> with SingleTickerProviderStateMixin {
+  bool _pressed = false;
+  bool _entered = false;
+  late final AnimationController _wobbleCtrl;
+  late final double _wobbleSign;
+
+  @override
+  void initState() {
+    super.initState();
+    _wobbleSign = widget.index.isEven ? 1.0 : -1.0;
+    _wobbleCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 260))
+      ..repeat(reverse: true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _entered = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _wobbleCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final item = widget.item;
+    final card = AnimatedScale(
+      scale: widget.removing ? 0.0 : (_pressed ? 0.96 : (_entered ? 1.0 : 0.0)),
+      duration: Duration(milliseconds: widget.removing ? 180 : 220),
+      curve: Curves.easeOutBack,
+      child: AnimatedOpacity(
+        opacity: widget.removing ? 0.0 : (_entered ? 1.0 : 0.0),
+        duration: const Duration(milliseconds: 200),
+        child: AnimatedBuilder(
+          animation: _wobbleCtrl,
+          builder: (ctx, child) {
+            final angle = widget.organizeMode ? (_wobbleSign * 0.018 * (_wobbleCtrl.value * 2 - 1)) : 0.0;
+            return Transform.rotate(angle: angle, child: child);
+          },
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: _cSurface,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(color: _cPrimary.withOpacity(0.06), blurRadius: 14, offset: const Offset(0, 4)),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(color: _cPrimary.withOpacity(0.12), borderRadius: BorderRadius.circular(16)),
+                  child: Icon(item.icon, color: _cPrimary, size: 24),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.title, style: _vaultFont(17, FontWeight.w700, _cOnSurface, height: 20 / 17), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 3),
+                    Text(_catLabel(item.category), style: _vaultFont(13, FontWeight.w400, _cOnSurface.withOpacity(0.55)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (!widget.organizeMode) {
+      return GestureDetector(
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
+        child: card,
+      );
+    }
+
+    final withBadge = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        card,
+        Positioned(right: -6, top: -6, child: _RemoveBadge(onTap: widget.onRemove)),
+      ],
+    );
+
+    return DragTarget<int>(
+      onWillAcceptWithDetails: (d) => d.data != widget.index,
+      onAcceptWithDetails: (d) => widget.onReorderRequested(d.data),
+      builder: (ctx, _, __) => LongPressDraggable<int>(
+        data: widget.index,
+        feedback: Material(
+          color: Colors.transparent,
+          child: Transform.scale(scale: 1.06, child: SizedBox(width: widget.width, height: widget.height, child: card)),
+        ),
+        childWhenDragging: Opacity(opacity: 0.25, child: withBadge),
+        child: withBadge,
+      ),
+    );
+  }
+}
+
 class _VaultListCard extends StatefulWidget {
   final VaultItem item;
   final VoidCallback onTap;
