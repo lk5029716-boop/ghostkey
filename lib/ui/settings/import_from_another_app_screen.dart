@@ -68,7 +68,7 @@ class ImportFromAnotherAppScreen extends StatelessWidget {
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(28),
                   border: Border.all(color: outlineVar.withOpacity(0.3)),
                   boxShadow: [
                     BoxShadow(
@@ -197,13 +197,13 @@ class _ImportRow extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: kSecondaryContainer.withOpacity(0.4),
-                  borderRadius: BorderRadius.circular(10),
+                  color: kPrimary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(icon, color: kPrimary, size: 20),
+                child: Icon(icon, color: kPrimary, size: 24),
               ),
               const SizedBox(width: 14),
               Expanded(
