@@ -333,16 +333,6 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-  Color _accentFor(String label) {
-    final l = label.toLowerCase();
-    if (_isSecret(l)) return kPrimary;
-    if (l.contains('url') || l.contains('website') || l.contains('link') || l.contains('domain')) {
-      return const Color(0xFF1565C0);
-    }
-    if (l.contains('note') || l.contains('memo')) return const Color(0xFFE65100);
-    return kPrimary;
-  }
-
 // ═══════════════════════════════════════════════════════════════
 // SCREEN 2 — ITEM DETAIL
 // ═══════════════════════════════════════════════════════════════
@@ -366,6 +356,16 @@ class PasswordItemDetailScreen extends StatelessWidget {
       return Icons.alternate_email;
     }
     return Icons.label_important_outline;
+  }
+
+  Color _accentFor(String label) {
+    final l = label.toLowerCase();
+    if (_isSecret(l)) return kPrimary;
+    if (l.contains('url') || l.contains('website') || l.contains('link') || l.contains('domain')) {
+      return const Color(0xFF1565C0);
+    }
+    if (l.contains('note') || l.contains('memo')) return const Color(0xFFE65100);
+    return kPrimary;
   }
 
   @override
