@@ -14,12 +14,12 @@ class ApiKeyAddScreen extends StatefulWidget {
 }
 
 class _ApiKeyAddScreenState extends State<ApiKeyAddScreen> {
-  static const _primary = Color(0xFF5B3FE8);
-  static const _surface = Color(0xFFF8F9FF);
-  static const _onSurface = Color(0xFF12101E);
-  static const _onSurfaceVariant = Color(0xFF8E8BA8);
-  static const _outlineVariant = Color(0xFF8E8BA8);
-  static const _surfaceContainerLow = Color(0xFFF8F9FF);
+  static const _primary = Color(0xFF0D631B);
+  static const _surface = Color(0xFFF8F9FA);
+  static const _onSurface = Color(0xFF191C1D);
+  static const _onSurfaceVariant = Color(0xFF40493D);
+  static const _outlineVariant = Color(0xFFBFCABA);
+  static const _surfaceContainerLow = Color(0xFFF3F4F5);
 
   final _titleCtrl = TextEditingController();
   final _apiKeyCtrl = TextEditingController();
@@ -52,8 +52,8 @@ class _ApiKeyAddScreenState extends State<ApiKeyAddScreen> {
         subtitle: _apiKeyCtrl.text.trim(),
         category: VaultCategory.apiKeys,
         icon: Icons.vpn_key,
-        iconColor: const Color(0xFF5B3FE8),
-        iconBgColor: const Color(0xFFEBE8FF),
+        iconColor: const Color(0xFFF57C00),
+        iconBgColor: const Color(0xFFFFE0B2),
         date: 'Today',
         fields: {
           'API Key': _apiKeyCtrl.text.trim(),
