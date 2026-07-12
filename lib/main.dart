@@ -6,7 +6,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:math' as math;
-import 'package:uuid/uuid.dart';
 import 'package:crypto/crypto.dart';
 import 'vault_data.dart';
 import 'vault_screens.dart';
@@ -705,39 +704,43 @@ class VaultPage extends StatefulWidget {
   State<VaultPage> createState() => _VaultPageState();
 }
 
-class _VaultTileInfo {
-  final String label; final IconData icon; final VaultCategory category; final WidgetBuilder builder;
-  const _VaultTileInfo(this.label, this.icon, this.category, this.builder);
+/// Category boxes shown in the Vault tab grid. Each maps to a
+/// [VaultCategory] so all existing filter / FAB / detail code keeps
+/// working unchanged — only the UI switches from chips to a box grid.
+class _CategoryBox {
+  final String label;
+  final VaultCategory category;
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBgColor;
+  final Color bgColor;
+  final Color titleColor;
+  const _CategoryBox({
+    required this.label,
+    required this.category,
+    required this.icon,
+    required this.iconColor,
+    required this.iconBgColor,
+    required this.bgColor,
+    required this.titleColor,
+  });
 }
-Widget _vLogin(_) => const PasswordAddScreen();
-Widget _vNote(_) => const SecureNoteAddScreen();
-Widget _vApi(_) => const ApiKeyAddScreen();
-Widget _vRecovery(_) => const RecoveryCodesAddScreen();
-Widget _vTotp(_) => const QrScannerScreen();
-Widget _vSeed(_) => const SeedPhraseRestoreScreen();
-const Map<HomeTileType, _VaultTileInfo> _kVaultTileInfo = {
-  HomeTileType.login: _VaultTileInfo('Passwords', Icons.login, VaultCategory.password, _vLogin),
-  HomeTileType.note: _VaultTileInfo('Secure Notes', Icons.note, VaultCategory.notes, _vNote),
-  HomeTileType.apiKey: _VaultTileInfo('API Keys', Icons.vpn_key, VaultCategory.apiKeys, _vApi),
-  HomeTileType.recoveryCodes: _VaultTileInfo('Recovery Codes', Icons.grid_view, VaultCategory.codes, _vRecovery),
-  HomeTileType.totp: _VaultTileInfo('2FA Codes', Icons.shield, VaultCategory.totp, _vTotp),
-  HomeTileType.seed: _VaultTileInfo('Seed Phrase', Icons.spa, VaultCategory.seeds, _vSeed),
-};
 
+const _categoryBoxes = <_CategoryBox>[
+  _CategoryBox(label: 'Passwords', category: VaultCategory.password, icon: Icons.key, iconColor: Color(0xFF5B3FE8), iconBgColor: Color(0xFFEBE9FE), bgColor: Color(0xFFEBE8FF), titleColor: Color(0xFF5B3FE8)),
+  _CategoryBox(label: 'Seeds', category: VaultCategory.seeds, icon: Icons.eco, iconColor: Color(0xFF16A34A), iconBgColor: Color(0xFFDCFCE7), bgColor: Color(0xFFD1F7F1), titleColor: Color(0xFF004D40)),
+  _CategoryBox(label: 'API Keys', category: VaultCategory.apiKeys, icon: Icons.api, iconColor: Color(0xFF0D9488), iconBgColor: Color(0xFFCCFBF1), bgColor: Color(0xFFCCFBF1), titleColor: Color(0xFF004D40)),
+  _CategoryBox(label: '2FA Codes', category: VaultCategory.totp, icon: Icons.security, iconColor: Color(0xFF2563EB), iconBgColor: Color(0xFFDBEAFE), bgColor: Color(0xFFD1E3FF), titleColor: Color(0xFF0D47A1)),
+  _CategoryBox(label: 'Recovery Codes', category: VaultCategory.codes, icon: Icons.grid_view, iconColor: Color(0xFF7C3AED), iconBgColor: Color(0xFFF3E8FF), bgColor: Color(0xFFF3E8FF), titleColor: Color(0xFF880E4F)),
+  _CategoryBox(label: 'Secure Notes', category: VaultCategory.notes, icon: Icons.sticky_note_2, iconColor: Color(0xFFE8692A), iconBgColor: Color(0xFFFFEDD5), bgColor: Color(0xFFFFE8D1), titleColor: Color(0xFF3E2723)),
+  _CategoryBox(label: 'Private Keys', category: VaultCategory.privateKeys, icon: Icons.badge, iconColor: Color(0xFF475569), iconBgColor: Color(0xFFF1F5F9), bgColor: Color(0xFFEBE6F4), titleColor: Color(0xFF475569)),
+];
 
 class _VaultPageState extends State<VaultPage> {
   List<VaultItem> _vaultItems = [];
   List<Code> _codes = [];
   bool _loaded = false;
-  VaultCategory? _selectedCategory; // null = tile grid; non-null = filtered list
-  // shared tile grid (mirrors Home tab)
-  static const _kHomeKey = 'gk_home_tiles_v1';
-  static const _kVaultKey = 'gk_vault_tiles_v1';
-  final _uuid = const Uuid();
-  List<HomeTile> _tiles = [];
-  final Set<String> _removingIds = {};
-  bool _organizeMode = false;
-  SharedPreferences? _prefs;
+  VaultCategory? _selectedCategory; // null = box grid view; non-null = filtered list
   StreamSubscription<VaultItemsUpdatedEvent>? _vaultSub;
   StreamSubscription<CodesUpdatedEvent>? _codesSub;
   StreamSubscription? _quickAddSub;
@@ -747,7 +750,6 @@ class _VaultPageState extends State<VaultPage> {
   void initState() {
     super.initState();
     _loadAll();
-    _loadTiles();
     _vaultSub = VaultStore.instance.onVaultItemsUpdated().listen((_) => _loadVaultItems());
     _codesSub = CodeStore.instance.onCodesUpdated().listen((_) => _loadCodes());
     // Listen for quick-add events from Home tab
@@ -857,37 +859,51 @@ class _VaultPageState extends State<VaultPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_selectedCategory != null) return _buildListView();
+    // A category box was tapped → show the filtered list (all existing code).
+    if (_selectedCategory != null) {
+      return _buildListView();
+    }
+    // Default: category box grid.
     return Scaffold(
       backgroundColor: const Color(0xFFF4F3FF),
       body: SafeArea(
-        child: Stack(
-          children: [
-            SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 104),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _VaultTopBar(organizeMode: _organizeMode, onDone: () => setState(() => _organizeMode = false)),
-                  const SizedBox(height: 16),
-                  if (!_loaded)
-                    const Padding(padding: EdgeInsets.symmetric(vertical: 40), child: Center(child: CircularProgressIndicator(color: kPrimary)))
-                  else if (_tiles.isEmpty)
-                    _VaultEmptyState()
-                  else
-                    _buildGrid(),
-                ],
-              ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Vault', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: kOnSurface)),
+                // refresh and three-dot icons removed
+              ],
             ),
-            if (!_organizeMode)
-              Positioned(right: 24, bottom: 28, child: _VaultFab(onTap: _openAddSheet)),
-          ],
-        ),
+          ),
+          const SizedBox(height: 4),
+          Expanded(
+            child: !_loaded
+                ? const Center(child: CircularProgressIndicator(color: kPrimary))
+                : GridView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 1.0,
+                    ),
+                    itemCount: _categoryBoxes.length,
+                    itemBuilder: (context, i) {
+                      final box = _categoryBoxes[i];
+                      return _CategoryBoxCard(
+                        box: box,
+                        onTap: () => setState(() => _selectedCategory = box.category),
+                      );
+                    },
+                  ),
+          ),
+        ]),
       ),
     );
   }
-
-
 
   /// Filtered list view shown after tapping a category box. Reuses all
   /// existing list / FAB / detail / multi-select code unchanged.
@@ -1005,119 +1021,156 @@ class _VaultPageState extends State<VaultPage> {
         ),
       ),
     );
-  
-  Future<void> _loadTiles() async {
-    final prefs = await SharedPreferences.getInstance();
-    _prefs = prefs;
-    final raw = prefs.getString(_kVaultKey) ?? prefs.getString(_kHomeKey);
-    List<HomeTile> loaded = [];
-    if (raw != null) {
-      try { loaded = (jsonDecode(raw) as List).cast<Map<String, dynamic>>().map(HomeTile.fromJson).toList(); } catch (_) { loaded = []; }
-    }
-    if (!mounted) return;
-    setState(() => _tiles = loaded);
-    if (prefs.getString(_kVaultKey) == null && raw != null) _persist();
   }
-  Future<void> _persist() async {
-    _prefs ??= await SharedPreferences.getInstance();
-    await _prefs!.setString(_kVaultKey, jsonEncode(_tiles.map((t) => t.toJson()).toList()));
-  }
-  void _addTile(HomeTileType type) { setState(() => _tiles.add(HomeTile(id: _uuid.v4(), type: type))); _persist(); }
-  Future<void> _removeTile(String id) async {
-    setState(() => _removingIds.add(id));
-    await Future.delayed(const Duration(milliseconds: 180));
-    if (!mounted) return;
-    setState(() { _tiles.removeWhere((t) => t.id == id); _removingIds.remove(id); if (_tiles.isEmpty) _organizeMode = false; });
-    _persist();
-  }
-  void _reorder(int from, int to) {
-    if (from == to) return;
-    setState(() { final t = _tiles.removeAt(from); _tiles.insert(to, t); });
-    _persist();
-  }
-  void _openTile(HomeTile tile) { final info = _kVaultTileInfo[tile.type]!; setState(() => _selectedCategory = info.category); }
-  Future<void> _openAddSheet() async {
-    final used = _tiles.map((t) => t.type).toSet();
-    final available = HomeTileType.values.where((t) => !used.contains(t)).toList();
-    final selected = await showModalBottomSheet<HomeTileType>(context: context, backgroundColor: Colors.transparent, isScrollControlled: true, builder: (ctx) => _VaultAddSheet(available: available));
-    if (selected != null) _addTile(selected);
-  }
-  Widget _buildGrid() {
-    return LayoutBuilder(builder: (ctx, constraints) {
-      const gap = 16.0;
-      final cellW = (constraints.maxWidth - gap) / 2;
-      final cellH = cellW;
-      final rows = _tiles.isEmpty ? 0 : ((_tiles.length - 1) ~/ 2) + 1;
-      final height = rows == 0 ? 0.0 : rows * cellH + (rows - 1) * gap;
-      final children = <Widget>[];
-      for (int i = 0; i < _tiles.length; i++) {
-        final tile = _tiles[i];
-        final col = i % 2, row = i ~/ 2;
-        children.add(AnimatedPositioned(key: ValueKey('pos_${tile.id}'), duration: const Duration(milliseconds: 280), curve: Curves.easeOutCubic, left: col * (cellW + gap), top: row * (cellH + gap), width: cellW, height: cellH, child: _VaultTileCard(key: ValueKey(tile.id), tile: tile, width: cellW, height: cellH, organizeMode: _organizeMode, removing: _removingIds.contains(tile.id), index: i, onTap: () => _openTile(tile), onLongPress: () => setState(() => _organizeMode = true), onRemove: () => _removeTile(tile.id), onReorderRequested: (from) => _reorder(from, i))));
-      }
-      return SizedBox(height: height, child: Stack(clipBehavior: Clip.none, children: children));
-    });
-  }
-
-}
 }
 
-const Color _cSurface = Color(0xFFFFFFFF);
-const Color _cPrimary = Color(0xFF5B3FE8);
-const Color _cOnSurface = Color(0xFF12101E);
-TextStyle _font(double s, FontWeight w, Color c, {double? height}) => TextStyle(fontSize: s, fontWeight: w, color: c, height: height);
+// ════════════════════════════════════════════════
+// VAULT LIST CARD — item card in filtered list view
+// White surface, larger square tinted icon, bold title + subtitle,
+// subtle press-scale. Matches the app's color core (white card on
+// light purple surface) — no chevron, no category pill.
+// ════════════════════════════════════════════════
+class _VaultListCard extends StatefulWidget {
+  final VaultItem item;
+  final VoidCallback onTap;
+  const _VaultListCard({required this.item, required this.onTap});
 
-class _VaultTileCard extends StatefulWidget {
-  final HomeTile tile; final double width; final double height; final bool organizeMode;
-  final bool removing; final int index; final VoidCallback onTap; final VoidCallback onLongPress;
-  final VoidCallback onRemove; final void Function(int fromIndex) onReorderRequested;
-  const _VaultTileCard({super.key, required this.tile, required this.width, required this.height, required this.organizeMode, required this.removing, required this.index, required this.onTap, required this.onLongPress, required this.onRemove, required this.onReorderRequested});
   @override
-  State<_VaultTileCard> createState() => _VaultTileCardState();
+  State<_VaultListCard> createState() => _VaultListCardState();
 }
-class _VaultTileCardState extends State<_VaultTileCard> with SingleTickerProviderStateMixin {
-  bool _pressed = false, _entered = false;
-  late final AnimationController _wobbleCtrl;
-  late final double _wobbleSign;
-  @override
-  void initState() {
-    super.initState();
-    _wobbleSign = widget.index.isEven ? 1.0 : -1.0;
-    _wobbleCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 260))..repeat(reverse: true);
-    WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) setState(() => _entered = true); });
-  }
-  @override
-  void dispose() { _wobbleCtrl.dispose(); super.dispose(); }
+
+class _VaultListCardState extends State<_VaultListCard> {
+  bool _pressed = false;
+
   @override
   Widget build(BuildContext context) {
-    final info = _kVaultTileInfo[widget.tile.type]!;
-    final card = AnimatedScale(
-      scale: widget.removing ? 0.0 : (_pressed ? 0.96 : (_entered ? 1.0 : 0.0)),
-      duration: Duration(milliseconds: widget.removing ? 180 : 220), curve: Curves.easeOutBack,
-      child: AnimatedOpacity(opacity: widget.removing ? 0.0 : (_entered ? 1.0 : 0.0), duration: const Duration(milliseconds: 200),
-        child: AnimatedBuilder(animation: _wobbleCtrl, builder: (ctx, child) {
-          final angle = widget.organizeMode ? (_wobbleSign * 0.018 * (_wobbleCtrl.value * 2 - 1)) : 0.0;
-          return Transform.rotate(angle: angle, child: child);
-        }, child: Container(padding: const EdgeInsets.all(18), decoration: BoxDecoration(color: _cSurface, borderRadius: BorderRadius.circular(28), boxShadow: [BoxShadow(color: _cPrimary.withOpacity(0.06), blurRadius: 14, offset: const Offset(0, 4))]), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Container(width: 48, height: 48, decoration: BoxDecoration(color: _cPrimary.withOpacity(0.12), borderRadius: BorderRadius.circular(16)), child: Icon(info.icon, color: _cPrimary, size: 24)), Text(info.label, style: _font(18, FontWeight.w700, _cOnSurface, height: 24 / 18))])))),
+    final item = widget.item;
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 110),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF5B3FE8).withOpacity(0.06),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(children: [
+            Container(
+              width: 52, height: 52,
+              decoration: BoxDecoration(
+                color: item.iconBgColor,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(item.icon, size: 26, color: item.iconColor),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    item.title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF12101E),
+                      height: 1.2,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    item.subtitle,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF8E8BA8),
+                      height: 1.3,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ]),
+        ),
+      ),
     );
-    if (!widget.organizeMode) return GestureDetector(onTapDown: (_) => setState(() => _pressed = true), onTapUp: (_) => setState(() => _pressed = false), onTapCancel: () => setState(() => _pressed = false), onTap: widget.onTap, onLongPress: widget.onLongPress, child: card);
-    final withBadge = Stack(clipBehavior: Clip.none, children: [card, Positioned(right: -6, top: -6, child: _RemoveBadge(onTap: widget.onRemove))]);
-    return DragTarget<int>(onWillAcceptWithDetails: (d) => d.data != widget.index, onAcceptWithDetails: (d) => widget.onReorderRequested(d.data), builder: (ctx, cand, rej) => LongPressDraggable<int>(data: widget.index, feedback: Material(color: Colors.transparent, child: Transform.scale(scale: 1.06, child: SizedBox(width: widget.width, height: widget.height, child: card))), childWhenDragging: Opacity(opacity: 0.25, child: withBadge), child: withBadge));
   }
 }
-class _VaultTopBar extends StatelessWidget {
-  final bool organizeMode; final VoidCallback onDone;
-  const _VaultTopBar({required this.organizeMode, required this.onDone});
+
+// ════════════════════════════════════════════════
+// CATEGORY BOX CARD — a single tile in the Vault grid
+// ════════════════════════════════════════════════
+class _CategoryBoxCard extends StatefulWidget {
+  final _CategoryBox box;
+  final VoidCallback onTap;
+  const _CategoryBoxCard({required this.box, required this.onTap});
+
   @override
-  Widget build(BuildContext context) => Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16), decoration: const BoxDecoration(color: Color(0xCCF4F3FF)), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [Text('Your Vault', style: _font(12, FontWeight.w500, _cOnSurface.withOpacity(0.6))), const SizedBox(height: 2), Text('Vault', style: _font(24, FontWeight.w700, _cPrimary))]), AnimatedSwitcher(duration: const Duration(milliseconds: 200), child: organizeMode ? _VaultPill(key: const ValueKey('d'), label: 'Done', onTap: onDone) : const SizedBox(key: ValueKey('e')))]));
+  State<_CategoryBoxCard> createState() => _CategoryBoxCardState();
 }
-class _VaultPill extends StatelessWidget { final String label; final VoidCallback onTap; const _VaultPill({super.key, required this.label, required this.onTap}); @override Widget build(BuildContext context) => Material(color: _cPrimary, borderRadius: BorderRadius.circular(9999), child: InkWell(onTap: onTap, borderRadius: BorderRadius.circular(9999), child: Padding(padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8), child: Text(label, style: _font(14, FontWeight.w500, Colors.white))))); }
-class _VaultFab extends StatelessWidget { final VoidCallback onTap; const _VaultFab({required this.onTap}); @override Widget build(BuildContext context) => GestureDetector(onTap: onTap, child: Container(width: 56, height: 56, decoration: BoxDecoration(color: _cPrimary, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 12, offset: const Offset(0, 4))]), child: const Icon(Icons.add, color: Colors.white, size: 32))); }
-class _VaultEmptyState extends StatelessWidget { @override Widget build(BuildContext context) => Center(child: Padding(padding: const EdgeInsets.all(32), child: Column(mainAxisSize: MainAxisSize.min, children: [Container(width: 72, height: 72, decoration: BoxDecoration(color: _cPrimary.withOpacity(0.12), shape: BoxShape.circle), child: const Icon(Icons.dashboard_customize, size: 32, color: _cPrimary)), const SizedBox(height: 20), Text('No shortcuts yet', style: _font(18, FontWeight.w600, _cOnSurface)), const SizedBox(height: 8), Text('Tap the + button to add your first one', style: _font(14, _cOnSurface.withOpacity(0.6)), textAlign: TextAlign.center)]))); }
-class _RemoveBadge extends StatelessWidget { final VoidCallback onTap; const _RemoveBadge({required this.onTap}); @override Widget build(BuildContext context) => GestureDetector(onTap: onTap, child: Container(width: 26, height: 26, decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 6, offset: const Offset(0, 2))]), child: const Icon(Icons.close, size: 16, color: Colors.red))); }
-class _VaultAddSheet extends StatelessWidget { final List<HomeTileType> available; const _VaultAddSheet({required this.available}); @override Widget build(BuildContext context) => SafeArea(child: Container(margin: const EdgeInsets.all(12), padding: const EdgeInsets.fromLTRB(20, 20, 20, 24), decoration: BoxDecoration(color: _cSurface, borderRadius: BorderRadius.circular(28)), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [Center(child: Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: _cPrimary.withOpacity(0.2), borderRadius: BorderRadius.circular(4)))), Text('Add shortcut', style: _font(20, FontWeight.w700, _cOnSurface)), const SizedBox(height: 4), Text('Choose what to add to your Vault', style: _font(13, FontWeight.w400, _cOnSurface.withOpacity(0.6))), const SizedBox(height: 16), if (available.isEmpty) Padding(padding: const EdgeInsets.symmetric(vertical: 24), child: Text('All shortcuts are already on your Vault.', style: _font(14, FontWeight.w500, _cOnSurface.withOpacity(0.6)))) else ...available.map((t) { final info = _kVaultTileInfo[t]!; return InkWell(borderRadius: BorderRadius.circular(16), onTap: () => Navigator.of(context).pop(t), child: Padding(padding: const EdgeInsets.symmetric(vertical: 10), child: Row(children: [Container(width: 42, height: 42, decoration: BoxDecoration(color: _cPrimary.withOpacity(0.12), borderRadius: BorderRadius.circular(12)), child: Icon(info.icon, color: _cPrimary, size: 20)), const SizedBox(width: 14), Text(info.label, style: _font(15.5, FontWeight.w600, _cOnSurface))])); })]))); }
 
+class _CategoryBoxCardState extends State<_CategoryBoxCard> {
+  bool _pressed = false;
 
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _pressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: widget.box.bgColor,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(color: widget.box.iconBgColor, shape: BoxShape.circle),
+                child: Icon(widget.box.icon, color: widget.box.iconColor, size: 24),
+              ),
+              Text(widget.box.label, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: widget.box.titleColor)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════
+// 2FA CODES LIST — uses CodeWidget for full features
+// (multi-select, reorder, brand icons, coach marks)
+// ════════════════════════════════════════════════
 class _CodesListWidget extends StatefulWidget {
   final List<Code> codes;
   const _CodesListWidget({required this.codes});
@@ -2857,3 +2910,4 @@ class _ProCard extends StatelessWidget {
     );
   }
 }
+
