@@ -47,7 +47,7 @@ class _OpenRouterTestScreenState extends State<OpenRouterTestScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('OpenRouter Owl‑Alpha Test')),
+      appBar: AppBar(centerTitle: true, title: const Text('OpenRouter Owl‑Alpha Test')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
