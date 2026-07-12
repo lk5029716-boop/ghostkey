@@ -113,7 +113,7 @@ class _GhostKeyAppState extends State<GhostKeyApp> {
         theme: ThemeData(
           brightness: Brightness.light,
           scaffoldBackgroundColor: kSurface,
-          fontFamily: GoogleFonts.spaceGrotesk().fontFamily,
+          fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
           colorScheme: const ColorScheme.light(
             primary: kPrimary,
             onPrimary: kOnPrimary,
@@ -132,6 +132,77 @@ class _GhostKeyAppState extends State<GhostKeyApp> {
             error: kError,
           ),
           useMaterial3: true,
+          appBarTheme: AppBarTheme(
+            backgroundColor: kSurface,
+            foregroundColor: kOnSurface,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            centerTitle: true,
+            titleTextStyle: GoogleFonts.plusJakartaSans(
+              fontSize: 20, fontWeight: FontWeight.w700, color: kOnSurface, letterSpacing: -0.01),
+            iconTheme: const IconThemeData(color: kOnSurface),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: kPrimary,
+              foregroundColor: Colors.white,
+              minimumSize: const Size.fromHeight(52),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              textStyle: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ),
+          outlinedButtonTheme: OutlinedButtonThemeData(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: kPrimary,
+              side: BorderSide(color: kOutlineVariant),
+              minimumSize: const Size.fromHeight(52),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              textStyle: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ),
+          textButtonTheme: TextButtonThemeData(
+            style: TextButton.styleFrom(
+              foregroundColor: kPrimary,
+              textStyle: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ),
+          cardTheme: CardThemeData(
+            color: Colors.white,
+            elevation: 2,
+            shadowColor: kPrimary.withOpacity(0.06),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            margin: const EdgeInsets.symmetric(vertical: 6),
+          ),
+          dialogTheme: DialogThemeData(
+            backgroundColor: kSurface,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            titleTextStyle: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w700, color: kOnSurface),
+            contentTextStyle: GoogleFonts.plusJakartaSans(fontSize: 14, color: kOnSurfaceVariant),
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: kSurfaceVariant.withOpacity(0.5),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: kOutlineVariant),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: kOutlineVariant),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: kPrimary, width: 2),
+            ),
+            labelStyle: GoogleFonts.plusJakartaSans(color: kOnSurfaceVariant),
+            hintStyle: GoogleFonts.plusJakartaSans(color: kOnSurfaceVariant),
+          ),
+          bottomSheetTheme: BottomSheetThemeData(
+            backgroundColor: kSurface,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+          ),
         ),
         home: _initialHome(widget.prefs),
       ),
