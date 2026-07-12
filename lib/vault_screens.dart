@@ -412,7 +412,7 @@ class _DetailFieldCardState extends State<_DetailFieldCard> {
               duration: const Duration(seconds: 1),
               backgroundColor: widget.accentColor,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           );
           return;
