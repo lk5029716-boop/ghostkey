@@ -2587,7 +2587,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final onSurface = kOnSurface;
     final onSurfaceVar = kOnSurfaceVariant;
     final surface = kSurface;
-    final surfaceLowest = kSurfaceContainerLowest;
+    final surfaceLowest = Colors.white;
     final outlineVar = kOutlineVariant;
 
     return Scaffold(
@@ -2631,14 +2631,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ImportFromAnotherAppScreen()));
             }),
             _divider(outlineVar),
-            _row(Icons.database, 'Local encrypted backup',
+            _row(Icons.cloud_upload, 'Local encrypted backup',
                 subtitle: 'Save an encrypted backup to your device', chevron: true, onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Local backup coming soon — needs libsodium FFI'), duration: Duration(seconds: 2)),
               );
             }),
             _divider(outlineVar),
-            _row(Icons.file_export, 'Export to file',
+            _row(Icons.ios_share, 'Export to file',
                 subtitle: 'Plain text, HTML, or JSON', chevron: true, onTap: () => ExportService.showExportOptions(context)),
           ]),
           const SizedBox(height: 28),
@@ -2691,8 +2691,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: kErrorContainer,
-                foregroundColor: kOnErrorContainer,
+                backgroundColor: const Color(0xFFFFDAD6),
+                foregroundColor: const Color(0xFF93000A),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
                 elevation: 1,
@@ -2723,7 +2723,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _card(List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: kSurfaceContainerLowest,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(28),
         boxShadow: [BoxShadow(color: kPrimary.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4))],
       ),
@@ -2731,12 +2731,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _iconBadge(IconData icon, {Color? fg, Color? bg}) {
+  Widget _iconBadge(IconData icon) {
     final a = _accentFor(icon);
     return Container(
       width: 48, height: 48,
-      decoration: BoxDecoration(color: bg ?? a['bg'], borderRadius: BorderRadius.circular(16)),
-      child: Icon(icon, color: fg ?? a['fg'], size: 24),
+      decoration: BoxDecoration(color: a.bg, borderRadius: BorderRadius.circular(16)),
+      child: Icon(icon, color: a.fg, size: 24),
     );
   }
 
@@ -2800,17 +2800,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Map<String, Color> _accentFor(IconData icon) {
-    if (icon == Icons.fingerprint) return {'fg': kPrimary, 'bg': kPrimaryFixed.withOpacity(0.5)};
-    if (icon == Icons.timer) return {'fg': kSecondary, 'bg': kSecondaryContainer.withOpacity(0.6)};
-    if (icon == Icons.cloud_download) return {'fg': kTertiary, 'bg': kTertiaryFixed.withOpacity(0.6)};
-    if (icon == Icons.database) return {'fg': kPrimary, 'bg': kPrimaryFixed.withOpacity(0.5)};
-    if (icon == Icons.file_export) return {'fg': kSecondary, 'bg': kSecondaryContainer.withOpacity(0.6)};
-    if (icon == Icons.event_available) return {'fg': kPrimary, 'bg': kPrimaryFixed.withOpacity(0.5)};
-    if (icon == Icons.policy || icon == Icons.gavel) return {'fg': kOnSurfaceVariant, 'bg': kSurfaceContainerHigh};
-    return {'fg': kPrimary, 'bg': kPrimaryFixed.withOpacity(0.5)};
+  _Accent _accentFor(IconData icon) {
+    if (icon == Icons.fingerprint) return _Accent(kPrimary, kPrimary.withOpacity(0.12));
+    if (icon == Icons.timer) return _Accent(kSecondary, kSecondaryContainer.withOpacity(0.6));
+    if (icon == Icons.cloud_download) return _Accent(kTertiary, kTertiary.withOpacity(0.12));
+    if (icon == Icons.cloud_upload) return _Accent(kPrimary, kPrimary.withOpacity(0.12));
+    if (icon == Icons.ios_share) return _Accent(kSecondary, kSecondaryContainer.withOpacity(0.6));
+    if (icon == Icons.event_available) return _Accent(kPrimary, kPrimary.withOpacity(0.12));
+    if (icon == Icons.policy || icon == Icons.gavel) return _Accent(kOnSurfaceVariant, kSurfaceContainerHigh);
+    return _Accent(kPrimary, kPrimary.withOpacity(0.12));
   }
 }
+
+class _Accent {
+  final Color fg;
+  final Color bg;
+  const _Accent(this.fg, this.bg);
+}
+
+class _ProCard extends StatelessWidget {
+  const _ProCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [BoxShadow(color: kPrimary.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4))],
+      ),
+      child: Row(children: [
+        Container(
+          width: 52, height: 52,
+          decoration: BoxDecoration(color: kPrimary, shape: BoxShape.circle),
+          child: const Icon(Icons.shield, color: Colors.white, size: 28),
+        ),
+        const SizedBox(width: 16),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('GhostKey Pro', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF191C1D))),
+          Text('Active until Oct 2025', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
+        ])),
+        const Icon(Icons.chevron_right, color: Color(0xFF40493D), size: 22),
+      ]),
+    );
+  }
+}
+
+
 
 class _ProCard extends StatelessWidget {
   const _ProCard();
