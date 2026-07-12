@@ -2584,10 +2584,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final primary = kPrimary;
-    final onSurface = kOnSurface;
     final onSurfaceVar = kOnSurfaceVariant;
     final surface = kSurface;
-    final surfaceLowest = Colors.white;
     final outlineVar = kOutlineVariant;
 
     return Scaffold(
@@ -2604,7 +2602,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _ProCard(),
           const SizedBox(height: 28),
 
-          // Security section
+          // Security
           _sectionHeader('Security', primary),
           const SizedBox(height: 8),
           _card([
@@ -2614,7 +2612,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ]),
           const SizedBox(height: 28),
 
-          // Vault & Timer section
+          // Vault & Timer
           _sectionHeader('Vault & Timer', primary),
           const SizedBox(height: 8),
           _card([
@@ -2622,28 +2620,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ]),
           const SizedBox(height: 28),
 
-          // Data Management section
+          // Data Management (DataSectionWidget: import/backup/export)
           _sectionHeader('Data Management', primary),
           const SizedBox(height: 8),
-          _card([
-            _row(Icons.cloud_download, 'Import from another app',
-                subtitle: 'Aegis, andOTP, Bitwarden, 2FAS...', chevron: true, onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ImportFromAnotherAppScreen()));
-            }),
-            _divider(outlineVar),
-            _row(Icons.cloud_upload, 'Local encrypted backup',
-                subtitle: 'Save an encrypted backup to your device', chevron: true, onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Local backup coming soon — needs libsodium FFI'), duration: Duration(seconds: 2)),
-              );
-            }),
-            _divider(outlineVar),
-            _row(Icons.ios_share, 'Export to file',
-                subtitle: 'Plain text, HTML, or JSON', chevron: true, onTap: () => ExportService.showExportOptions(context)),
-          ]),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [BoxShadow(color: kPrimary.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4))],
+            ),
+            child: const DataSectionWidget(),
+          ),
           const SizedBox(height: 28),
 
-          // Support section
+          // Support
           _sectionHeader('Support', primary),
           const SizedBox(height: 8),
           _card([
@@ -2651,7 +2641,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ]),
           const SizedBox(height: 28),
 
-          // Notifications section
+          // Notifications
           _sectionHeader('Notifications', primary),
           const SizedBox(height: 8),
           _card([
@@ -2659,7 +2649,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ]),
           const SizedBox(height: 28),
 
-          // Account & Plan section
+          // Account & Plan
           _sectionHeader('Account & Plan', primary),
           const SizedBox(height: 8),
           _card([
@@ -2667,7 +2657,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ]),
           const SizedBox(height: 28),
 
-          // About section
+          // About
           _sectionHeader('About', onSurfaceVar),
           const SizedBox(height: 8),
           _card([
@@ -2731,12 +2721,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _iconBadge(IconData icon) {
+  Widget _iconBadge(IconData icon, {Color? fg, Color? bg}) {
     final a = _accentFor(icon);
     return Container(
       width: 48, height: 48,
-      decoration: BoxDecoration(color: a.bg, borderRadius: BorderRadius.circular(16)),
-      child: Icon(icon, color: a.fg, size: 24),
+      decoration: BoxDecoration(color: bg ?? a.bg, borderRadius: BorderRadius.circular(16)),
+      child: Icon(icon, color: fg ?? a.fg, size: 24),
     );
   }
 
@@ -2803,9 +2793,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   _Accent _accentFor(IconData icon) {
     if (icon == Icons.fingerprint) return _Accent(kPrimary, kPrimary.withOpacity(0.12));
     if (icon == Icons.timer) return _Accent(kSecondary, kSecondaryContainer.withOpacity(0.6));
-    if (icon == Icons.cloud_download) return _Accent(kTertiary, kTertiary.withOpacity(0.12));
-    if (icon == Icons.cloud_upload) return _Accent(kPrimary, kPrimary.withOpacity(0.12));
-    if (icon == Icons.ios_share) return _Accent(kSecondary, kSecondaryContainer.withOpacity(0.6));
     if (icon == Icons.event_available) return _Accent(kPrimary, kPrimary.withOpacity(0.12));
     if (icon == Icons.policy || icon == Icons.gavel) return _Accent(kOnSurfaceVariant, kSurfaceContainerHigh);
     return _Accent(kPrimary, kPrimary.withOpacity(0.12));
@@ -2846,36 +2833,4 @@ class _ProCard extends StatelessWidget {
     );
   }
 }
-
-
-
-class _ProCard extends StatelessWidget {
-  const _ProCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: kSurfaceContainerLowest,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [BoxShadow(color: kPrimary.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
-      child: Row(children: [
-        Container(
-          width: 52, height: 52,
-          decoration: BoxDecoration(color: kPrimary, shape: BoxShape.circle),
-          child: const Icon(Icons.shield_lock, color: Colors.white, size: 28),
-        ),
-        const SizedBox(width: 16),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('GhostKey Pro', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF191C1D))),
-          Text('Active until Oct 2025', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
-        ])),
-        const Icon(Icons.chevron_right, color: Color(0xFF40493D), size: 22),
-      ]),
-    );
-  }
-}
-
 
