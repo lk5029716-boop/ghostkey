@@ -1,47 +1,54 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'vault_data.dart';
+import 'main.dart';
 
-// ═══════════════════════════════════════════════════════════════
-// SHARED DESIGN TOKENS (aligned with vault_home_screen / vault_screens)
-// ═══════════════════════════════════════════════════════════════
-const Color _kSurfaceDim = Color(0xFFF4F3FF); // screen background
-const Color _kSurface = Color(0xFFFFFFFF);
-const Color _kCardLavender = Color(0xFFFAF9FF); // very light lavender card
-const Color _kPrimary = Color(0xFF5B3FE8); // indigo
-const Color _kOnPrimary = Color(0xFFFFFFFF);
-const Color _kOnSurface = Color(0xFF12101E); // bold black text
-const Color _kOnSurfaceVariant = Color(0xFF8E8BA8); // muted gray
-const Color _kOutlineVariant = Color(0xFFE4E2F5);
-const Color _kError = Color(0xFFBA1A1A); // delete red
+// ─────────────────────────────────────────────────────────────────────────
+// PASSWORD LIST + ITEM DETAIL
+// Built with the SAME Pastel Vault building blocks as the Settings tab
+// (kSurface, kPrimary, _card / _iconBadge / _sectionHeader / _divider),
+// so the whole app reads as one design system.
+// ─────────────────────────────────────────────────────────────────────────
 
-// "2FA Codes" tile blue — light blue circular chip + blue icon.
-const Color _kChipBlueBg = Color(0xFFBBDEFB);
-const Color _kChipBlueFg = Color(0xFF4285F4);
-
-// Field accents
-const Color _kFieldPassword = Color(0xFF5B3FE8);
-const Color _kFieldUrl = Color(0xFF1565C0);
-const Color _kFieldNotes = Color(0xFFE65100);
-
-TextStyle _font(double size, FontWeight w, Color c, {double? height, double? ls}) =>
-    TextStyle(fontSize: size, fontWeight: w, color: c, height: height, letterSpacing: ls ?? 0);
+TextStyle _pj(double size, FontWeight w, Color c, {double? height, double? ls}) =>
+    GoogleFonts.plusJakartaSans(
+        fontSize: size, fontWeight: w, color: c, height: height, letterSpacing: ls ?? 0);
 
 void _copy(BuildContext context, String label, String value) {
   Clipboard.setData(ClipboardData(text: value));
   HapticFeedback.lightImpact();
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      content: Text('Copied $label'),
+      content: Text('Copied $label', style: _pj(14, FontWeight.w600, Colors.white)),
       duration: const Duration(seconds: 1),
-      backgroundColor: _kPrimary,
+      backgroundColor: kPrimary,
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     ),
   );
 }
 
-// A consistent header: back arrow + bold title (matches vault_screens).
+// Tinted rounded icon chip — same shape/feel as the Settings tab.
+Widget _iconBadge(IconData icon, {required Color fg, required Color bg, double size = 48}) {
+  return Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(size * 0.33)),
+    child: Icon(icon, size: size * 0.46, color: fg),
+  );
+}
+
+// Uppercase section header — same as the Settings tab.
+Widget _sectionHeader(String title, Color color) {
+  return Padding(
+    padding: const EdgeInsets.only(left: 4),
+    child: Text(title.toUpperCase(),
+        style: _pj(12, FontWeight.w600, color, ls: 1.5)),
+  );
+}
+
+// Back arrow + bold centered title — matches the Settings header bar.
 class _ScreenHeader extends StatelessWidget {
   final String title;
   const _ScreenHeader({required this.title});
@@ -49,20 +56,22 @@ class _ScreenHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: _kOnSurface),
+            icon: const Icon(Icons.arrow_back, color: kOnSurface),
             onPressed: () => Navigator.of(context).maybePop(),
           ),
           Expanded(
             child: Text(
               title,
-              style: _font(18, FontWeight.w700, _kOnSurface),
+              style: _pj(20, FontWeight.w700, kOnSurface, ls: -0.01),
+              textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          const SizedBox(width: 48), // balance the back button
         ],
       ),
     );
@@ -107,41 +116,40 @@ class _PasswordListScreenState extends State<PasswordListScreen> {
   Widget build(BuildContext context) {
     final items = _filtered;
     return Scaffold(
-      backgroundColor: _kSurfaceDim,
+      backgroundColor: kSurface,
       body: SafeArea(
         child: Column(
           children: [
             const _ScreenHeader(title: 'Passwords'),
-            // Search pill
+            // Search pill (rounded, soft shadow, no border)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
               child: Container(
                 decoration: BoxDecoration(
-                  color: _kSurface,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(9999),
-                  border: Border.all(color: _kOutlineVariant),
                   boxShadow: [
                     BoxShadow(
-                      color: _kPrimary.withOpacity(0.04),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
+                      color: kPrimary.withOpacity(0.04),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
                 child: TextField(
                   controller: _searchCtrl,
                   onChanged: (v) => setState(() => _query = v),
-                  style: _font(15, FontWeight.w500, _kOnSurface),
-                  cursorColor: _kPrimary,
+                  style: _pj(15, FontWeight.w500, kOnSurface),
+                  cursorColor: kPrimary,
                   decoration: InputDecoration(
                     isCollapsed: true,
                     hintText: 'Search passwords',
-                    hintStyle: _font(15, FontWeight.w400, _kOnSurfaceVariant),
-                    prefixIcon: const Icon(Icons.search, color: _kOnSurfaceVariant, size: 22),
+                    hintStyle: _pj(15, FontWeight.w400, kOnSurfaceVariant),
+                    prefixIcon: const Icon(Icons.search, color: kOnSurfaceVariant, size: 22),
                     suffixIcon: _query.isEmpty
                         ? null
                         : IconButton(
-                            icon: const Icon(Icons.close, color: _kOnSurfaceVariant, size: 20),
+                            icon: const Icon(Icons.close, color: kOnSurfaceVariant, size: 20),
                             onPressed: () {
                               _searchCtrl.clear();
                               setState(() => _query = '');
@@ -153,7 +161,6 @@ class _PasswordListScreenState extends State<PasswordListScreen> {
                 ),
               ),
             ),
-            // List or empty state
             Expanded(
               child: items.isEmpty
                   ? _EmptyState(searching: _query.trim().isNotEmpty)
@@ -178,11 +185,11 @@ class _PasswordListScreenState extends State<PasswordListScreen> {
         width: 56,
         height: 56,
         decoration: BoxDecoration(
-          color: _kPrimary,
+          color: kPrimary,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: _kPrimary.withOpacity(0.35),
+              color: kPrimary.withOpacity(0.35),
               blurRadius: 14,
               offset: const Offset(0, 6),
             ),
@@ -194,7 +201,7 @@ class _PasswordListScreenState extends State<PasswordListScreen> {
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: () {}, // TODO: wire to add-password flow
-            child: const Icon(Icons.add, color: _kOnPrimary, size: 30),
+            child: const Icon(Icons.add, color: Colors.white, size: 30),
           ),
         ),
       ),
@@ -202,7 +209,8 @@ class _PasswordListScreenState extends State<PasswordListScreen> {
   }
 }
 
-// A single password entry card in the list.
+// A single password entry card — SAME language as the Settings rows:
+// white, 28px radius, soft indigo shadow, 48px tinted chip, copy on the right.
 class _PasswordCard extends StatefulWidget {
   final VaultItem item;
   final VoidCallback onTap;
@@ -231,26 +239,21 @@ class _PasswordCardState extends State<_PasswordCard> {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: _kCardLavender,
-            borderRadius: BorderRadius.circular(20),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
             boxShadow: [
               BoxShadow(
-                color: _kPrimary.withOpacity(0.06),
-                blurRadius: 16,
+                color: kPrimary.withOpacity(0.04),
+                blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
           child: Row(
             children: [
-              // Light blue circular icon chip with lock
-              Container(
-                width: 48,
-                height: 48,
-                decoration: const BoxDecoration(color: _kChipBlueBg, shape: BoxShape.circle),
-                child: const Icon(Icons.lock_outline, size: 22, color: _kChipBlueFg),
-              ),
-              const SizedBox(width: 14),
+              // Tinted circular chip with lock (matches Settings icon badges)
+              _iconBadge(Icons.lock_outline, fg: kPrimary, bg: kPrimary.withOpacity(0.12)),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,15 +261,15 @@ class _PasswordCardState extends State<_PasswordCard> {
                   children: [
                     Text(
                       item.title,
-                      style: _font(16, FontWeight.w700, _kOnSurface, height: 1.2),
+                      style: _pj(16, FontWeight.w600, kOnSurface, height: 1.2),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     if (username.trim().isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         username,
-                        style: _font(13, FontWeight.w400, _kOnSurfaceVariant, height: 1.3),
+                        style: _pj(13, FontWeight.w400, kOnSurfaceVariant, height: 1.3),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -275,9 +278,8 @@ class _PasswordCardState extends State<_PasswordCard> {
                 ),
               ),
               const SizedBox(width: 8),
-              // Copy affordance on the right edge
               IconButton(
-                icon: const Icon(Icons.copy, size: 18, color: _kOnSurfaceVariant),
+                icon: const Icon(Icons.copy, size: 18, color: kOnSurfaceVariant),
                 tooltip: 'Copy password',
                 onPressed: () {
                   final pwd = item.fields['Password'] ?? '';
@@ -304,27 +306,23 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: const BoxDecoration(color: _kChipBlueBg, shape: BoxShape.circle),
-              child: Icon(
-                searching ? Icons.search_off : Icons.lock_outline,
-                size: 34,
-                color: _kChipBlueFg,
-              ),
+            _iconBadge(
+              searching ? Icons.search_off : Icons.lock_outline,
+              fg: kPrimary,
+              bg: kPrimary.withOpacity(0.12),
+              size: 72,
             ),
             const SizedBox(height: 18),
             Text(
               searching ? 'No matching passwords' : 'No passwords saved yet',
-              style: _font(16, FontWeight.w600, _kOnSurface),
+              style: _pj(16, FontWeight.w600, kOnSurface),
               textAlign: TextAlign.center,
             ),
             if (!searching) ...[
               const SizedBox(height: 8),
               Text(
                 'Tap the + button to add your first password',
-                style: _font(14, FontWeight.w400, _kOnSurfaceVariant),
+                style: _pj(14, FontWeight.w400, kOnSurfaceVariant),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -335,6 +333,16 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
+  Color _accentFor(String label) {
+    final l = label.toLowerCase();
+    if (_isSecret(l)) return kPrimary;
+    if (l.contains('url') || l.contains('website') || l.contains('link') || l.contains('domain')) {
+      return const Color(0xFF1565C0);
+    }
+    if (l.contains('note') || l.contains('memo')) return const Color(0xFFE65100);
+    return kPrimary;
+  }
+
 // ═══════════════════════════════════════════════════════════════
 // SCREEN 2 — ITEM DETAIL
 // ═══════════════════════════════════════════════════════════════
@@ -342,7 +350,6 @@ class PasswordItemDetailScreen extends StatelessWidget {
   final VaultItem item;
   const PasswordItemDetailScreen({super.key, required this.item});
 
-  // Only these labels are treated as secrets (masked + eye toggle).
   bool _isSecret(String label) {
     final l = label.toLowerCase();
     return l.contains('password') || l.contains('secret') || l.contains('pin');
@@ -361,16 +368,6 @@ class PasswordItemDetailScreen extends StatelessWidget {
     return Icons.label_important_outline;
   }
 
-  Color _accentFor(String label) {
-    final l = label.toLowerCase();
-    if (_isSecret(l)) return _kFieldPassword;
-    if (l.contains('url') || l.contains('website') || l.contains('link') || l.contains('domain')) {
-      return _kFieldUrl;
-    }
-    if (l.contains('note') || l.contains('memo')) return _kFieldNotes;
-    return _kChipBlueFg;
-  }
-
   @override
   Widget build(BuildContext context) {
     final subtitle = item.subtitle.isNotEmpty
@@ -381,7 +378,7 @@ class PasswordItemDetailScreen extends StatelessWidget {
         .toList();
 
     return Scaffold(
-      backgroundColor: _kSurfaceDim,
+      backgroundColor: kSurface,
       body: SafeArea(
         child: Column(
           children: [
@@ -396,26 +393,18 @@ class PasswordItemDetailScreen extends StatelessWidget {
                     Center(
                       child: Column(
                         children: [
-                          Container(
-                            width: 72,
-                            height: 72,
-                            decoration: const BoxDecoration(
-                              color: _kChipBlueBg,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.lock_outline, size: 34, color: _kChipBlueFg),
-                          ),
+                          _iconBadge(Icons.lock_outline, fg: kPrimary, bg: kPrimary.withOpacity(0.12), size: 72),
                           const SizedBox(height: 14),
                           Text(
                             item.title,
-                            style: _font(22, FontWeight.w800, _kOnSurface, ls: -0.3),
+                            style: _pj(22, FontWeight.w700, kOnSurface, ls: -0.3),
                             textAlign: TextAlign.center,
                           ),
                           if (subtitle.trim().isNotEmpty) ...[
                             const SizedBox(height: 6),
                             Text(
                               subtitle,
-                              style: _font(14, FontWeight.w500, _kOnSurfaceVariant),
+                              style: _pj(14, FontWeight.w500, kOnSurfaceVariant),
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -423,11 +412,8 @@ class PasswordItemDetailScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 28),
-                    // Saved fields section
-                    Text(
-                      'Saved fields',
-                      style: _font(13, FontWeight.w700, _kOnSurfaceVariant, ls: 0.4),
-                    ),
+                    // Section header — uppercase, same as Settings
+                    _sectionHeader('Saved fields', kPrimary),
                     const SizedBox(height: 12),
                     for (final entry in fields) ...[
                       _FieldCard(
@@ -449,10 +435,10 @@ class PasswordItemDetailScreen extends StatelessWidget {
                             child: ElevatedButton.icon(
                               onPressed: () {}, // TODO: wire to edit flow
                               icon: const Icon(Icons.edit_outlined, size: 20),
-                              label: Text('Edit', style: _font(15, FontWeight.w600, _kOnPrimary)),
+                              label: Text('Edit', style: _pj(15, FontWeight.w600, Colors.white)),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: _kPrimary,
-                                foregroundColor: _kOnPrimary,
+                                backgroundColor: kPrimary,
+                                foregroundColor: Colors.white,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
@@ -468,10 +454,10 @@ class PasswordItemDetailScreen extends StatelessWidget {
                             child: OutlinedButton.icon(
                               onPressed: () => _confirmDelete(context),
                               icon: const Icon(Icons.delete_outline, size: 20),
-                              label: Text('Delete', style: _font(15, FontWeight.w600, _kError)),
+                              label: Text('Delete', style: _pj(15, FontWeight.w600, kError)),
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: _kError,
-                                side: const BorderSide(color: _kError, width: 1.5),
+                                foregroundColor: kError,
+                                side: const BorderSide(color: kError, width: 1.5),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
@@ -495,23 +481,23 @@ class PasswordItemDetailScreen extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Delete ${item.title}?', style: _font(18, FontWeight.w700, _kOnSurface)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text('Delete ${item.title}?', style: _pj(18, FontWeight.w700, kOnSurface)),
         content: Text(
           'This item will be permanently removed from your vault.',
-          style: _font(14, FontWeight.w400, _kOnSurfaceVariant),
+          style: _pj(14, FontWeight.w400, kOnSurfaceVariant),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('Cancel', style: _font(14, FontWeight.w600, _kOnSurfaceVariant)),
+            child: Text('Cancel', style: _pj(14, FontWeight.w600, kOnSurfaceVariant)),
           ),
           TextButton(
             onPressed: () {
-              Navigator.of(ctx).pop(); // close dialog
-              Navigator.of(context).maybePop(); // leave detail screen
+              Navigator.of(ctx).pop();
+              Navigator.of(context).maybePop();
             },
-            child: Text('Delete', style: _font(14, FontWeight.w700, _kError)),
+            child: Text('Delete', style: _pj(14, FontWeight.w700, kError)),
           ),
         ],
       ),
@@ -519,8 +505,8 @@ class PasswordItemDetailScreen extends StatelessWidget {
   }
 }
 
-// A single "Saved fields" card. Secrets are masked with an eye toggle;
-// non-secret fields (URL, Notes) show a copy icon only — no reveal.
+// A single "Saved fields" card — SAME language as Settings rows:
+// white, 28px radius, soft shadow, 48px tinted icon chip, no visible border.
 class _FieldCard extends StatefulWidget {
   final IconData icon;
   final Color accent;
@@ -546,38 +532,26 @@ class _FieldCardState extends State<_FieldCard> {
   @override
   Widget build(BuildContext context) {
     final masked = widget.isSecret && !_revealed;
-    // Non-secret fields always show a copy icon.
-    // Secret fields show a copy icon only once revealed.
     final showCopy = !widget.isSecret || _revealed;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kOutlineVariant),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: _kPrimary.withOpacity(0.04),
+            color: kPrimary.withOpacity(0.04),
             blurRadius: 12,
-            offset: const Offset(0, 3),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Small colored leading icon
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: widget.accent.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(widget.icon, size: 20, color: widget.accent),
-          ),
-          const SizedBox(width: 14),
+          _iconBadge(widget.icon, fg: widget.accent, bg: widget.accent.withOpacity(0.12)),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,12 +559,12 @@ class _FieldCardState extends State<_FieldCard> {
               children: [
                 Text(
                   widget.label,
-                  style: _font(11, FontWeight.w600, _kOnSurfaceVariant, ls: 0.4),
+                  style: _pj(11, FontWeight.w600, kOnSurfaceVariant, ls: 0.4),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   masked ? '••••••••••••' : widget.value,
-                  style: _font(15, FontWeight.w600, _kOnSurface, height: 1.3),
+                  style: _pj(15, FontWeight.w600, kOnSurface, height: 1.3),
                   maxLines: widget.isSecret ? 1 : 4,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -598,7 +572,6 @@ class _FieldCardState extends State<_FieldCard> {
             ),
           ),
           const SizedBox(width: 10),
-          // Eye toggle only for secret fields
           if (widget.isSecret)
             IconButton(
               icon: Icon(
@@ -611,7 +584,7 @@ class _FieldCardState extends State<_FieldCard> {
             ),
           if (showCopy)
             IconButton(
-              icon: const Icon(Icons.copy, size: 18, color: _kOnSurfaceVariant),
+              icon: const Icon(Icons.copy, size: 18, color: kOnSurfaceVariant),
               tooltip: 'Copy ${widget.label}',
               onPressed: () => _copy(context, widget.label, widget.value),
             ),
