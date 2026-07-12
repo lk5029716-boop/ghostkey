@@ -992,7 +992,7 @@ class _VaultPageState extends State<VaultPage> {
             const SizedBox(height: 20),
             Text('No categories', style: _vaultFont(18, FontWeight.w600, _cOnSurface)),
             const SizedBox(height: 8),
-            Text('Long-press a box to remove it.', style: _vaultFont(14, _cOnSurface.withOpacity(0.6)), textAlign: TextAlign.center),
+            Text('Long-press a box to remove it.', style: _vaultFont(14, FontWeight.w400, _cOnSurface.withOpacity(0.6)), textAlign: TextAlign.center),
           ],
         ),
       ),
