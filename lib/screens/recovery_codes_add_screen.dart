@@ -14,12 +14,12 @@ class RecoveryCodesAddScreen extends StatefulWidget {
 }
 
 class _RecoveryCodesAddScreenState extends State<RecoveryCodesAddScreen> {
-  static const _primary = Color(0xFF5B3FE8);
-  static const _surface = Color(0xFFF8F9FF);
-  static const _onSurface = Color(0xFF12101E);
-  static const _onSurfaceVariant = Color(0xFF8E8BA8);
-  static const _outlineVariant = Color(0xFF8E8BA8);
-  static const _surfaceContainerLow = Color(0xFFF8F9FF);
+  static const _primary = Color(0xFF0D631B);
+  static const _surface = Color(0xFFF8F9FA);
+  static const _onSurface = Color(0xFF191C1D);
+  static const _onSurfaceVariant = Color(0xFF40493D);
+  static const _outlineVariant = Color(0xFFBFCABA);
+  static const _surfaceContainerLow = Color(0xFFF3F4F5);
 
   final _titleCtrl = TextEditingController();
   final _codesCtrl = TextEditingController();
@@ -52,8 +52,8 @@ class _RecoveryCodesAddScreenState extends State<RecoveryCodesAddScreen> {
         subtitle: '${codes.length} codes',
         category: VaultCategory.codes,
         icon: Icons.grid_view,
-        iconColor: const Color(0xFF5B3FE8),
-        iconBgColor: const Color(0xFFEBE8FF),
+        iconColor: const Color(0xFF7B1FA2),
+        iconBgColor: const Color(0xFFE1BEE7),
         date: 'Today',
         fields: {
           _titleCtrl.text.trim(): codes.join('\n'),
