@@ -14,12 +14,12 @@ class SecureNoteAddScreen extends StatefulWidget {
 }
 
 class _SecureNoteAddScreenState extends State<SecureNoteAddScreen> {
-  static const _primary = Color(0xFF0D631B);
-  static const _surface = Color(0xFFF8F9FA);
-  static const _onSurface = Color(0xFF191C1D);
-  static const _onSurfaceVariant = Color(0xFF40493D);
-  static const _outlineVariant = Color(0xFFBFCABA);
-  static const _surfaceContainerLow = Color(0xFFF3F4F5);
+  static const _primary = Color(0xFF5B3FE8);
+  static const _surface = Color(0xFFF8F9FF);
+  static const _onSurface = Color(0xFF12101E);
+  static const _onSurfaceVariant = Color(0xFF8E8BA8);
+  static const _outlineVariant = Color(0xFF8E8BA8);
+  static const _surfaceContainerLow = Color(0xFFF8F9FF);
 
   final _titleCtrl = TextEditingController();
   final _contentCtrl = TextEditingController();
@@ -47,8 +47,8 @@ class _SecureNoteAddScreenState extends State<SecureNoteAddScreen> {
             : _contentCtrl.text.trim(),
         category: VaultCategory.notes,
         icon: Icons.description,
-        iconColor: const Color(0xFF00796B),
-        iconBgColor: const Color(0xFFB2DFDB),
+        iconColor: const Color(0xFF5B3FE8),
+        iconBgColor: const Color(0xFFEBE8FF),
         date: 'Today',
         fields: {
           'Content': _contentCtrl.text.trim(),
