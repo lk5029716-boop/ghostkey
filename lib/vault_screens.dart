@@ -396,6 +396,24 @@ class _DetailFieldCardState extends State<_DetailFieldCard> {
     });
   }
 
+  Widget _trailingWidget(Color accent) {
+    if (widget.isSensitive && _revealed) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: const Color(0xFFFFF3CD)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.timer_outlined, size: 12, color: Color(0xFFF59E0B)),
+          const SizedBox(width: 3),
+          Text('$_timer', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFF59E0B))),
+        ]),
+      );
+    } else if (!widget.isSensitive) {
+      return Icon(Icons.copy_all, size: 18, color: accent.withOpacity(0.5));
+    } else {
+      return Icon(_revealed ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20, color: accent);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final sensitive = widget.isSensitive;
@@ -463,20 +481,7 @@ class _DetailFieldCardState extends State<_DetailFieldCard> {
             ]),
           ),
           const SizedBox(width: 10),
-          if (sensitive && _revealed)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: const Color(0xFFFFF3CD)),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.timer_outlined, size: 12, color: Color(0xFFF59E0B)),
-                const SizedBox(width: 3),
-                Text('$_timer', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFF59E0B))),
-              ]),
-          else
-            if (!sensitive)
-              Icon(Icons.copy_all, size: 18, color: accent.withOpacity(0.5))
-            else
-              Icon(_revealed ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20, color: accent),
+          _trailingWidget(accent),
         ]),
       ),
     );
