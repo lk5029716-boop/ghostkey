@@ -698,6 +698,18 @@ class _TotpListItemState extends State<_TotpListItem> {
   }
 }
 
+String _vaultCatLabel(VaultCategory cat) {
+  switch (cat) {
+    case VaultCategory.password: return 'Password';
+    case VaultCategory.seeds: return 'Seed';
+    case VaultCategory.apiKeys: return 'API Key';
+    case VaultCategory.codes: return 'Code';
+    case VaultCategory.totp: return '2FA';
+    case VaultCategory.notes: return 'Note';
+    case VaultCategory.privateKeys: return 'Key';
+  }
+}
+
 class VaultPage extends StatefulWidget {
   const VaultPage({super.key});
   @override
@@ -1223,7 +1235,7 @@ class _VaultItemCardState extends State<_VaultItemCard> with SingleTickerProvide
                   children: [
                     Text(item.title, style: _vaultFont(17, FontWeight.w700, _cOnSurface, height: 20 / 17), maxLines: 1, overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 3),
-                    Text(_catLabel(item.category), style: _vaultFont(13, FontWeight.w400, _cOnSurface.withOpacity(0.55)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(_vaultCatLabel(item.category), style: _vaultFont(13, FontWeight.w400, _cOnSurface.withOpacity(0.55)), maxLines: 1, overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ],
