@@ -62,16 +62,16 @@ class _ImportRow extends StatelessWidget {
   const _ImportRow({required this.icon, required this.title, required this.subtitle, required this.onTap});
 
   Color _fg() {
-    if (icon == Icons.cloud_download_outlined) return kTertiary;
-    if (icon == Icons.cloud_upload_outlined) return kPrimary;
-    if (icon == Icons.ios_share) return kSecondary;
+    if (icon == Icons.cloud_download_outlined) return kTertiary;   // Import  → amber
+    if (icon == Icons.cloud_upload_outlined) return kPrimary;      // Backup  → indigo
+    if (icon == Icons.ios_share) return kPrimary;                  // Export  → indigo
     return kPrimary;
   }
 
   Color _bg() {
     if (icon == Icons.cloud_download_outlined) return kTertiary.withOpacity(0.12);
     if (icon == Icons.cloud_upload_outlined) return kPrimary.withOpacity(0.12);
-    if (icon == Icons.ios_share) return kSecondaryContainer.withOpacity(0.6);
+    if (icon == Icons.ios_share) return kPrimary.withOpacity(0.12);
     return kPrimary.withOpacity(0.12);
   }
 
