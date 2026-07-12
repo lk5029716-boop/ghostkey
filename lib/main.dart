@@ -166,14 +166,14 @@ class _GhostKeyAppState extends State<GhostKeyApp> {
               textStyle: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ),
-          cardTheme: CardThemeData(
+          cardTheme: CardTheme(
             color: Colors.white,
             elevation: 2,
             shadowColor: kPrimary.withOpacity(0.06),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             margin: const EdgeInsets.symmetric(vertical: 6),
           ),
-          dialogTheme: DialogThemeData(
+          dialogTheme: DialogTheme(
             backgroundColor: kSurface,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
             titleTextStyle: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w700, color: kOnSurface),
