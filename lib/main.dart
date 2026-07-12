@@ -698,18 +698,6 @@ class _TotpListItemState extends State<_TotpListItem> {
   }
 }
 
-String _vaultCatLabel(VaultCategory cat) {
-  switch (cat) {
-    case VaultCategory.password: return 'Password';
-    case VaultCategory.seeds: return 'Seed';
-    case VaultCategory.apiKeys: return 'API Key';
-    case VaultCategory.codes: return 'Code';
-    case VaultCategory.totp: return '2FA';
-    case VaultCategory.notes: return 'Note';
-    case VaultCategory.privateKeys: return 'Key';
-  }
-}
-
 class VaultPage extends StatefulWidget {
   const VaultPage({super.key});
   @override
@@ -717,33 +705,53 @@ class VaultPage extends StatefulWidget {
 }
 
 /// Category boxes shown in the Vault tab grid. Each maps to a
-/// [VaultCategory] so all existing filter / detail code keeps working.
-/// Boxes use the app's unified indigo palette and support long-press
-/// reorder / delete, mirroring the Home tab. Order persists locally.
+/// [VaultCategory] so all existing filter / FAB / detail code keeps
+/// working unchanged — only the UI switches from chips to a box grid.
+class _CategoryBox {
+  final String label;
+  final VaultCategory category;
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBgColor;
+  final Color bgColor;
+  final Color titleColor;
+  const _CategoryBox({
+    required this.label,
+    required this.category,
+    required this.icon,
+    required this.iconColor,
+    required this.iconBgColor,
+    required this.bgColor,
+    required this.titleColor,
+  });
+}
 
+const _categoryBoxes = <_CategoryBox>[
+  _CategoryBox(label: 'Passwords', category: VaultCategory.password, icon: Icons.key, iconColor: Color(0xFF5B3FE8), iconBgColor: Color(0xFFEBE9FE), bgColor: Color(0xFFEBE8FF), titleColor: Color(0xFF5B3FE8)),
+  _CategoryBox(label: 'Seeds', category: VaultCategory.seeds, icon: Icons.eco, iconColor: Color(0xFF16A34A), iconBgColor: Color(0xFFDCFCE7), bgColor: Color(0xFFD1F7F1), titleColor: Color(0xFF004D40)),
+  _CategoryBox(label: 'API Keys', category: VaultCategory.apiKeys, icon: Icons.api, iconColor: Color(0xFF0D9488), iconBgColor: Color(0xFFCCFBF1), bgColor: Color(0xFFCCFBF1), titleColor: Color(0xFF004D40)),
+  _CategoryBox(label: '2FA Codes', category: VaultCategory.totp, icon: Icons.security, iconColor: Color(0xFF2563EB), iconBgColor: Color(0xFFDBEAFE), bgColor: Color(0xFFD1E3FF), titleColor: Color(0xFF0D47A1)),
+  _CategoryBox(label: 'Recovery Codes', category: VaultCategory.codes, icon: Icons.grid_view, iconColor: Color(0xFF7C3AED), iconBgColor: Color(0xFFF3E8FF), bgColor: Color(0xFFF3E8FF), titleColor: Color(0xFF880E4F)),
+  _CategoryBox(label: 'Secure Notes', category: VaultCategory.notes, icon: Icons.sticky_note_2, iconColor: Color(0xFFE8692A), iconBgColor: Color(0xFFFFEDD5), bgColor: Color(0xFFFFE8D1), titleColor: Color(0xFF3E2723)),
+  _CategoryBox(label: 'Private Keys', category: VaultCategory.privateKeys, icon: Icons.badge, iconColor: Color(0xFF475569), iconBgColor: Color(0xFFF1F5F9), bgColor: Color(0xFFEBE6F4), titleColor: Color(0xFF475569)),
+];
 
 class _VaultPageState extends State<VaultPage> {
   List<VaultItem> _vaultItems = [];
   List<Code> _codes = [];
   bool _loaded = false;
   VaultCategory? _selectedCategory; // null = box grid view; non-null = filtered list
-  List<VaultItem> _items = [];
-  bool _organizeMode = false;
-  final Set<String> _removingIds = {};
-  final Map<String, int> _order = {};
-  bool _orderLoaded = false;
   StreamSubscription<VaultItemsUpdatedEvent>? _vaultSub;
   StreamSubscription<CodesUpdatedEvent>? _codesSub;
   StreamSubscription? _quickAddSub;
-  static const String _kItemOrderKey = 'gk_vault_item_order_v1';
 
 
   @override
   void initState() {
     super.initState();
-    _loadOrder().then((_) => _loadAll());
-    _vaultSub = VaultStore.instance.onVaultItemsUpdated().listen((_) => _loadVaultItems().then((_) => _rebuildItems()));
-    // codes listener wired with rebuild above
+    _loadAll();
+    _vaultSub = VaultStore.instance.onVaultItemsUpdated().listen((_) => _loadVaultItems());
+    _codesSub = CodeStore.instance.onCodesUpdated().listen((_) => _loadCodes());
     // Listen for quick-add events from Home tab
     _quickAddSub = QuickAddService.instance.bus.on<FilterChangedEvent>().listen((event) {
       if (event is FilterChangedEvent) {
@@ -761,75 +769,6 @@ class _VaultPageState extends State<VaultPage> {
 
   Future<void> _loadAll() async {
     await Future.wait([_loadVaultItems(), _loadCodes()]);
-    _rebuildItems();
-  }
-
-  void _rebuildItems() {
-    final list = _allVaultItems;
-    if (_orderLoaded) {
-      list.sort((a, b) {
-        final oa = _order[a.id] ?? (1 << 30);
-        final ob = _order[b.id] ?? (1 << 30);
-        return oa.compareTo(ob);
-      });
-    }
-    if (!mounted) return;
-    setState(() => _items = list);
-  }
-
-  Future<void> _loadOrder() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_kItemOrderKey);
-      if (raw != null) {
-        final m = jsonDecode(raw) as Map<String, dynamic>;
-        _order.clear();
-        m.forEach((k, v) => _order[k] = v as int);
-      }
-    } catch (_) {}
-    _orderLoaded = true;
-  }
-
-  Future<void> _persistOrder() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_kItemOrderKey, jsonEncode(_order));
-    } catch (_) {}
-  }
-
-  Future<void> _reorderItem(int from, int to) async {
-    if (from == to || from < 0 || to < 0 || from >= _items.length || to >= _items.length) return;
-    final moved = _items[from];
-    setState(() {
-      _items.removeAt(from);
-      _items.insert(to, moved);
-      for (int i = 0; i < _items.length; i++) _order[_items[i].id] = i;
-    });
-    await _persistOrder();
-  }
-
-  Future<void> _removeItem(VaultItem item) async {
-    setState(() => _removingIds.add(item.id));
-    await Future.delayed(const Duration(milliseconds: 180));
-    if (!mounted) return;
-    try {
-      if (item.category == VaultCategory.totp) {
-        final code = _codes.firstWhere((c) => 'code_${c.hashCode}' == item.id);
-        await CodeStore.instance.removeCode(code);
-      } else {
-        await VaultStore.instance.deleteItem(item.id);
-      }
-    } catch (e) {
-      debugPrint('Failed to delete vault item: $e');
-    }
-    _order.remove(item.id);
-    await _persistOrder();
-    if (!mounted) return;
-    setState(() {
-      _items.removeWhere((it) => it.id == item.id);
-      _removingIds.remove(item.id);
-      if (_items.isEmpty) _organizeMode = false;
-    });
   }
 
   Future<void> _loadVaultItems() async {
@@ -935,9 +874,7 @@ class _VaultPageState extends State<VaultPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Vault', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: kOnSurface)),
-                _organizeMode
-                    ? _VaultDonePill(onTap: () => setState(() => _organizeMode = false))
-                    : const SizedBox.shrink(),
+                // refresh and three-dot icons removed
               ],
             ),
           ),
@@ -945,74 +882,25 @@ class _VaultPageState extends State<VaultPage> {
           Expanded(
             child: !_loaded
                 ? const Center(child: CircularProgressIndicator(color: kPrimary))
-                : _items.isEmpty
-                    ? _buildVaultEmptyState()
-                    : _buildItemsGrid(),
+                : GridView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 1.0,
+                    ),
+                    itemCount: _categoryBoxes.length,
+                    itemBuilder: (context, i) {
+                      final box = _categoryBoxes[i];
+                      return _CategoryBoxCard(
+                        box: box,
+                        onTap: () => setState(() => _selectedCategory = box.category),
+                      );
+                    },
+                  ),
           ),
         ]),
-      ),
-    );
-  }
-
-  Widget _buildItemsGrid() {
-    return LayoutBuilder(builder: (ctx, constraints) {
-      const gap = 16.0;
-      final cellW = (constraints.maxWidth - gap) / 2;
-      final cellH = cellW;
-      final rows = _items.isEmpty ? 0 : ((_items.length - 1) ~/ 2) + 1;
-      final height = rows * cellH + (rows - 1) * gap;
-      final children = <Widget>[];
-      for (int i = 0; i < _items.length; i++) {
-        final item = _items[i];
-        final col = i % 2;
-        final row = i ~/ 2;
-        children.add(
-          AnimatedPositioned(
-            key: ValueKey('it_${item.id}'),
-            duration: const Duration(milliseconds: 280),
-            curve: Curves.easeOutCubic,
-            left: col * (cellW + gap),
-            top: row * (cellH + gap),
-            width: cellW,
-            height: cellH,
-            child: _VaultItemCard(
-              key: ValueKey(item.id),
-              item: item,
-              width: cellW,
-              height: cellH,
-              organizeMode: _organizeMode,
-              removing: _removingIds.contains(item.id),
-              index: i,
-              onTap: () => _openDetail(item),
-              onLongPress: () => setState(() => _organizeMode = true),
-              onRemove: () => _removeItem(item),
-              onReorderRequested: (from) => _reorderItem(from, i),
-            ),
-          ),
-        );
-      }
-      return SizedBox(height: height, child: Stack(clipBehavior: Clip.none, children: children));
-    });
-  }
-
-  Widget _buildVaultEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72, height: 72,
-              decoration: BoxDecoration(color: _cPrimary.withOpacity(0.12), shape: BoxShape.circle),
-              child: const Icon(Icons.lock_outline, size: 32, color: _cPrimary),
-            ),
-            const SizedBox(height: 20),
-            Text('Your vault is empty', style: _vaultFont(18, FontWeight.w600, _cOnSurface)),
-            const SizedBox(height: 8),
-            Text('Items you add on the Home tab will appear here.', style: _vaultFont(14, FontWeight.w400, _cOnSurface.withOpacity(0.6)), textAlign: TextAlign.center),
-          ],
-        ),
       ),
     );
   }
@@ -1142,144 +1030,6 @@ class _VaultPageState extends State<VaultPage> {
 // subtle press-scale. Matches the app's color core (white card on
 // light purple surface) — no chevron, no category pill.
 // ════════════════════════════════════════════════
-class _VaultItemCard extends StatefulWidget {
-  final VaultItem item;
-  final double width;
-  final double height;
-  final bool organizeMode;
-  final bool removing;
-  final int index;
-  final VoidCallback onTap;
-  final VoidCallback onLongPress;
-  final VoidCallback onRemove;
-  final void Function(int fromIndex) onReorderRequested;
-
-  const _VaultItemCard({
-    super.key,
-    required this.item,
-    required this.width,
-    required this.height,
-    required this.organizeMode,
-    required this.removing,
-    required this.index,
-    required this.onTap,
-    required this.onLongPress,
-    required this.onRemove,
-    required this.onReorderRequested,
-  });
-
-  @override
-  State<_VaultItemCard> createState() => _VaultItemCardState();
-}
-
-class _VaultItemCardState extends State<_VaultItemCard> with SingleTickerProviderStateMixin {
-  bool _pressed = false;
-  bool _entered = false;
-  late final AnimationController _wobbleCtrl;
-  late final double _wobbleSign;
-
-  @override
-  void initState() {
-    super.initState();
-    _wobbleSign = widget.index.isEven ? 1.0 : -1.0;
-    _wobbleCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 260))
-      ..repeat(reverse: true);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _entered = true);
-    });
-  }
-
-  @override
-  void dispose() {
-    _wobbleCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final item = widget.item;
-    final card = AnimatedScale(
-      scale: widget.removing ? 0.0 : (_pressed ? 0.96 : (_entered ? 1.0 : 0.0)),
-      duration: Duration(milliseconds: widget.removing ? 180 : 220),
-      curve: Curves.easeOutBack,
-      child: AnimatedOpacity(
-        opacity: widget.removing ? 0.0 : (_entered ? 1.0 : 0.0),
-        duration: const Duration(milliseconds: 200),
-        child: AnimatedBuilder(
-          animation: _wobbleCtrl,
-          builder: (ctx, child) {
-            final angle = widget.organizeMode ? (_wobbleSign * 0.018 * (_wobbleCtrl.value * 2 - 1)) : 0.0;
-            return Transform.rotate(angle: angle, child: child);
-          },
-          child: Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: _cSurface,
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(color: _cPrimary.withOpacity(0.06), blurRadius: 14, offset: const Offset(0, 4)),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(color: _cPrimary.withOpacity(0.12), borderRadius: BorderRadius.circular(16)),
-                  child: Icon(item.icon, color: _cPrimary, size: 24),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(item.title, style: _vaultFont(17, FontWeight.w700, _cOnSurface, height: 20 / 17), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 3),
-                    Text(_vaultCatLabel(item.category), style: _vaultFont(13, FontWeight.w400, _cOnSurface.withOpacity(0.55)), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-    if (!widget.organizeMode) {
-      return GestureDetector(
-        onTapDown: (_) => setState(() => _pressed = true),
-        onTapUp: (_) => setState(() => _pressed = false),
-        onTapCancel: () => setState(() => _pressed = false),
-        onTap: widget.onTap,
-        onLongPress: widget.onLongPress,
-        child: card,
-      );
-    }
-
-    final withBadge = Stack(
-      clipBehavior: Clip.none,
-      children: [
-        card,
-        Positioned(right: -6, top: -6, child: _RemoveBadge(onTap: widget.onRemove)),
-      ],
-    );
-
-    return DragTarget<int>(
-      onWillAcceptWithDetails: (d) => d.data != widget.index,
-      onAcceptWithDetails: (d) => widget.onReorderRequested(d.data),
-      builder: (ctx, _, __) => LongPressDraggable<int>(
-        data: widget.index,
-        feedback: Material(
-          color: Colors.transparent,
-          child: Transform.scale(scale: 1.06, child: SizedBox(width: widget.width, height: widget.height, child: card)),
-        ),
-        childWhenDragging: Opacity(opacity: 0.25, child: withBadge),
-        child: withBadge,
-      ),
-    );
-  }
-}
-
 class _VaultListCard extends StatefulWidget {
   final VaultItem item;
   final VoidCallback onTap;
@@ -1367,49 +1117,51 @@ class _VaultListCardState extends State<_VaultListCard> {
 // ════════════════════════════════════════════════
 // CATEGORY BOX CARD — a single tile in the Vault grid
 // ════════════════════════════════════════════════
-// ── Unified indigo palette matching the Home tab ──
-const Color _cSurface = Color(0xFFFFFFFF);
-const Color _cPrimary = Color(0xFF5B3FE8);
-const Color _cOnSurface = Color(0xFF12101E);
-TextStyle _vaultFont(double size, FontWeight w, Color c, {double? height}) =>
-    TextStyle(fontSize: size, fontWeight: w, color: c, height: height);
-
-class _VaultDonePill extends StatelessWidget {
+class _CategoryBoxCard extends StatefulWidget {
+  final _CategoryBox box;
   final VoidCallback onTap;
-  const _VaultDonePill({super.key, required this.onTap});
+  const _CategoryBoxCard({required this.box, required this.onTap});
+
   @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: _cPrimary,
-      borderRadius: BorderRadius.circular(9999),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(9999),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          child: Text('Done', style: _vaultFont(14, FontWeight.w500, Colors.white)),
-        ),
-      ),
-    );
-  }
+  State<_CategoryBoxCard> createState() => _CategoryBoxCardState();
 }
 
-class _RemoveBadge extends StatelessWidget {
-  final VoidCallback onTap;
-  const _RemoveBadge({super.key, required this.onTap});
+class _CategoryBoxCardState extends State<_CategoryBoxCard> {
+  bool _pressed = false;
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 26,
-        height: 26,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 6, offset: const Offset(0, 2))],
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _pressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: widget.box.bgColor,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(color: widget.box.iconBgColor, shape: BoxShape.circle),
+                child: Icon(widget.box.icon, color: widget.box.iconColor, size: 24),
+              ),
+              Text(widget.box.label, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: widget.box.titleColor)),
+            ],
+          ),
         ),
-        child: const Icon(Icons.close, size: 16, color: Colors.red),
       ),
     );
   }
