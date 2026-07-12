@@ -472,10 +472,11 @@ class _DetailFieldCardState extends State<_DetailFieldCard> {
                 const SizedBox(width: 3),
                 Text('$_timer', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFF59E0B))),
               ]),
-          else if (!sensitive)
-            Icon(Icons.copy_all, size: 18, color: accent.withOpacity(0.5))
           else
-            Icon(_revealed ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20, color: accent),
+            if (!sensitive)
+              Icon(Icons.copy_all, size: 18, color: accent.withOpacity(0.5))
+            else
+              Icon(_revealed ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20, color: accent),
         ]),
       ),
     );
