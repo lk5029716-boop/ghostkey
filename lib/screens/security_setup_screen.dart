@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../pin_unlock_screen.dart';
 import '../services/biometric_service.dart';
@@ -113,9 +114,9 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
   void _showAttemptsPicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: kSurface,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [3, 5, 10].map((v) {
@@ -123,7 +124,7 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
             title: Text('$v attempts',
                 style: const TextStyle(fontSize: 16, color: Color(0xFF191C1D))),
             trailing: _maxAttempts == v
-                ? const Icon(Icons.check, color: Color(0xFF0D631B))
+                ? const Icon(Icons.check, color: kPrimary)
                 : null,
             onTap: () {
               setState(() => _maxAttempts = v);
@@ -139,9 +140,9 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
   void _showLockoutPicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: kSurface,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [1, 5, 15].map((m) {
@@ -149,7 +150,7 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
             title: Text('$m ${m == 1 ? 'minute' : 'minutes'}',
                 style: const TextStyle(fontSize: 16, color: Color(0xFF191C1D))),
             trailing: _lockoutMinutes == m
-                ? const Icon(Icons.check, color: Color(0xFF0D631B))
+                ? const Icon(Icons.check, color: kPrimary)
                 : null,
             onTap: () {
               setState(() => _lockoutMinutes = m);
@@ -164,10 +165,10 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const primary = Color(0xFF0D631B);
-    const onSurface = Color(0xFF191C1D);
-    const surface = Color(0xFFF8F9FA);
-    const outlineVar = Color(0xFFBFCABA);
+    const primary = kPrimary;
+    const onSurface = kOnSurface;
+    const surface = kSurface;
+    const outlineVar = kOutlineVariant;
     const cardBg = Colors.white;
 
     return Scaffold(
@@ -181,8 +182,8 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
         ),
         title: const Text('Security',
             style: TextStyle(
-                fontSize: 18, fontWeight: FontWeight.w700, color: primary)),
-        centerTitle: false,
+                fontSize: 20, fontWeight: FontWeight.w700, color: kOnSurface)),
+        centerTitle: true,
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -299,7 +300,7 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
     return Container(
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(color: outline.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
@@ -314,13 +315,13 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
 
   Widget _iconBadge(IconData icon, {Color? color}) {
     return Container(
-      width: 40,
-      height: 40,
+      width: 48,
+      height: 48,
       decoration: BoxDecoration(
-        color: const Color(0xFFACF4A4).withOpacity(0.35),
-        borderRadius: BorderRadius.circular(10),
+        color: kPrimary.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Icon(icon, color: color ?? const Color(0xFF0D631B), size: 22),
+      child: Icon(icon, color: color ?? kPrimary, size: 22),
     );
   }
 
