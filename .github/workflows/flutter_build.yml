@@ -3,6 +3,8 @@ name: Build GhostKey APK
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -38,10 +40,14 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Analyze
+        run: flutter analyze
+
       - name: Build APK
         run: flutter build apk --debug
 
       - name: Upload to Firebase App Distribution
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: ${{ secrets.FIREBASE_APP_ID }}
