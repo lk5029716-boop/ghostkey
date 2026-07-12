@@ -17,7 +17,7 @@ class DataSectionWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _ImportRow(
-          icon: Icons.cloud_download,
+          icon: Icons.cloud_download_outlined,
           title: 'Import from another app',
           subtitle: 'Aegis, andOTP, Bitwarden, 2FAS, Google Authenticator, and more',
           onTap: () {
@@ -28,7 +28,7 @@ class DataSectionWidget extends StatelessWidget {
         ),
         _divider(kOutlineVariant),
         _ImportRow(
-          icon: Icons.database,
+          icon: Icons.cloud_upload_outlined,
           title: 'Local encrypted backup',
           subtitle: 'Save an encrypted backup to your device',
           onTap: () {
@@ -39,7 +39,7 @@ class DataSectionWidget extends StatelessWidget {
         ),
         _divider(kOutlineVariant),
         _ImportRow(
-          icon: Icons.file_export,
+          icon: Icons.ios_share,
           title: 'Export to file',
           subtitle: 'Plain text, HTML, or JSON',
           onTap: () => ExportService.showExportOptions(context),
@@ -62,17 +62,17 @@ class _ImportRow extends StatelessWidget {
   const _ImportRow({required this.icon, required this.title, required this.subtitle, required this.onTap});
 
   Color _fg() {
-    if (icon == Icons.cloud_download) return kTertiary;
-    if (icon == Icons.database) return kPrimary;
-    if (icon == Icons.file_export) return kSecondary;
+    if (icon == Icons.cloud_download_outlined) return kTertiary;
+    if (icon == Icons.cloud_upload_outlined) return kPrimary;
+    if (icon == Icons.ios_share) return kSecondary;
     return kPrimary;
   }
 
   Color _bg() {
-    if (icon == Icons.cloud_download) return kTertiaryFixed.withOpacity(0.6);
-    if (icon == Icons.database) return kPrimaryFixed.withOpacity(0.5);
-    if (icon == Icons.file_export) return kSecondaryContainer.withOpacity(0.6);
-    return kPrimaryFixed.withOpacity(0.5);
+    if (icon == Icons.cloud_download_outlined) return kTertiary.withOpacity(0.12);
+    if (icon == Icons.cloud_upload_outlined) return kPrimary.withOpacity(0.12);
+    if (icon == Icons.ios_share) return kSecondaryContainer.withOpacity(0.6);
+    return kPrimary.withOpacity(0.12);
   }
 
   @override
