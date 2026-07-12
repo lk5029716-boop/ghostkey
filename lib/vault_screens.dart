@@ -1,10 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'vault_data.dart';
+
+// ── Pastel Vault design tokens ──
+const Color _kPrimary = Color(0xFF5B3FE8);
+const Color _kOnSurface = Color(0xFF12101E);
+const Color _kOnSurfaceVariant = Color(0xFF8E8BA8);
+const Color _kError = Color(0xFFBA1A1A);
+
+TextStyle _pj(double size, FontWeight w, Color c, {double? height, double? ls}) =>
+    GoogleFonts.plusJakartaSans(fontSize: size, fontWeight: w, color: c, height: height, letterSpacing: ls ?? 0);
+
+Widget _iconBadge(IconData icon, {required Color fg, required Color bg, double size = 48}) {
+  return Container(
+    width: size, height: size,
+    decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(size * 0.33)),
+    child: Icon(icon, size: size * 0.46, color: fg),
+  );
+}
+
+Widget _sectionHeader(String title, Color color) {
+  return Padding(padding: const EdgeInsets.only(left: 4),
+    child: Text(title.toUpperCase(), style: _pj(12, FontWeight.w600, color, ls: 1.5)));
+}
 
 // ═══════════════════════════════════════════════════════════════
 // TOTP GENERATOR
@@ -232,7 +255,6 @@ class PasswordDetailScreen extends StatelessWidget {
   final VaultItem item;
   const PasswordDetailScreen({super.key, required this.item});
 
-  // Field classification
   static const _sensitive = {'Password', 'Secret', 'Token', 'Private Key', 'Recovery Key'};
   static const _emailFields = {'Email', 'Username', 'Login'};
   static const _urlFields = {'URL', 'Website', 'Domain', 'Link', 'Issuer'};
@@ -254,85 +276,66 @@ class PasswordDetailScreen extends StatelessWidget {
     return Icons.label_important_outline;
   }
 
+  void _confirmDelete(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text('Delete ${item.title}?', style: _pj(18, FontWeight.w700, _kOnSurface)),
+        content: Text('This item will be permanently removed from your vault.',
+            style: _pj(14, FontWeight.w400, _kOnSurfaceVariant)),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(),
+              child: Text('Cancel', style: _pj(14, FontWeight.w600, _kOnSurfaceVariant))),
+          TextButton(
+            onPressed: () { Navigator.of(ctx).pop(); Navigator.of(context).maybePop(); },
+            child: Text('Delete', style: _pj(14, FontWeight.w700, _kError)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final f = item.fields;
-    final ic = item.iconColor;
-    final ibg = item.iconBgColor;
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F3FF),
+      backgroundColor: const Color(0xFFF8F9FF),
       body: SafeArea(
         child: Column(children: [
-          // Top bar
+          // Header: back arrow + bold centered title
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: Row(children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back, color: Color(0xFF12101E)),
-                onPressed: () => Navigator.pop(context),
-              ),
+              IconButton(icon: const Icon(Icons.arrow_back, color: _kOnSurface),
+                  onPressed: () => Navigator.pop(context)),
               Expanded(
-                child: Text(
-                  item.title,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF12101E)),
-                  overflow: TextOverflow.ellipsis,
-                ),
+                child: Text(item.title,
+                    style: _pj(20, FontWeight.w700, _kOnSurface, ls: -0.01),
+                    textAlign: TextAlign.center, overflow: TextOverflow.ellipsis),
               ),
-              IconButton(
-                icon: Container(
-                  width: 36, height: 36,
-                  decoration: BoxDecoration(color: ibg, shape: BoxShape.circle),
-                  child: Icon(item.icon, size: 18, color: ic),
-                ),
-                onPressed: () {},
-              ),
+              const SizedBox(width: 48),
             ]),
           ),
-
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                // HERO CARD — icon + title + subtitle
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: ibg,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(color: ic.withOpacity(0.10), blurRadius: 20, offset: const Offset(0, 8)),
-                    ],
-                  ),
-                  child: Column(children: [
-                    Container(
-                      width: 64, height: 64,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.7),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(item.icon, size: 32, color: ic),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      item.title,
-                      style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: ic, letterSpacing: -0.4),
-                      textAlign: TextAlign.center,
-                    ),
-                    if (item.subtitle.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        item.subtitle,
-                        style: TextStyle(fontSize: 14, color: ic.withOpacity(0.65), fontWeight: FontWeight.w500),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ]),
-                ),
-                const SizedBox(height: 24),
-
-                // FIELD CARDS
+                // Hero
+                Center(child: Column(children: [
+                  _iconBadge(item.icon, fg: _kPrimary, bg: _kPrimary.withOpacity(0.12), size: 72),
+                  const SizedBox(height: 14),
+                  Text(item.title, style: _pj(22, FontWeight.w700, _kOnSurface, ls: -0.3),
+                      textAlign: TextAlign.center),
+                  if (item.subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(item.subtitle, style: _pj(14, FontWeight.w500, _kOnSurfaceVariant),
+                        textAlign: TextAlign.center),
+                  ],
+                ])),
+                const SizedBox(height: 28),
+                _sectionHeader('Saved fields', _kPrimary),
+                const SizedBox(height: 12),
                 for (final entry in f.entries) ...[
                   _DetailFieldCard(
                     icon: _iconFor(entry.key),
@@ -340,11 +343,30 @@ class PasswordDetailScreen extends StatelessWidget {
                     value: entry.value,
                     isSensitive: _isSensitive(entry.key),
                     isMono: _isMono(entry.key),
-                    accentColor: ic,
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                 ],
                 const SizedBox(height: 16),
+                // Actions
+                Row(children: [
+                  Expanded(child: SizedBox(height: 52, child: ElevatedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.edit_outlined, size: 20),
+                    label: Text('Edit', style: _pj(15, FontWeight.w600, Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _kPrimary, foregroundColor: Colors.white, elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                  ))),
+                  const SizedBox(width: 12),
+                  Expanded(child: SizedBox(height: 52, child: OutlinedButton.icon(
+                    onPressed: () => _confirmDelete(context),
+                    icon: const Icon(Icons.delete_outline, size: 20),
+                    label: Text('Delete', style: _pj(15, FontWeight.w600, _kError)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _kError, side: const BorderSide(color: _kError, width: 1.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                  ))),
+                ]),
               ]),
             ),
           ),
@@ -363,15 +385,10 @@ class _DetailFieldCard extends StatefulWidget {
   final String value;
   final bool isSensitive;
   final bool isMono;
-  final Color accentColor;
 
   const _DetailFieldCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.isSensitive,
-    required this.isMono,
-    required this.accentColor,
+    required this.icon, required this.label, required this.value,
+    required this.isSensitive, required this.isMono,
   });
 
   @override
@@ -380,110 +397,51 @@ class _DetailFieldCard extends StatefulWidget {
 
 class _DetailFieldCardState extends State<_DetailFieldCard> {
   bool _revealed = false;
-  int _timer = 30;
-  Timer? _t;
-
-  @override
-  void dispose() { _t?.cancel(); super.dispose(); }
-
-  void _startTimer() {
-    _t?.cancel();
-    setState(() => _timer = 30);
-    _t = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) { t.cancel(); return; }
-      setState(() => _timer--);
-      if (_timer <= 0) { t.cancel(); if (mounted) setState(() => _revealed = false); }
-    });
-  }
-
-  Widget _trailingWidget(Color accent) {
-    if (widget.isSensitive && _revealed) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: const Color(0xFFFFF3CD)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.timer_outlined, size: 12, color: Color(0xFFF59E0B)),
-          const SizedBox(width: 3),
-          Text('$_timer', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFF59E0B))),
-        ]),
-      );
-    } else if (!widget.isSensitive) {
-      return Icon(Icons.copy_all, size: 18, color: accent.withOpacity(0.5));
-    } else {
-      return Icon(_revealed ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20, color: accent);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final sensitive = widget.isSensitive;
-    final accent = sensitive ? const Color(0xFFF59E0B) : widget.accentColor;
-    final bg = sensitive ? const Color(0xFFFFF8E1) : Colors.white;
-
-    return GestureDetector(
-      onTap: () {
-        if (!sensitive) {
-          Clipboard.setData(ClipboardData(text: widget.value));
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Copied ${widget.label}'),
-              duration: const Duration(seconds: 1),
-              backgroundColor: widget.accentColor,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          );
-          return;
-        }
-        setState(() {
-          if (!_revealed) {
-            _revealed = true;
-            _startTimer();
-          } else {
-            _revealed = false;
-            _t?.cancel();
-          }
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: accent.withOpacity(0.15), width: 1),
-          boxShadow: [BoxShadow(color: accent.withOpacity(0.06), blurRadius: 14, offset: const Offset(0, 4))],
-        ),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-          Container(
-            width: 48, height: 48,
-            decoration: BoxDecoration(color: accent.withOpacity(0.12), borderRadius: BorderRadius.circular(14)),
-            child: Icon(widget.icon, size: 22, color: accent),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(
-                widget.label,
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: accent.withOpacity(0.8), letterSpacing: 0.5),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                (sensitive && !_revealed) ? '••••••••••••' : widget.value,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: widget.isMono ? 'monospace' : null,
-                  color: const Color(0xFF12101E),
-                  letterSpacing: widget.isMono ? 1.5 : 0,
-                  height: 1.3,
-                ),
-              ),
-            ]),
-          ),
-          const SizedBox(width: 10),
-          _trailingWidget(accent),
-        ]),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [BoxShadow(color: _kPrimary.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4))],
       ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        _iconBadge(widget.icon, fg: _kPrimary, bg: _kPrimary.withOpacity(0.12)),
+        const SizedBox(width: 16),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(widget.label, style: _pj(11, FontWeight.w600, _kOnSurfaceVariant, ls: 0.4)),
+          const SizedBox(height: 4),
+          Text(
+            (sensitive && !_revealed) ? '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' : widget.value,
+            style: _pj(15, FontWeight.w600, _kOnSurface, height: 1.3, ls: widget.isMono ? 1.2 : 0),
+          ),
+        ])),
+        const SizedBox(width: 10),
+        if (sensitive)
+          IconButton(
+            icon: Icon(_revealed ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20, color: _kPrimary),
+            tooltip: _revealed ? 'Hide' : 'Reveal',
+            onPressed: () => setState(() => _revealed = !_revealed),
+          ),
+        if (!sensitive || _revealed)
+          IconButton(
+            icon: const Icon(Icons.copy, size: 18, color: _kOnSurfaceVariant),
+            tooltip: 'Copy ${widget.label}',
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: widget.value));
+              HapticFeedback.lightImpact();
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('Copied ${widget.label}'),
+                duration: const Duration(seconds: 1),
+                backgroundColor: _kPrimary, behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ));
+            },
+          ),
+      ]),
     );
   }
 }
