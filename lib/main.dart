@@ -2594,9 +2594,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: surface,
         elevation: 0,
         centerTitle: false,
-        title: const Text('Settings', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF191C1D), letterSpacing: -0.01)),
+        title: Text('Settings', style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w700, color: const Color(0xFF191C1D), letterSpacing: -0.01)),
       ),
-      body: ListView(
+      body: DefaultTextStyle(
+        style: GoogleFonts.plusJakartaSans(color: const Color(0xFF191C1D)),
+        child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
           _ProCard(),
@@ -2700,6 +2702,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 32),
         ],
       ),
+      ),
     );
   }
 
@@ -2791,10 +2794,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   _Accent _accentFor(IconData icon) {
+    // Vivid, mockup-like tonal chips — no gray.
     if (icon == Icons.fingerprint) return _Accent(kPrimary, kPrimary.withOpacity(0.12));
-    if (icon == Icons.timer) return _Accent(kSecondary, kSecondaryContainer.withOpacity(0.6));
+    if (icon == Icons.timer) return _Accent(kTertiary, kTertiary.withOpacity(0.12));
+    if (icon == Icons.api) return _Accent(kPrimary, kPrimary.withOpacity(0.12));
     if (icon == Icons.event_available) return _Accent(kPrimary, kPrimary.withOpacity(0.12));
-    if (icon == Icons.policy || icon == Icons.gavel) return _Accent(kOnSurfaceVariant, kSurfaceContainerHigh);
+    if (icon == Icons.credit_card) return _Accent(kTertiary, kTertiary.withOpacity(0.12));
+    if (icon == Icons.policy || icon == Icons.gavel) return _Accent(kPrimary, kPrimary.withOpacity(0.12));
     return _Accent(kPrimary, kPrimary.withOpacity(0.12));
   }
 }
