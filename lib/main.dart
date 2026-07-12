@@ -708,46 +708,30 @@ class VaultPage extends StatefulWidget {
 /// [VaultCategory] so all existing filter / detail code keeps working.
 /// Boxes use the app's unified indigo palette and support long-press
 /// reorder / delete, mirroring the Home tab. Order persists locally.
-class _VaultBox {
-  final String id;
-  final VaultCategory category;
-  final String label;
-  final IconData icon;
-  const _VaultBox({required this.id, required this.category, required this.label, required this.icon});
-}
 
-const List<_VaultBox> _kVaultBoxDefs = [
-  _VaultBox(id: 'password', category: VaultCategory.password, label: 'Passwords', icon: Icons.key),
-  _VaultBox(id: 'seeds', category: VaultCategory.seeds, label: 'Seeds', icon: Icons.eco),
-  _VaultBox(id: 'apiKeys', category: VaultCategory.apiKeys, label: 'API Keys', icon: Icons.api),
-  _VaultBox(id: 'totp', category: VaultCategory.totp, label: '2FA Codes', icon: Icons.security),
-  _VaultBox(id: 'codes', category: VaultCategory.codes, label: 'Recovery Codes', icon: Icons.grid_view),
-  _VaultBox(id: 'notes', category: VaultCategory.notes, label: 'Secure Notes', icon: Icons.sticky_note_2),
-  _VaultBox(id: 'privateKeys', category: VaultCategory.privateKeys, label: 'Private Keys', icon: Icons.badge),
-];
 
 class _VaultPageState extends State<VaultPage> {
   List<VaultItem> _vaultItems = [];
   List<Code> _codes = [];
   bool _loaded = false;
   VaultCategory? _selectedCategory; // null = box grid view; non-null = filtered list
-  List<_VaultBox> _boxes = [];
+  List<VaultItem> _items = [];
   bool _organizeMode = false;
-  final Set<String> _removingBoxIds = {};
-  SharedPreferences? _boxPrefs;
-  static const _kBoxOrderKey = 'gk_vault_boxes_v1';
+  final Set<String> _removingIds = {};
+  final Map<String, int> _order = {};
+  bool _orderLoaded = false;
   StreamSubscription<VaultItemsUpdatedEvent>? _vaultSub;
   StreamSubscription<CodesUpdatedEvent>? _codesSub;
   StreamSubscription? _quickAddSub;
+  static const String _kItemOrderKey = 'gk_vault_item_order_v1';
 
 
   @override
   void initState() {
     super.initState();
-    _loadAll();
-    _loadBoxes();
-    _vaultSub = VaultStore.instance.onVaultItemsUpdated().listen((_) => _loadVaultItems());
-    _codesSub = CodeStore.instance.onCodesUpdated().listen((_) => _loadCodes());
+    _loadOrder().then((_) => _loadAll());
+    _vaultSub = VaultStore.instance.onVaultItemsUpdated().listen((_) => _loadVaultItems().then((_) => _rebuildItems()));
+    // codes listener wired with rebuild below
     // Listen for quick-add events from Home tab
     _quickAddSub = QuickAddService.instance.bus.on<FilterChangedEvent>().listen((event) {
       if (event is FilterChangedEvent) {
@@ -765,6 +749,75 @@ class _VaultPageState extends State<VaultPage> {
 
   Future<void> _loadAll() async {
     await Future.wait([_loadVaultItems(), _loadCodes()]);
+    _rebuildItems();
+  }
+
+  void _rebuildItems() {
+    final list = _allVaultItems;
+    if (_orderLoaded) {
+      list.sort((a, b) {
+        final oa = _order[a.id] ?? (1 << 30);
+        final ob = _order[b.id] ?? (1 << 30);
+        return oa.compareTo(ob);
+      });
+    }
+    if (!mounted) return;
+    setState(() => _items = list);
+  }
+
+  Future<void> _loadOrder() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_kItemOrderKey);
+      if (raw != null) {
+        final m = jsonDecode(raw) as Map<String, dynamic>;
+        _order.clear();
+        m.forEach((k, v) => _order[k] = v as int);
+      }
+    } catch (_) {}
+    _orderLoaded = true;
+  }
+
+  Future<void> _persistOrder() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_kItemOrderKey, jsonEncode(_order));
+    } catch (_) {}
+  }
+
+  Future<void> _reorderItem(int from, int to) async {
+    if (from == to || from < 0 || to < 0 || from >= _items.length || to >= _items.length) return;
+    final moved = _items[from];
+    setState(() {
+      _items.removeAt(from);
+      _items.insert(to, moved);
+      for (int i = 0; i < _items.length; i++) _order[_items[i].id] = i;
+    });
+    await _persistOrder();
+  }
+
+  Future<void> _removeItem(VaultItem item) async {
+    setState(() => _removingIds.add(item.id));
+    await Future.delayed(const Duration(milliseconds: 180));
+    if (!mounted) return;
+    try {
+      if (item.category == VaultCategory.totp) {
+        final code = _codes.firstWhere((c) => 'code_${c.hashCode}' == item.id);
+        await CodeStore.instance.removeCode(code);
+      } else {
+        await VaultStore.instance.deleteItem(item.id);
+      }
+    } catch (e) {
+      debugPrint('Failed to delete vault item: $e');
+    }
+    _order.remove(item.id);
+    await _persistOrder();
+    if (!mounted) return;
+    setState(() {
+      _items.removeWhere((it) => it.id == item.id);
+      _removingIds.remove(item.id);
+      if (_items.isEmpty) _organizeMode = false;
+    });
   }
 
   Future<void> _loadVaultItems() async {
@@ -880,95 +933,48 @@ class _VaultPageState extends State<VaultPage> {
           Expanded(
             child: !_loaded
                 ? const Center(child: CircularProgressIndicator(color: kPrimary))
-                : _boxes.isEmpty
+                : _items.isEmpty
                     ? _buildVaultEmptyState()
-                    : _buildBoxesGrid(),
+                    : _buildItemsGrid(),
           ),
         ]),
       ),
     );
   }
 
-  Future<void> _loadBoxes() async {
-    final prefs = await SharedPreferences.getInstance();
-    _boxPrefs = prefs;
-    final raw = prefs.getString(_kBoxOrderKey);
-    if (raw == null) {
-      if (!mounted) return;
-      setState(() => _boxes = List.from(_kVaultBoxDefs));
-      return;
-    }
-    List<String> ids;
-    try {
-      ids = (jsonDecode(raw) as List).cast<String>();
-    } catch (_) {
-      ids = _kVaultBoxDefs.map((d) => d.id).toList();
-    }
-    final byId = { for (final d in _kVaultBoxDefs) d.id : d };
-    final ordered = ids.where((id) => byId.containsKey(id)).map((id) => byId[id]!).toList();
-    if (!mounted) return;
-    setState(() => _boxes = ordered);
-  }
-
-  Future<void> _persistBoxes() async {
-    _boxPrefs ??= await SharedPreferences.getInstance();
-    await _boxPrefs!.setString(_kBoxOrderKey, jsonEncode(_boxes.map((b) => b.id).toList()));
-  }
-
-  Future<void> _removeBox(String id) async {
-    setState(() => _removingBoxIds.add(id));
-    await Future.delayed(const Duration(milliseconds: 180));
-    if (!mounted) return;
-    setState(() {
-      _boxes.removeWhere((b) => b.id == id);
-      _removingBoxIds.remove(id);
-      if (_boxes.isEmpty) _organizeMode = false;
-    });
-    _persistBoxes();
-  }
-
-  void _reorderBox(int from, int to) {
-    if (from == to) return;
-    setState(() {
-      final b = _boxes.removeAt(from);
-      _boxes.insert(to, b);
-    });
-    _persistBoxes();
-  }
-
-  Widget _buildBoxesGrid() {
+  Widget _buildItemsGrid() {
     return LayoutBuilder(builder: (ctx, constraints) {
       const gap = 16.0;
       final cellW = (constraints.maxWidth - gap) / 2;
       final cellH = cellW;
-      final rows = ((_boxes.length - 1) ~/ 2) + 1;
+      final rows = _items.isEmpty ? 0 : ((_items.length - 1) ~/ 2) + 1;
       final height = rows * cellH + (rows - 1) * gap;
       final children = <Widget>[];
-      for (int i = 0; i < _boxes.length; i++) {
-        final box = _boxes[i];
+      for (int i = 0; i < _items.length; i++) {
+        final item = _items[i];
         final col = i % 2;
         final row = i ~/ 2;
         children.add(
           AnimatedPositioned(
-            key: ValueKey('b_${box.id}'),
+            key: ValueKey('it_${item.id}'),
             duration: const Duration(milliseconds: 280),
             curve: Curves.easeOutCubic,
             left: col * (cellW + gap),
             top: row * (cellH + gap),
             width: cellW,
             height: cellH,
-            child: _CategoryBoxCard(
-              key: ValueKey(box.id),
-              box: box,
+            child: _VaultItemCard(
+              key: ValueKey(item.id),
+              item: item,
               width: cellW,
               height: cellH,
               organizeMode: _organizeMode,
-              removing: _removingBoxIds.contains(box.id),
+              removing: _removingIds.contains(item.id),
               index: i,
-              onTap: () => setState(() => _selectedCategory = box.category),
+              onTap: () => _openDetail(item),
               onLongPress: () => setState(() => _organizeMode = true),
-              onRemove: () => _removeBox(box.id),
-              onReorderRequested: (from) => _reorderBox(from, i),
+              onRemove: () => _removeItem(item),
+              onReorderRequested: (from) => _reorderItem(from, i),
             ),
           ),
         );
@@ -987,12 +993,12 @@ class _VaultPageState extends State<VaultPage> {
             Container(
               width: 72, height: 72,
               decoration: BoxDecoration(color: _cPrimary.withOpacity(0.12), shape: BoxShape.circle),
-              child: const Icon(Icons.dashboard_customize, size: 32, color: _cPrimary),
+              child: const Icon(Icons.lock_outline, size: 32, color: _cPrimary),
             ),
             const SizedBox(height: 20),
-            Text('No categories', style: _vaultFont(18, FontWeight.w600, _cOnSurface)),
+            Text('Your vault is empty', style: _vaultFont(18, FontWeight.w600, _cOnSurface)),
             const SizedBox(height: 8),
-            Text('Long-press a box to remove it.', style: _vaultFont(14, FontWeight.w400, _cOnSurface.withOpacity(0.6)), textAlign: TextAlign.center),
+            Text('Items you add on the Home tab will appear here.', style: _vaultFont(14, FontWeight.w400, _cOnSurface.withOpacity(0.6)), textAlign: TextAlign.center),
           ],
         ),
       ),
@@ -1209,186 +1215,6 @@ class _VaultListCardState extends State<_VaultListCard> {
 }
 
 // ════════════════════════════════════════════════
-// CATEGORY BOX CARD — a single tile in the Vault grid
-// ════════════════════════════════════════════════
-// ── Unified indigo palette matching the Home tab ──
-const Color _cSurface = Color(0xFFFFFFFF);
-const Color _cPrimary = Color(0xFF5B3FE8);
-const Color _cOnSurface = Color(0xFF12101E);
-TextStyle _vaultFont(double size, FontWeight w, Color c, {double? height}) =>
-    TextStyle(fontSize: size, fontWeight: w, color: c, height: height);
-
-class _VaultDonePill extends StatelessWidget {
-  final VoidCallback onTap;
-  const _VaultDonePill({super.key, required this.onTap});
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: _cPrimary,
-      borderRadius: BorderRadius.circular(9999),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(9999),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          child: Text('Done', style: _vaultFont(14, FontWeight.w500, Colors.white)),
-        ),
-      ),
-    );
-  }
-}
-
-class _RemoveBadge extends StatelessWidget {
-  final VoidCallback onTap;
-  const _RemoveBadge({super.key, required this.onTap});
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 26,
-        height: 26,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 6, offset: const Offset(0, 2))],
-        ),
-        child: const Icon(Icons.close, size: 16, color: Colors.red),
-      ),
-    );
-  }
-}
-
-class _CategoryBoxCard extends StatefulWidget {
-  final _VaultBox box;
-  final double width;
-  final double height;
-  final bool organizeMode;
-  final bool removing;
-  final int index;
-  final VoidCallback onTap;
-  final VoidCallback onLongPress;
-  final VoidCallback onRemove;
-  final void Function(int fromIndex) onReorderRequested;
-
-  const _CategoryBoxCard({
-    super.key,
-    required this.box,
-    required this.width,
-    required this.height,
-    required this.organizeMode,
-    required this.removing,
-    required this.index,
-    required this.onTap,
-    required this.onLongPress,
-    required this.onRemove,
-    required this.onReorderRequested,
-  });
-
-  @override
-  State<_CategoryBoxCard> createState() => _CategoryBoxCardState();
-}
-
-class _CategoryBoxCardState extends State<_CategoryBoxCard> with SingleTickerProviderStateMixin {
-  bool _pressed = false;
-  bool _entered = false;
-  late final AnimationController _wobbleCtrl;
-  late final double _wobbleSign;
-
-  @override
-  void initState() {
-    super.initState();
-    _wobbleSign = widget.index.isEven ? 1.0 : -1.0;
-    _wobbleCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 260))
-      ..repeat(reverse: true);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _entered = true);
-    });
-  }
-
-  @override
-  void dispose() {
-    _wobbleCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final card = AnimatedScale(
-      scale: widget.removing ? 0.0 : (_pressed ? 0.96 : (_entered ? 1.0 : 0.0)),
-      duration: Duration(milliseconds: widget.removing ? 180 : 220),
-      curve: Curves.easeOutBack,
-      child: AnimatedOpacity(
-        opacity: widget.removing ? 0.0 : (_entered ? 1.0 : 0.0),
-        duration: const Duration(milliseconds: 200),
-        child: AnimatedBuilder(
-          animation: _wobbleCtrl,
-          builder: (ctx, child) {
-            final angle = widget.organizeMode ? (_wobbleSign * 0.018 * (_wobbleCtrl.value * 2 - 1)) : 0.0;
-            return Transform.rotate(angle: angle, child: child);
-          },
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: _cSurface,
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(color: _cPrimary.withOpacity(0.06), blurRadius: 14, offset: const Offset(0, 4)),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(color: _cPrimary.withOpacity(0.12), borderRadius: BorderRadius.circular(16)),
-                  child: Icon(widget.box.icon, color: _cPrimary, size: 24),
-                ),
-                Text(widget.box.label, style: _vaultFont(18, FontWeight.w700, _cOnSurface, height: 24 / 18)),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-    if (!widget.organizeMode) {
-      return GestureDetector(
-        onTapDown: (_) => setState(() => _pressed = true),
-        onTapUp: (_) => setState(() => _pressed = false),
-        onTapCancel: () => setState(() => _pressed = false),
-        onTap: widget.onTap,
-        onLongPress: widget.onLongPress,
-        child: card,
-      );
-    }
-
-    final withBadge = Stack(
-      clipBehavior: Clip.none,
-      children: [
-        card,
-        Positioned(right: -6, top: -6, child: _RemoveBadge(onTap: widget.onRemove)),
-      ],
-    );
-
-    return DragTarget<int>(
-      onWillAcceptWithDetails: (d) => d.data != widget.index,
-      onAcceptWithDetails: (d) => widget.onReorderRequested(d.data),
-      builder: (ctx, _, __) => LongPressDraggable<int>(
-        data: widget.index,
-        feedback: Material(
-          color: Colors.transparent,
-          child: Transform.scale(scale: 1.06, child: SizedBox(width: widget.width, height: widget.height, child: card)),
-        ),
-        childWhenDragging: Opacity(opacity: 0.25, child: withBadge),
-        child: withBadge,
-      ),
-    );
-  }
-}
-
 // ════════════════════════════════════════════════
 // 2FA CODES LIST — uses CodeWidget for full features
 // (multi-select, reorder, brand icons, coach marks)
