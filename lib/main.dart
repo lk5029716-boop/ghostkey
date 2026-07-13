@@ -727,12 +727,12 @@ class _CategoryBox {
 }
 
 const _categoryBoxes = <_CategoryBox>[
-  _CategoryBox(label: 'Passwords', category: VaultCategory.password, icon: Icons.key, iconColor: Color(0xFF5B3FE8), iconBgColor: Color(0xFFEBE9FE), bgColor: Color(0xFFEBE8FF), titleColor: Color(0xFF5B3FE8)),
-  _CategoryBox(label: 'Seeds', category: VaultCategory.seeds, icon: Icons.eco, iconColor: Color(0xFF16A34A), iconBgColor: Color(0xFFDCFCE7), bgColor: Color(0xFFD1F7F1), titleColor: Color(0xFF004D40)),
-  _CategoryBox(label: 'API Keys', category: VaultCategory.apiKeys, icon: Icons.api, iconColor: Color(0xFF0D9488), iconBgColor: Color(0xFFCCFBF1), bgColor: Color(0xFFCCFBF1), titleColor: Color(0xFF004D40)),
-  _CategoryBox(label: '2FA Codes', category: VaultCategory.totp, icon: Icons.security, iconColor: Color(0xFF2563EB), iconBgColor: Color(0xFFDBEAFE), bgColor: Color(0xFFD1E3FF), titleColor: Color(0xFF0D47A1)),
-  _CategoryBox(label: 'Recovery Codes', category: VaultCategory.codes, icon: Icons.grid_view, iconColor: Color(0xFF7C3AED), iconBgColor: Color(0xFFF3E8FF), bgColor: Color(0xFFF3E8FF), titleColor: Color(0xFF880E4F)),
-  _CategoryBox(label: 'Secure Notes', category: VaultCategory.notes, icon: Icons.sticky_note_2, iconColor: Color(0xFFE8692A), iconBgColor: Color(0xFFFFEDD5), bgColor: Color(0xFFFFE8D1), titleColor: Color(0xFF3E2723)),
+  _CategoryBox(label: 'Create a login', category: VaultCategory.password, icon: Icons.login, iconColor: Color(0xFF4285F4), iconBgColor: Color(0xFFBBDEFB), bgColor: Color(0xFFBBDEFB), titleColor: Color(0xFF4285F4)),
+  _CategoryBox(label: 'Seed phrase', category: VaultCategory.seeds, icon: Icons.spa, iconColor: Color(0xFF0D631B), iconBgColor: Color(0xFFC8E6C9), bgColor: Color(0xFFC8E6C9), titleColor: Color(0xFF0D631B)),
+  _CategoryBox(label: 'Add API key', category: VaultCategory.apiKeys, icon: Icons.vpn_key, iconColor: Color(0xFF00796B), iconBgColor: Color(0xFFB2DFDB), bgColor: Color(0xFFB2DFDB), titleColor: Color(0xFF00796B)),
+  _CategoryBox(label: 'Add 2FA code', category: VaultCategory.totp, icon: Icons.shield, iconColor: Color(0xFF1D4FA6), iconBgColor: Color(0xFFBBDEFB), bgColor: Color(0xFFBBDEFB), titleColor: Color(0xFF1D4FA6)),
+  _CategoryBox(label: 'Recovery codes', category: VaultCategory.codes, icon: Icons.grid_view, iconColor: Color(0xFF7B1FA2), iconBgColor: Color(0xFFE1BEE7), bgColor: Color(0xFFE1BEE7), titleColor: Color(0xFF7B1FA2)),
+  _CategoryBox(label: 'Create a note', category: VaultCategory.notes, icon: Icons.note, iconColor: Color(0xFF6A1B9A), iconBgColor: Color(0xFFE1BEE7), bgColor: Color(0xFFE1BEE7), titleColor: Color(0xFF6A1B9A)),
   _CategoryBox(label: 'Private Keys', category: VaultCategory.privateKeys, icon: Icons.badge, iconColor: Color(0xFF475569), iconBgColor: Color(0xFFF1F5F9), bgColor: Color(0xFFEBE6F4), titleColor: Color(0xFF475569)),
 ];
 
@@ -966,13 +966,13 @@ class _VaultPageState extends State<VaultPage> {
 
   String _catLabel(VaultCategory cat) {
     switch (cat) {
-      case VaultCategory.password: return 'Password';
-      case VaultCategory.seeds: return 'Seed';
-      case VaultCategory.apiKeys: return 'API Key';
-      case VaultCategory.codes: return 'Code';
-      case VaultCategory.totp: return '2FA';
-      case VaultCategory.notes: return 'Note';
-      case VaultCategory.privateKeys: return 'Key';
+      case VaultCategory.password: return 'Create a login';
+      case VaultCategory.seeds: return 'Seed phrase';
+      case VaultCategory.apiKeys: return 'Add API key';
+      case VaultCategory.codes: return 'Recovery codes';
+      case VaultCategory.totp: return 'Add 2FA code';
+      case VaultCategory.notes: return 'Create a note';
+      case VaultCategory.privateKeys: return 'Private Keys';
     }
   }
 
