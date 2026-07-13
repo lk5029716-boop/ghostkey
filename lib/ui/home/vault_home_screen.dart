@@ -11,6 +11,7 @@ import '../../screens/api_key_add_screen.dart';
 import '../../screens/recovery_codes_add_screen.dart';
 import '../../enter_key_manually_screen.dart';
 import '../../seed_phrase_restore_screen.dart';
+import '../../vault_data.dart';
 
 // ═══════════════════════════════════════════════════════════════
 // HOME TAB — "Your Vault"
@@ -89,7 +90,10 @@ const Map<HomeTileType, _TileTypeInfo> _kTileInfo = {
 // ── Screen ────────────────────────────────────────────────────────
 
 class VaultHomeScreen extends StatefulWidget {
-  const VaultHomeScreen({super.key});
+  /// When a Home tile is tapped, jump to the Vault tab and open that
+  /// category's filtered list — mirroring what a Vault box tap does.
+  final void Function(VaultCategory category)? onActivateCategory;
+  const VaultHomeScreen({super.key, this.onActivateCategory});
 
   @override
   State<VaultHomeScreen> createState() => _VaultHomeScreenState();
@@ -173,8 +177,33 @@ class _VaultHomeScreenState extends State<VaultHomeScreen> {
   }
 
   void _openTile(HomeTile tile) {
+    final category = _tileCategory(tile.type);
+    if (category != null && widget.onActivateCategory != null) {
+      widget.onActivateCategory!(category);
+      return;
+    }
+    // Fallback: navigate straight to the add form (unchanged behaviour).
     final info = _kTileInfo[tile.type]!;
     Navigator.of(context).push(MaterialPageRoute(builder: info.destinationBuilder));
+  }
+
+  /// Map a Home shortcut tile to the equivalent Vault category so a tap
+  /// opens the same filtered list as tapping the matching Vault box.
+  VaultCategory? _tileCategory(HomeTileType type) {
+    switch (type) {
+      case HomeTileType.login:
+        return VaultCategory.password;
+      case HomeTileType.note:
+        return VaultCategory.notes;
+      case HomeTileType.apiKey:
+        return VaultCategory.apiKeys;
+      case HomeTileType.recoveryCodes:
+        return VaultCategory.codes;
+      case HomeTileType.totp:
+        return VaultCategory.totp;
+      case HomeTileType.seed:
+        return VaultCategory.seeds;
+    }
   }
 
   Future<void> _openAddSheet() async {

@@ -537,25 +537,27 @@ int _pow10(int n) {
 
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
-  final _pages = <Widget>[
-    const VaultHomeScreen(),
-    VaultPage(),
-    const SettingsScreen(),
-  ];
+  final _pages = <Widget>[];
 
   @override
-  void dispose() {
-    super.dispose();
+  void initState() {
+    super.initState();
+    _pages.addAll([
+      VaultHomeScreen(
+        onActivateCategory: (category) {
+          setState(() => _currentIndex = 1);
+          QuickAddService.instance.bus.fire(FilterChangedEvent(category));
+        },
+      ),
+      VaultPage(),
+      const SettingsScreen(),
+    ]);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: [
-        const VaultHomeScreen(),
-        const VaultPage(),
-        const SettingsScreen(),
-      ]),
+      body: IndexedStack(index: _currentIndex, children: _pages),
       floatingActionButton: null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: NavigationBar(
