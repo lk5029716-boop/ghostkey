@@ -448,12 +448,12 @@ class _HomeTileWidgetState extends State<_HomeTileWidget> with SingleTickerProvi
             return Transform.rotate(angle: angle, child: child);
           },
           child: Container(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: _cSurface,
-              borderRadius: BorderRadius.circular(28),
+              color: info.bg,
+              borderRadius: BorderRadius.circular(18),
               boxShadow: [
-                BoxShadow(color: _cPrimary.withOpacity(0.06), blurRadius: 14, offset: const Offset(0, 4)),
+                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
               ],
             ),
             child: Column(
@@ -461,15 +461,12 @@ class _HomeTileWidgetState extends State<_HomeTileWidget> with SingleTickerProvi
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: info.color.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(color: info.bg, shape: BoxShape.circle),
                   child: Icon(info.icon, color: info.color, size: 24),
                 ),
-                Text(info.label, style: _font(18, FontWeight.w700, _cOnSurface, height: 24 / 18)),
+                Text(info.label, style: _font(18, FontWeight.w700, info.color, height: 24 / 18)),
               ],
             ),
           ),
