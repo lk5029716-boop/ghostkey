@@ -36,6 +36,7 @@ import 'models/code.dart';
 import 'models/code_display.dart';
 import 'screens/openrouter_test_screen.dart';
 import 'ui/home/vault_home_screen.dart';
+import 'home_tile_data.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -706,37 +707,9 @@ class VaultPage extends StatefulWidget {
   State<VaultPage> createState() => _VaultPageState();
 }
 
-/// Category boxes shown in the Vault tab grid. Each maps to a
-/// [VaultCategory] so all existing filter / FAB / detail code keeps
-/// working unchanged — only the UI switches from chips to a box grid.
-class _CategoryBox {
-  final String label;
-  final VaultCategory category;
-  final IconData icon;
-  final Color iconColor;
-  final Color iconBgColor;
-  final Color bgColor;
-  final Color titleColor;
-  const _CategoryBox({
-    required this.label,
-    required this.category,
-    required this.icon,
-    required this.iconColor,
-    required this.iconBgColor,
-    required this.bgColor,
-    required this.titleColor,
-  });
-}
-
-const _categoryBoxes = <_CategoryBox>[
-  _CategoryBox(label: 'Create a login', category: VaultCategory.password, icon: Icons.login, iconColor: Color(0xFF4285F4), iconBgColor: Color(0xFFBBDEFB), bgColor: Color(0xFFBBDEFB), titleColor: Color(0xFF4285F4)),
-  _CategoryBox(label: 'Seed phrase', category: VaultCategory.seeds, icon: Icons.spa, iconColor: Color(0xFF0D631B), iconBgColor: Color(0xFFC8E6C9), bgColor: Color(0xFFC8E6C9), titleColor: Color(0xFF0D631B)),
-  _CategoryBox(label: 'Add API key', category: VaultCategory.apiKeys, icon: Icons.vpn_key, iconColor: Color(0xFF00796B), iconBgColor: Color(0xFFB2DFDB), bgColor: Color(0xFFB2DFDB), titleColor: Color(0xFF00796B)),
-  _CategoryBox(label: 'Add 2FA code', category: VaultCategory.totp, icon: Icons.shield, iconColor: Color(0xFF1D4FA6), iconBgColor: Color(0xFFBBDEFB), bgColor: Color(0xFFBBDEFB), titleColor: Color(0xFF1D4FA6)),
-  _CategoryBox(label: 'Recovery codes', category: VaultCategory.codes, icon: Icons.grid_view, iconColor: Color(0xFF7B1FA2), iconBgColor: Color(0xFFE1BEE7), bgColor: Color(0xFFE1BEE7), titleColor: Color(0xFF7B1FA2)),
-  _CategoryBox(label: 'Create a note', category: VaultCategory.notes, icon: Icons.note, iconColor: Color(0xFF6A1B9A), iconBgColor: Color(0xFFE1BEE7), bgColor: Color(0xFFE1BEE7), titleColor: Color(0xFF6A1B9A)),
-  _CategoryBox(label: 'Private Keys', category: VaultCategory.privateKeys, icon: Icons.badge, iconColor: Color(0xFF475569), iconBgColor: Color(0xFFF1F5F9), bgColor: Color(0xFFEBE6F4), titleColor: Color(0xFF475569)),
-];
+/// Category boxes shown in the Vault tab are now driven by the same
+/// Home tile data — no more hardcoded list. Each user tile type maps
+/// to a VaultCategory.
 
 class _VaultPageState extends State<VaultPage> {
   List<VaultItem> _vaultItems = [];
@@ -746,12 +719,14 @@ class _VaultPageState extends State<VaultPage> {
   StreamSubscription<VaultItemsUpdatedEvent>? _vaultSub;
   StreamSubscription<CodesUpdatedEvent>? _codesSub;
   StreamSubscription? _quickAddSub;
-
+  List<HomeTile> _tiles = [];
+  bool _tilesLoaded = false;
 
   @override
   void initState() {
     super.initState();
     _loadAll();
+    _loadTiles();
     _vaultSub = VaultStore.instance.onVaultItemsUpdated().listen((_) => _loadVaultItems());
     _codesSub = CodeStore.instance.onCodesUpdated().listen((_) => _loadCodes());
     // Listen for quick-add events from Home tab
@@ -760,17 +735,42 @@ class _VaultPageState extends State<VaultPage> {
         setState(() => _selectedCategory = event.category);
       }
     });
+    // Listen for tile changes from Home tab
+    VaultHomeScreen.tilesChangedNotifier.addListener(_loadTiles);
   }
 
   @override
   void dispose() {
     _vaultSub?.cancel();
     _codesSub?.cancel();
+    VaultHomeScreen.tilesChangedNotifier.removeListener(_loadTiles);
     super.dispose();
   }
 
   Future<void> _loadAll() async {
     await Future.wait([_loadVaultItems(), _loadCodes()]);
+  }
+
+  /// Load tiles from the same SharedPreferences key the Home tab uses.
+  Future<void> _loadTiles() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('gk_home_tiles_v1');
+    List<HomeTile> loaded;
+    if (raw != null) {
+      try {
+        final decoded = (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
+        loaded = decoded.map(HomeTile.fromJson).toList();
+      } catch (_) {
+        loaded = [];
+      }
+    } else {
+      loaded = [];
+    }
+    if (!mounted) return;
+    setState(() {
+      _tiles = loaded;
+      _tilesLoaded = true;
+    });
   }
 
   Future<void> _loadVaultItems() async {
@@ -865,7 +865,7 @@ class _VaultPageState extends State<VaultPage> {
     if (_selectedCategory != null) {
       return _buildListView();
     }
-    // Default: category box grid.
+    // Default: category box grid — driven by the Home tiles.
     return Scaffold(
       backgroundColor: const Color(0xFFF4F3FF),
       body: SafeArea(
@@ -876,32 +876,58 @@ class _VaultPageState extends State<VaultPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Vault', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: kOnSurface)),
-                // refresh and three-dot icons removed
               ],
             ),
           ),
           const SizedBox(height: 4),
           Expanded(
-            child: !_loaded
+            child: (!_loaded || !_tilesLoaded)
                 ? const Center(child: CircularProgressIndicator(color: kPrimary))
-                : GridView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: 1.0,
-                    ),
-                    itemCount: _categoryBoxes.length,
-                    itemBuilder: (context, i) {
-                      final box = _categoryBoxes[i];
-                      return _CategoryBoxCard(
-                        box: box,
-                        onTap: () => setState(() => _selectedCategory = box.category),
-                      );
-                    },
-                  ),
+                : _tiles.isEmpty
+                    ? _buildVaultEmptyState()
+                    : GridView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 1.0,
+                        ),
+                        itemCount: _tiles.length,
+                        itemBuilder: (context, i) {
+                          final tile = _tiles[i];
+                          final info = kTileInfo[tile.type]!;
+                          final cat = tileTypeToCategory(tile.type);
+                          return _VaultBoxCard(
+                            label: info.label,
+                            icon: info.icon,
+                            iconColor: info.color,
+                            bgColor: info.bg,
+                            onTap: () => setState(() => _selectedCategory = cat),
+                          );
+                        },
+                      ),
           ),
+        ]),
+      ),
+    );
+  }
+
+  /// Shown when no tiles have been added in the Home tab yet.
+  Widget _buildVaultEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: 72, height: 72,
+            decoration: BoxDecoration(color: kSurfaceContainerLow, shape: BoxShape.circle),
+            child: const Icon(Icons.lock_outline, size: 32, color: kOnSurfaceVariant),
+          ),
+          const SizedBox(height: 20),
+          const Text('Your vault is empty', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: kOnSurface)),
+          const SizedBox(height: 8),
+          const Text('Add shortcuts on the Home tab to see categories here', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant), textAlign: TextAlign.center),
         ]),
       ),
     );
@@ -1117,18 +1143,29 @@ class _VaultListCardState extends State<_VaultListCard> {
 }
 
 // ════════════════════════════════════════════════
-// CATEGORY BOX CARD — a single tile in the Vault grid
+// VAULT BOX CARD — a single tile in the Vault grid.
+// Uses the same colors and style as the Home tab tiles
+// so both tabs look identical.
 // ════════════════════════════════════════════════
-class _CategoryBoxCard extends StatefulWidget {
-  final _CategoryBox box;
+class _VaultBoxCard extends StatefulWidget {
+  final String label;
+  final IconData icon;
+  final Color iconColor;
+  final Color bgColor;
   final VoidCallback onTap;
-  const _CategoryBoxCard({required this.box, required this.onTap});
+  const _VaultBoxCard({
+    required this.label,
+    required this.icon,
+    required this.iconColor,
+    required this.bgColor,
+    required this.onTap,
+  });
 
   @override
-  State<_CategoryBoxCard> createState() => _CategoryBoxCardState();
+  State<_VaultBoxCard> createState() => _VaultBoxCardState();
 }
 
-class _CategoryBoxCardState extends State<_CategoryBoxCard> {
+class _VaultBoxCardState extends State<_VaultBoxCard> {
   bool _pressed = false;
 
   @override
@@ -1144,7 +1181,7 @@ class _CategoryBoxCardState extends State<_CategoryBoxCard> {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: widget.box.bgColor,
+            color: widget.bgColor,
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
@@ -1157,10 +1194,10 @@ class _CategoryBoxCardState extends State<_CategoryBoxCard> {
               Container(
                 width: 40,
                 height: 40,
-                decoration: BoxDecoration(color: widget.box.iconBgColor, shape: BoxShape.circle),
-                child: Icon(widget.box.icon, color: widget.box.iconColor, size: 24),
+                decoration: BoxDecoration(color: widget.bgColor, shape: BoxShape.circle),
+                child: Icon(widget.icon, color: widget.iconColor, size: 24),
               ),
-              Text(widget.box.label, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: widget.box.titleColor)),
+              Text(widget.label, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: widget.iconColor)),
             ],
           ),
         ),

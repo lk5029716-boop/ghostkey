@@ -12,6 +12,7 @@ import '../../screens/recovery_codes_add_screen.dart';
 import '../../enter_key_manually_screen.dart';
 import '../../seed_phrase_restore_screen.dart';
 import '../../vault_data.dart';
+import '../../home_tile_data.dart';
 
 // ═══════════════════════════════════════════════════════════════
 // HOME TAB — "Your Vault"
@@ -38,33 +39,7 @@ const Color _cDanger = Color(0xFFE0435B);
 TextStyle _font(double size, FontWeight w, Color c, {double? height, double? ls}) =>
     TextStyle(fontSize: size, fontWeight: w, color: c, height: height, letterSpacing: ls ?? 0);
 
-// ── Home tile data model ─────────────────────────────────────────
-
-enum HomeTileType { login, note, apiKey, recoveryCodes, totp, seed }
-
-class HomeTile {
-  final String id;
-  final HomeTileType type;
-  const HomeTile({required this.id, required this.type});
-
-  Map<String, dynamic> toJson() => {'id': id, 'type': type.name};
-
-  factory HomeTile.fromJson(Map<String, dynamic> json) => HomeTile(
-        id: json['id'] as String,
-        type: HomeTileType.values.byName(json['type'] as String),
-      );
-}
-
-class _TileTypeInfo {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final Color bg;
-  final WidgetBuilder destinationBuilder;
-  const _TileTypeInfo(this.label, this.icon, this.color, this.bg, this.destinationBuilder);
-}
-
-// Top-level function tear-offs so this map can stay a compile-time const.
+// Top-level function tear-offs for navigation destinations.
 Widget _buildPasswordAdd(BuildContext ctx) => const PasswordAddScreen();
 Widget _buildNoteAdd(BuildContext ctx) => const SecureNoteAddScreen();
 Widget _buildApiKeyAdd(BuildContext ctx) => const ApiKeyAddScreen();
@@ -72,24 +47,21 @@ Widget _buildRecoveryAdd(BuildContext ctx) => const RecoveryCodesAddScreen();
 Widget _buildTotpAdd(BuildContext ctx) => const EnterKeyManuallyScreen();
 Widget _buildSeedAdd(BuildContext ctx) => const SeedPhraseRestoreScreen();
 
-const Map<HomeTileType, _TileTypeInfo> _kTileInfo = {
-  HomeTileType.login: _TileTypeInfo(
-      'Create a login', Icons.login, Color(0xFF4285F4), Color(0xFFBBDEFB), _buildPasswordAdd),
-  HomeTileType.note: _TileTypeInfo(
-      'Create a note', Icons.note, Color(0xFF6A1B9A), Color(0xFFE1BEE7), _buildNoteAdd),
-  HomeTileType.apiKey: _TileTypeInfo(
-      'Add API key', Icons.vpn_key, Color(0xFF00796B), Color(0xFFB2DFDB), _buildApiKeyAdd),
-  HomeTileType.recoveryCodes: _TileTypeInfo(
-      'Recovery codes', Icons.grid_view, Color(0xFF7B1FA2), Color(0xFFE1BEE7), _buildRecoveryAdd),
-  HomeTileType.totp: _TileTypeInfo(
-      'Add 2FA code', Icons.shield, Color(0xFF1D4FA6), Color(0xFFBBDEFB), _buildTotpAdd),
-  HomeTileType.seed: _TileTypeInfo(
-      'Seed phrase', Icons.spa, Color(0xFF0D631B), Color(0xFFC8E6C9), _buildSeedAdd),
+const Map<HomeTileType, WidgetBuilder> _kTileDestinations = {
+  HomeTileType.login: _buildPasswordAdd,
+  HomeTileType.note: _buildNoteAdd,
+  HomeTileType.apiKey: _buildApiKeyAdd,
+  HomeTileType.recoveryCodes: _buildRecoveryAdd,
+  HomeTileType.totp: _buildTotpAdd,
+  HomeTileType.seed: _buildSeedAdd,
 };
 
 // ── Screen ────────────────────────────────────────────────────────
 
 class VaultHomeScreen extends StatefulWidget {
+  /// Notifier so VaultPage can reload tiles when Home adds/removes one.
+  static final tilesChangedNotifier = ValueNotifier<int>(0);
+
   /// When a Home tile is tapped, jump to the Vault tab and open that
   /// category's filtered list — mirroring what a Vault box tap does.
   final void Function(VaultCategory category)? onActivateCategory;
@@ -165,6 +137,7 @@ class _VaultHomeScreenState extends State<VaultHomeScreen> {
       if (_tiles.isEmpty) _organizeMode = false;
     });
     _persist();
+    _notifyVault();
   }
 
   void _reorder(int fromIndex, int toIndex) {
@@ -177,33 +150,14 @@ class _VaultHomeScreenState extends State<VaultHomeScreen> {
   }
 
   void _openTile(HomeTile tile) {
-    final category = _tileCategory(tile.type);
-    if (category != null && widget.onActivateCategory != null) {
+    final category = tileTypeToCategory(tile.type);
+    if (widget.onActivateCategory != null) {
       widget.onActivateCategory!(category);
       return;
     }
     // Fallback: navigate straight to the add form (unchanged behaviour).
-    final info = _kTileInfo[tile.type]!;
-    Navigator.of(context).push(MaterialPageRoute(builder: info.destinationBuilder));
-  }
-
-  /// Map a Home shortcut tile to the equivalent Vault category so a tap
-  /// opens the same filtered list as tapping the matching Vault box.
-  VaultCategory? _tileCategory(HomeTileType type) {
-    switch (type) {
-      case HomeTileType.login:
-        return VaultCategory.password;
-      case HomeTileType.note:
-        return VaultCategory.notes;
-      case HomeTileType.apiKey:
-        return VaultCategory.apiKeys;
-      case HomeTileType.recoveryCodes:
-        return VaultCategory.codes;
-      case HomeTileType.totp:
-        return VaultCategory.totp;
-      case HomeTileType.seed:
-        return VaultCategory.seeds;
-    }
+    final builder = _kTileDestinations[tile.type]!;
+    Navigator.of(context).push(MaterialPageRoute(builder: builder));
   }
 
   Future<void> _openAddSheet() async {
@@ -215,7 +169,16 @@ class _VaultHomeScreenState extends State<VaultHomeScreen> {
       isScrollControlled: true,
       builder: (ctx) => _AddShortcutSheet(available: available),
     );
-    if (selected != null) _addTile(selected);
+    if (selected != null) {
+      _addTile(selected);
+      // Notify Vault tab to reload its boxes
+      _notifyVault();
+    }
+  }
+
+  void _notifyVault() {
+    // Fire an event so VaultPage knows the tiles changed
+    VaultHomeScreen.tilesChangedNotifier.notifyListeners();
   }
 
   @override
@@ -460,7 +423,7 @@ class _HomeTileWidgetState extends State<_HomeTileWidget> with SingleTickerProvi
 
   @override
   Widget build(BuildContext context) {
-    final info = _kTileInfo[widget.tile.type]!;
+    final info = kTileInfo[widget.tile.type]!;
 
     final cardContent = AnimatedScale(
       scale: widget.removing ? 0.0 : (_pressed ? 0.96 : (_entered ? 1.0 : 0.0)),
@@ -690,7 +653,7 @@ class _AddShortcutSheet extends StatelessWidget {
               )
             else
               ...available.map((t) {
-                final info = _kTileInfo[t]!;
+                final info = kTileInfo[t]!;
                 return InkWell(
                   borderRadius: BorderRadius.circular(16),
                   onTap: () => Navigator.of(context).pop(t),
