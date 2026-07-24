@@ -9,7 +9,7 @@ import '../../screens/password_add_screen.dart';
 import '../../screens/secure_note_add_screen.dart';
 import '../../screens/api_key_add_screen.dart';
 import '../../screens/recovery_codes_add_screen.dart';
-import '../../enter_key_manually_screen.dart';
+import '../../qr_scanner_screen.dart';
 import '../../seed_phrase_restore_screen.dart';
 import '../../home_tile_data.dart';
 
@@ -43,7 +43,7 @@ Widget _buildPasswordAdd(BuildContext ctx) => const PasswordAddScreen();
 Widget _buildNoteAdd(BuildContext ctx) => const SecureNoteAddScreen();
 Widget _buildApiKeyAdd(BuildContext ctx) => const ApiKeyAddScreen();
 Widget _buildRecoveryAdd(BuildContext ctx) => const RecoveryCodesAddScreen();
-Widget _buildTotpAdd(BuildContext ctx) => const EnterKeyManuallyScreen();
+Widget _buildTotpAdd(BuildContext ctx) => const QrScannerScreen();
 Widget _buildSeedAdd(BuildContext ctx) => const SeedPhraseRestoreScreen();
 
 const Map<HomeTileType, WidgetBuilder> _kTileDestinations = {
