@@ -544,12 +544,7 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     _pages.addAll([
-      VaultHomeScreen(
-        onActivateCategory: (category) {
-          setState(() => _currentIndex = 1);
-          QuickAddService.instance.bus.fire(FilterChangedEvent(category));
-        },
-      ),
+      const VaultHomeScreen(),
       VaultPage(),
       const SettingsScreen(),
     ]);

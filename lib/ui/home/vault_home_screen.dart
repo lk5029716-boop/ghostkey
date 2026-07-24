@@ -11,7 +11,6 @@ import '../../screens/api_key_add_screen.dart';
 import '../../screens/recovery_codes_add_screen.dart';
 import '../../enter_key_manually_screen.dart';
 import '../../seed_phrase_restore_screen.dart';
-import '../../vault_data.dart';
 import '../../home_tile_data.dart';
 
 // ═══════════════════════════════════════════════════════════════
@@ -62,10 +61,7 @@ class VaultHomeScreen extends StatefulWidget {
   /// Notifier so VaultPage can reload tiles when Home adds/removes one.
   static final tilesChangedNotifier = ValueNotifier<int>(0);
 
-  /// When a Home tile is tapped, jump to the Vault tab and open that
-  /// category's filtered list — mirroring what a Vault box tap does.
-  final void Function(VaultCategory category)? onActivateCategory;
-  const VaultHomeScreen({super.key, this.onActivateCategory});
+  const VaultHomeScreen({super.key});
 
   @override
   State<VaultHomeScreen> createState() => _VaultHomeScreenState();
@@ -150,12 +146,8 @@ class _VaultHomeScreenState extends State<VaultHomeScreen> {
   }
 
   void _openTile(HomeTile tile) {
-    final category = tileTypeToCategory(tile.type);
-    if (widget.onActivateCategory != null) {
-      widget.onActivateCategory!(category);
-      return;
-    }
-    // Fallback: navigate straight to the add form (unchanged behaviour).
+    // Home tab: tapping a tile opens the add interface directly.
+    // After saving, the item goes into Vault automatically.
     final builder = _kTileDestinations[tile.type]!;
     Navigator.of(context).push(MaterialPageRoute(builder: builder));
   }
