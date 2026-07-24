@@ -2681,266 +2681,276 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _checkinReminders = true;
 
-  @override
-  void initState() {
-    super.initState();
-  }
+  static const Color _bg = Color(0xFFFCFCFF);
+  static const Color _titleColor = Color(0xFF18181B);
+  static const Color _sectionTitleColor = Color(0xFFA1A1AA);
+  static const Color _rowTitleColor = Color(0xFF27272A);
+  static const Color _rowSubtitleColor = Color(0xFF71717A);
+  static const Color _dividerColor = Color(0xFFF1F5F9);
+  static const Color _white = Color(0xFFFFFFFF);
+  static const Color _switchActive = Color(0xFF6C4EFF);
+  static const Color _switchInactive = Color(0xFFE4E4E7);
+
+  // Pastel icon backgrounds
+  static const Color _iconBgPurple = Color(0xFFF3E8FF);
+  static const Color _iconBgBlue = Color(0xFFE0F2FE);
+  static const Color _iconBgGreen = Color(0xFFDCFCE7);
+  static const Color _iconBgPink = Color(0xFFFCE7F3);
+  static const Color _iconBgOrange = Color(0xFFFEF3C7);
+  static const Color _iconBgGray = Color(0xFFF4F4F5);
+
+  TextStyle _title32() => GoogleFonts.inter(fontSize: 32, fontWeight: FontWeight.bold, color: _titleColor, height: 1.2);
+
+  TextStyle _sectionTitle() => GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: _sectionTitleColor, letterSpacing: 0.8, height: 1.2);
+
+  TextStyle _rowTitle() => GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: _rowTitleColor, height: 1.3);
+
+  TextStyle _rowSubtitle() => GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: _rowSubtitleColor, height: 1.3);
 
   @override
   Widget build(BuildContext context) {
-    final primary = kPrimary;
-    final onSurfaceVar = kOnSurfaceVariant;
-    final surface = kSurface;
-    final outlineVar = kOutlineVariant;
-
     return Scaffold(
-      backgroundColor: surface,
-      appBar: AppBar(
-        backgroundColor: surface,
-        elevation: 0,
-        centerTitle: false,
-        title: Text('Settings', style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w700, color: const Color(0xFF191C1D), letterSpacing: -0.01)),
-      ),
-      body: DefaultTextStyle(
-        style: GoogleFonts.plusJakartaSans(color: const Color(0xFF191C1D)),
+      backgroundColor: _bg,
+      body: SafeArea(
         child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        children: [
-          _ProCard(),
-          const SizedBox(height: 28),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+          children: [
+            // Title
+            Text('Settings', style: _title32()),
+            const SizedBox(height: 20),
 
-          // Security
-          _sectionHeader('Security', primary),
-          const SizedBox(height: 8),
-          _card([
-            _row(Icons.fingerprint, 'PIN & biometric setup', subtitle: 'Secure your access', chevron: true, onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SecuritySetupScreen()));
-            }),
-          ]),
-          const SizedBox(height: 28),
+            // Profile card
+            _profileCard(),
+            const SizedBox(height: 32),
 
-          // Vault & Timer
-          _sectionHeader('Vault & Timer', primary),
-          const SizedBox(height: 8),
-          _card([
-            _row(Icons.timer, "Dead Man's Switch Duration", subtitle: 'Active: 6 Months', chevron: true, onTap: () {}),
-          ]),
-          const SizedBox(height: 28),
+            // Security
+            Text('SECURITY', style: _sectionTitle()),
+            const SizedBox(height: 14),
+            _card([
+              _row(Icons.fingerprint, 'PIN & biometric setup', subtitle: 'Secure your access', iconBg: _iconBgBlue, onTap: () {
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SecuritySetupScreen()));
+              }),
+              _sep(),
+              _row(Icons.timer, "Dead Man's Switch Duration", subtitle: 'Active: 6 Months', iconBg: _iconBgOrange, chevron: true, onTap: () {}),
+            ]),
+            const SizedBox(height: 32),
 
-          // Data Management (DataSectionWidget: import/backup/export)
-          _sectionHeader('Data Management', primary),
-          const SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [BoxShadow(color: kPrimary.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4))],
-            ),
-            child: const DataSectionWidget(),
-          ),
-          const SizedBox(height: 28),
-
-          // Support
-          _sectionHeader('Support', primary),
-          const SizedBox(height: 8),
-          _card([
-            _row(Icons.api, 'OpenRouter Test', chevron: true, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OpenRouterTestScreen()))),
-          ]),
-          const SizedBox(height: 28),
-
-          // Notifications
-          _sectionHeader('Notifications', primary),
-          const SizedBox(height: 8),
-          _card([
-            _switchRow(Icons.event_available, 'Check-in Reminders', _checkinReminders, (v) => setState(() => _checkinReminders = v)),
-          ]),
-          const SizedBox(height: 28),
-
-          // Account & Plan
-          _sectionHeader('Account & Plan', primary),
-          const SizedBox(height: 8),
-          _card([
-            _row(Icons.credit_card, 'Payment Methods', chevron: true),
-          ]),
-          const SizedBox(height: 28),
-
-          // About
-          _sectionHeader('About', onSurfaceVar),
-          const SizedBox(height: 8),
-          _card([
-            _row(Icons.policy, 'Privacy Policy', trailing: const Icon(Icons.open_in_new, color: Color(0xFF40493D), size: 18), onTap: () {}),
-            _divider(outlineVar),
-            _row(Icons.gavel, 'Terms of Service', trailing: const Icon(Icons.open_in_new, color: Color(0xFF40493D), size: 18), onTap: () {}),
-            _divider(outlineVar),
-            _infoRow('Version', '1.0.4'),
-            _infoRow('Release', 'Stable Release'),
-          ]),
-          const SizedBox(height: 32),
-
-          // Sign Out
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-                  (r) => false,
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFDAD6),
-                foregroundColor: const Color(0xFF93000A),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-                elevation: 1,
-                shadowColor: kError.withOpacity(0.15),
+            // Data Management
+            Text('DATA MANAGEMENT', style: _sectionTitle()),
+            const SizedBox(height: 14),
+            Container(
+              decoration: BoxDecoration(
+                color: _white,
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: _softShadow(),
               ),
-              child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(Icons.logout, size: 20),
-                SizedBox(width: 8),
-                Text('Sign Out', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-              ]),
+              child: const DataSectionWidget(),
             ),
-          ),
-          const SizedBox(height: 16),
-          Center(child: Text('GhostKey • Secure by Design', style: TextStyle(fontSize: 12, color: kOnSurfaceVariant.withOpacity(0.6)))),
-          const SizedBox(height: 32),
-        ],
-      ),
+            const SizedBox(height: 32),
+
+            // Account
+            Text('ACCOUNT', style: _sectionTitle()),
+            const SizedBox(height: 14),
+            _card([
+              _row(Icons.credit_card, 'Payment Methods', subtitle: 'Manage your plan', iconBg: _iconBgGreen, chevron: true, onTap: () {}),
+            ]),
+            const SizedBox(height: 32),
+
+            // Notifications
+            Text('NOTIFICATIONS', style: _sectionTitle()),
+            const SizedBox(height: 14),
+            _card([
+              _switchRow(Icons.event_available, 'Check-in Reminders', subtitle: 'Get reminded to check in', iconBg: _iconBgPink, _checkinReminders, (v) => setState(() => _checkinReminders = v)),
+            ]),
+            const SizedBox(height: 32),
+
+            // Support
+            Text('SUPPORT', style: _sectionTitle()),
+            const SizedBox(height: 14),
+            _card([
+              _row(Icons.api, 'OpenRouter Test', subtitle: 'Test API connectivity', iconBg: _iconBgPurple, chevron: true, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OpenRouterTestScreen()))),
+            ]),
+            const SizedBox(height: 32),
+
+            // About
+            Text('ABOUT', style: _sectionTitle()),
+            const SizedBox(height: 14),
+            _card([
+              _row(Icons.policy, 'Privacy Policy', iconBg: _iconBgGray, onTap: () {}),
+              _sep(),
+              _row(Icons.gavel, 'Terms of Service', iconBg: _iconBgGray, onTap: () {}),
+              _sep(),
+              _infoRow('Version', '1.0.4'),
+              _sep(),
+              _infoRow('Release', 'Stable Release'),
+            ]),
+            const SizedBox(height: 32),
+
+            // Sign Out
+            _signOutButton(),
+            const SizedBox(height: 16),
+            Center(child: Text('GhostKey • Secure by Design', style: GoogleFonts.inter(fontSize: 12, color: _rowSubtitleColor.withOpacity(0.6)))),
+            const SizedBox(height: 32),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _sectionHeader(String title, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4),
-      child: Text(title.toUpperCase(), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color, letterSpacing: 1.5)),
+  // ── Profile Card ─────────────────────────────────────────────
+  Widget _profileCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: _softShadow(),
+      ),
+      child: Row(children: [
+        Container(
+          width: 56, height: 56,
+          decoration: const BoxDecoration(color: _iconBgGreen, shape: BoxShape.circle),
+          child: const Icon(Icons.person, color: Color(0xFF166534), size: 28),
+        ),
+        const SizedBox(width: 14),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Maruf', style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.bold, color: _titleColor, height: 1.3)),
+          const SizedBox(height: 2),
+          Text('maruf@example.com', style: GoogleFonts.inter(fontSize: 14, color: _rowSubtitleColor, height: 1.3)),
+        ])),
+        const Icon(Icons.chevron_right, color: _rowSubtitleColor, size: 22),
+      ]),
     );
   }
 
+  // ── Card wrapper ─────────────────────────────────────────────
   Widget _card(List<Widget> children) {
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [BoxShadow(color: kPrimary.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4))],
+        color: _white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: _softShadow(),
       ),
       child: Column(children: children),
     );
   }
 
-  Widget _iconBadge(IconData icon, {Color? fg, Color? bg}) {
-    final a = _accentFor(icon);
-    return Container(
-      width: 48, height: 48,
-      decoration: BoxDecoration(color: bg ?? a.bg, borderRadius: BorderRadius.circular(16)),
-      child: Icon(icon, color: fg ?? a.fg, size: 24),
-    );
-  }
+  // ── Soft shadow ──────────────────────────────────────────────
+  List<BoxShadow> _softShadow() => [
+    BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 16, offset: const Offset(0, 4)),
+    BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 1)),
+  ];
 
-  Widget _divider(Color color) {
-    return Divider(height: 1, thickness: 1, color: color.withOpacity(0.1), indent: 64);
-  }
-
-  Widget _infoRow(String label, String value) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: Color(0xFF191C1D))),
-        Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF191C1D))),
-      ]),
-    );
-  }
-
-  Widget _row(IconData icon, String title, {Widget? trailing, bool chevron = false, String? subtitle, VoidCallback? onTap}) {
+  // ── Row with icon + title + subtitle + chevron ───────────────
+  Widget _row(IconData icon, String title, {String? subtitle, bool chevron = false, Color? iconBg, VoidCallback? onTap}) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 60),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         child: Row(children: [
-          _iconBadge(icon),
-          const SizedBox(width: 16),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Color(0xFF191C1D))),
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(color: iconBg ?? _iconBgGray, shape: BoxShape.circle),
+            child: Icon(icon, size: 20, color: _rowTitleColor),
+          ),
+          const SizedBox(width: 14),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+            Text(title, style: _rowTitle()),
             if (subtitle != null) ...[
               const SizedBox(height: 2),
-              Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF40493D))),
+              Text(subtitle, style: _rowSubtitle()),
             ],
           ])),
-          trailing ?? (chevron
-              ? const Icon(Icons.chevron_right, color: Color(0xFF40493D), size: 20)
-              : const SizedBox.shrink()),
+          if (chevron)
+            const Icon(Icons.chevron_right, color: Color(0xFFA1A1AA), size: 20),
         ]),
       ),
     );
   }
 
-  Widget _switchRow(IconData icon, String title, bool value, ValueChanged<bool> onChanged) {
+  // ── Switch row ────────────────────────────────────────────────
+  Widget _switchRow(IconData icon, String title, {String? subtitle, Color? iconBg, required bool value, required ValueChanged<bool> onChanged}) {
     return InkWell(
       onTap: () => onChanged(!value),
-      borderRadius: BorderRadius.circular(20),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 60),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         child: Row(children: [
-          _iconBadge(icon),
-          const SizedBox(width: 16),
-          Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Color(0xFF191C1D)))),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: kPrimary,
-            activeTrackColor: kPrimary.withOpacity(0.3),
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(color: iconBg ?? _iconBgGray, shape: BoxShape.circle),
+            child: Icon(icon, size: 20, color: _rowTitleColor),
+          ),
+          const SizedBox(width: 14),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+            Text(title, style: _rowTitle()),
+            if (subtitle != null) ...[
+              const SizedBox(height: 2),
+              Text(subtitle, style: _rowSubtitle()),
+            ],
+          ])),
+          const SizedBox(width: 8),
+          SizedBox(
+            height: 28,
+            child: Switch.adaptive(
+              value: value,
+              onChanged: onChanged,
+              activeColor: _switchActive,
+              activeTrackColor: _switchActive.withOpacity(0.3),
+              inactiveThumbColor: _rowSubtitleColor.withOpacity(0.4),
+              inactiveTrackColor: _switchInactive,
+            ),
           ),
         ]),
       ),
     );
   }
 
-  _Accent _accentFor(IconData icon) {
-    // Vivid, mockup-like tonal chips — no gray.
-    if (icon == Icons.fingerprint) return _Accent(kPrimary, kPrimary.withOpacity(0.12));
-    if (icon == Icons.timer) return _Accent(kTertiary, kTertiary.withOpacity(0.12));
-    if (icon == Icons.api) return _Accent(kPrimary, kPrimary.withOpacity(0.12));
-    if (icon == Icons.event_available) return _Accent(kPrimary, kPrimary.withOpacity(0.12));
-    if (icon == Icons.credit_card) return _Accent(kTertiary, kTertiary.withOpacity(0.12));
-    if (icon == Icons.policy || icon == Icons.gavel) return _Accent(kPrimary, kPrimary.withOpacity(0.12));
-    return _Accent(kPrimary, kPrimary.withOpacity(0.12));
-  }
-}
-
-class _Accent {
-  final Color fg;
-  final Color bg;
-  const _Accent(this.fg, this.bg);
-}
-
-class _ProCard extends StatelessWidget {
-  const _ProCard();
-
-  @override
-  Widget build(BuildContext context) {
+  // ── Info row (label + value, no icon) ────────────────────────
+  Widget _infoRow(String label, String value) {
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [BoxShadow(color: kPrimary.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
-      child: Row(children: [
-        Container(
-          width: 52, height: 52,
-          decoration: BoxDecoration(color: kPrimary, shape: BoxShape.circle),
-          child: const Icon(Icons.shield, color: Colors.white, size: 28),
-        ),
-        const SizedBox(width: 16),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('GhostKey Pro', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF191C1D))),
-          Text('Active until Oct 2025', style: TextStyle(fontSize: 14, color: kOnSurfaceVariant)),
-        ])),
-        const Icon(Icons.chevron_right, color: Color(0xFF40493D), size: 22),
+      constraints: const BoxConstraints(minHeight: 60),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(label, style: _rowTitle()),
+        Text(value, style: _rowSubtitle()),
       ]),
+    );
+  }
+
+  // ── Divider between rows ──────────────────────────────────────
+  Widget _sep() {
+    return Divider(height: 1, thickness: 1, color: _dividerColor, indent: 64);
+  }
+
+  // ── Sign Out button ──────────────────────────────────────────
+  Widget _signOutButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: () {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+            (r) => false,
+          );
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFFEE2E2),
+          foregroundColor: const Color(0xFF991B1B),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          elevation: 0,
+        ),
+        child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(Icons.logout, size: 20),
+          SizedBox(width: 8),
+          Text('Sign Out', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+        ]),
+      ),
     );
   }
 }

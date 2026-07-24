@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-import '../../../main.dart';
 import 'data/export/export_service.dart';
 import 'import_from_another_app_screen.dart';
 
-/// Settings → Data section.
-///
-/// Uses the same "Pastel Vault" M3 row style as the rest of the
-/// Settings screen (rounded tinted icon chip, 64px divider indent).
+const Color _rowTitleColor = Color(0xFF27272A);
+const Color _rowSubtitleColor = Color(0xFF71717A);
+const Color _dividerColor = Color(0xFFF1F5F9);
+const Color _iconBgPurple = Color(0xFFF3E8FF);
+const Color _iconBgBlue = Color(0xFFE0F2FE);
+const Color _iconBgGreen = Color(0xFFDCFCE7);
+const Color _iconBgPink = Color(0xFFFCE7F3);
+const Color _iconBgOrange = Color(0xFFFEF3C7);
+const Color _iconBgGray = Color(0xFFF4F4F5);
+
 class DataSectionWidget extends StatelessWidget {
   const DataSectionWidget({super.key});
 
@@ -20,36 +26,39 @@ class DataSectionWidget extends StatelessWidget {
           icon: Icons.cloud_download_outlined,
           title: 'Import from another app',
           subtitle: 'Aegis, andOTP, Bitwarden, 2FAS, Google Authenticator, and more',
+          iconBg: _iconBgBlue,
           onTap: () {
             Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const ImportFromAnotherAppScreen()),
             );
           },
         ),
-        _divider(kOutlineVariant),
+        _sep(),
         _ImportRow(
           icon: Icons.cloud_upload_outlined,
           title: 'Local encrypted backup',
           subtitle: 'Save an encrypted backup to your device',
+          iconBg: _iconBgGreen,
           onTap: () {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Local backup coming soon — needs libsodium FFI'), duration: Duration(seconds: 2)),
             );
           },
         ),
-        _divider(kOutlineVariant),
+        _sep(),
         _ImportRow(
           icon: Icons.ios_share,
           title: 'Export to file',
           subtitle: 'Plain text, HTML, or JSON',
+          iconBg: _iconBgOrange,
           onTap: () => ExportService.showExportOptions(context),
         ),
       ],
     );
   }
 
-  Widget _divider(Color color) {
-    return Divider(height: 1, thickness: 1, color: color.withOpacity(0.1), indent: 64);
+  Widget _sep() {
+    return Divider(height: 1, thickness: 1, color: _dividerColor, indent: 64);
   }
 }
 
@@ -57,23 +66,10 @@ class _ImportRow extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
+  final Color iconBg;
   final VoidCallback onTap;
 
-  const _ImportRow({required this.icon, required this.title, required this.subtitle, required this.onTap});
-
-  Color _fg() {
-    if (icon == Icons.cloud_download_outlined) return kTertiary;   // Import  → amber
-    if (icon == Icons.cloud_upload_outlined) return kPrimary;      // Backup  → indigo
-    if (icon == Icons.ios_share) return kPrimary;                  // Export  → indigo
-    return kPrimary;
-  }
-
-  Color _bg() {
-    if (icon == Icons.cloud_download_outlined) return kTertiary.withOpacity(0.12);
-    if (icon == Icons.cloud_upload_outlined) return kPrimary.withOpacity(0.12);
-    if (icon == Icons.ios_share) return kPrimary.withOpacity(0.12);
-    return kPrimary.withOpacity(0.12);
-  }
+  const _ImportRow({required this.icon, required this.title, required this.subtitle, required this.iconBg, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -81,22 +77,23 @@ class _ImportRow extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 60),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
           child: Row(children: [
             Container(
-              width: 48, height: 48,
-              decoration: BoxDecoration(color: _bg(), borderRadius: BorderRadius.circular(16)),
-              child: Icon(icon, color: _fg(), size: 24),
+              width: 40, height: 40,
+              decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
+              child: Icon(icon, size: 20, color: _rowTitleColor),
             ),
-            const SizedBox(width: 16),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Color(0xFF191C1D))),
+            const SizedBox(width: 14),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              Text(title, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: _rowTitleColor, height: 1.3)),
               const SizedBox(height: 2),
-              Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF40493D))),
+              Text(subtitle, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: _rowSubtitleColor, height: 1.3)),
             ])),
-            const Icon(Icons.chevron_right, color: Color(0xFF40493D), size: 20),
+            const Icon(Icons.chevron_right, color: Color(0xFFA1A1AA), size: 20),
           ]),
         ),
       ),
