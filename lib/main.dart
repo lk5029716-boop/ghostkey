@@ -2681,9 +2681,9 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _checkinReminders = true;
 
-  static const Color _bg = Color(0xFFFCFCFF);
+  static const Color _bg = Color(0xFFF4F3FF);
   static const Color _titleColor = Color(0xFF18181B);
-  static const Color _sectionTitleColor = Color(0xFFA1A1AA);
+  static const Color _sectionTitleColor = Color(0xFF71717A);
   static const Color _rowTitleColor = Color(0xFF27272A);
   static const Color _rowSubtitleColor = Color(0xFF71717A);
   static const Color _dividerColor = Color(0xFFF1F5F9);
@@ -2741,8 +2741,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Container(
               decoration: BoxDecoration(
                 color: _white,
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: _softShadow(),
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
+                ],
               ),
               child: const DataSectionWidget(),
             ),
@@ -2803,8 +2805,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: _white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: _softShadow(),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
+        ],
       ),
       child: Row(children: [
         Container(
@@ -2826,11 +2830,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ── Card wrapper ─────────────────────────────────────────────
   Widget _card(List<Widget> children) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: _white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: _softShadow(),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
+        ],
       ),
       child: Column(children: children),
     );
@@ -2838,8 +2844,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Soft shadow ──────────────────────────────────────────────
   List<BoxShadow> _softShadow() => [
-    BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 16, offset: const Offset(0, 4)),
-    BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 1)),
+    BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
   ];
 
   // ── Row with icon + title + subtitle + chevron ───────────────
@@ -2942,7 +2947,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           backgroundColor: const Color(0xFFFEE2E2),
           foregroundColor: const Color(0xFF991B1B),
           padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           elevation: 0,
         ),
         child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
