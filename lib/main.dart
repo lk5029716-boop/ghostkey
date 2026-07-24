@@ -2760,7 +2760,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text('NOTIFICATIONS', style: _sectionTitle()),
             const SizedBox(height: 14),
             _card([
-              _switchRow(Icons.event_available, 'Check-in Reminders', subtitle: 'Get reminded to check in', iconBg: _iconBgPink, _checkinReminders, (v) => setState(() => _checkinReminders = v)),
+              _switchRow(Icons.event_available, 'Check-in Reminders', subtitle: 'Get reminded to check in', iconBg: _iconBgPink, value: _checkinReminders, onChanged: (v) => setState(() => _checkinReminders = v)),
             ]),
             const SizedBox(height: 32),
 
